@@ -181,7 +181,55 @@ namespace MongoDB.Driver.Internal
             }
         }
 
-        internal void EnsureMinConnectionPoolSizeWorkItem(object state)
+        internal void ReleaseConnection(MongoConnection connection)
+        {
+            if (connection.ConnectionPool != this)
+            {
+                throw new ArgumentException("The connection being released does not belong to this connection pool.", "connection");
+            }
+
+            // if the connection is no longer open remove it from the pool
+            if (connection.State != MongoConnectionState.Open)
+            {
+                RemoveConnection(connection);
+                return;
+            }
+
+            // don't put connections that have reached their maximum lifetime back in the pool
+            // but only remove one connection at most per timer tick to avoid connection storms
+            if (_connectionsRemovedSinceLastTimerTick == 0)
+            {
+                if (DateTime.UtcNow - connection.CreatedAt > _server.Settings.MaxConnectionLifeTime)
+                {
+                    RemoveConnection(connection);
+                    return;
+                }
+            }
+
+            var connectionIsFromAnotherGeneration = false;
+            lock (_connectionPoolLock)
+            {
+                if (connection.GenerationId == _generationId)
+                {
+                    connection.LastUsedAt = DateTime.UtcNow;
+                    _availableConnections.Add(connection);
+                    Monitor.Pulse(_connectionPoolLock);
+                }
+                else
+                {
+                    connectionIsFromAnotherGeneration = true;
+                }
+            }
+
+            // if connection is from another generation of the pool just close it
+            if (connectionIsFromAnotherGeneration)
+            {
+                connection.Close();
+            }
+        }
+
+        // private methods
+        private void EnsureMinConnectionPoolSizeWorkItem(object state)
         {
             // make sure only one instance of EnsureMinConnectionPoolSizeWorkItem is running at a time
             if (_inEnsureMinConnectionPoolSizeWorkItem)
@@ -251,54 +299,6 @@ namespace MongoDB.Driver.Internal
             }
         }
 
-        internal void ReleaseConnection(MongoConnection connection)
-        {
-            if (connection.ConnectionPool != this)
-            {
-                throw new ArgumentException("The connection being released does not belong to this connection pool.", "connection");
-            }
-
-            // if the connection is no longer open remove it from the pool
-            if (connection.State != MongoConnectionState.Open)
-            {
-                RemoveConnection(connection);
-                return;
-            }
-
-            // don't put connections that have reached their maximum lifetime back in the pool
-            // but only remove one connection at most per timer tick to avoid connection storms
-            if (_connectionsRemovedSinceLastTimerTick == 0)
-            {
-                if (DateTime.UtcNow - connection.CreatedAt > _server.Settings.MaxConnectionLifeTime)
-                {
-                    RemoveConnection(connection);
-                    return;
-                }
-            }
-
-            var connectionIsFromAnotherGeneration = false;
-            lock (_connectionPoolLock)
-            {
-                if (connection.GenerationId == _generationId)
-                {
-                    connection.LastUsedAt = DateTime.UtcNow;
-                    _availableConnections.Add(connection);
-                    Monitor.Pulse(_connectionPoolLock);
-                }
-                else
-                {
-                    connectionIsFromAnotherGeneration = true;
-                }
-            }
-
-            // if connection is from another generation of the pool just close it
-            if (connectionIsFromAnotherGeneration)
-            {
-                connection.Close();
-            }
-        }
-
-        // private methods
         private void RemoveConnection(MongoConnection connection)
         {
             lock (_connectionPoolLock)

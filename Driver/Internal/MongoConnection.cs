@@ -148,54 +148,6 @@ namespace MongoDB.Driver.Internal
         }
 
         // internal methods
-        internal void Authenticate(string databaseName, MongoCredentials credentials)
-        {
-            if (_state == MongoConnectionState.Closed) { throw new InvalidOperationException("Connection is closed."); }
-            lock (_connectionLock)
-            {
-                var nonceCommand = new CommandDocument("getnonce", 1);
-                var commandCollectionName = string.Format("{0}.$cmd", databaseName);
-
-                var commandResult = RunCommand(commandCollectionName, QueryFlags.None, nonceCommand, false);
-                if (!commandResult.Ok)
-                {
-                    throw new MongoAuthenticationException(
-                        "Error getting nonce for authentication.",
-                        new MongoCommandException(commandResult));
-                }
-
-                var nonce = commandResult.Response["nonce"].AsString;
-                var passwordDigest = MongoUtils.Hash(credentials.Username + ":mongo:" + credentials.Password);
-                var digest = MongoUtils.Hash(nonce + credentials.Username + passwordDigest);
-                var authenticateCommand = new CommandDocument
-                {
-                    { "authenticate", 1 },
-                    { "user", credentials.Username },
-                    { "nonce", nonce },
-                    { "key", digest }
-                };
-
-                commandResult = RunCommand(commandCollectionName, QueryFlags.None, authenticateCommand, false);
-                if (!commandResult.Ok)
-                {
-                    var message = string.Format("Invalid credentials for database '{0}'.", databaseName);
-                    throw new MongoAuthenticationException(
-                        message,
-                        new MongoCommandException(commandResult));
-                }
-
-                var authentication = new Authentication(credentials);
-                _authentications.Add(databaseName, authentication);
-            }
-        }
-
-        // check whether the connection can be used with the given database (and credentials)
-        // the following are the only valid authentication states for a connection:
-        // 1. the connection is not authenticated against any database
-        // 2. the connection has a single authentication against the admin database (with a particular set of credentials)
-        // 3. the connection has one or more authentications against any databases other than admin
-        //    (with the restriction that a particular database can only be authenticated against once and therefore with only one set of credentials)
-
         // assume that IsAuthenticated was called first and returned false
         internal bool CanAuthenticate(MongoDatabase database)
         {
@@ -331,26 +283,6 @@ namespace MongoDB.Driver.Internal
                         return false;
                     }
                 }
-            }
-        }
-
-        internal void Logout(string databaseName)
-        {
-            if (_state == MongoConnectionState.Closed) { throw new InvalidOperationException("Connection is closed."); }
-            lock (_connectionLock)
-            {
-                var logoutCommand = new CommandDocument("logout", 1);
-                var commandCollectionName = string.Format("{0}.$cmd", databaseName);
-
-                var commandResult = RunCommand(commandCollectionName, QueryFlags.None, logoutCommand, false);
-                if (!commandResult.Ok)
-                {
-                    throw new MongoAuthenticationException(
-                        "Error logging off.",
-                        new MongoCommandException(commandResult));
-                }
-
-                _authentications.Remove(databaseName);
             }
         }
 
@@ -522,6 +454,53 @@ namespace MongoDB.Driver.Internal
         }
 
         // private methods
+        // check whether the connection can be used with the given database (and credentials)
+        // the following are the only valid authentication states for a connection:
+        // 1. the connection is not authenticated against any database
+        // 2. the connection has a single authentication against the admin database (with a particular set of credentials)
+        // 3. the connection has one or more authentications against any databases other than admin
+        //    (with the restriction that a particular database can only be authenticated against once and therefore with only one set of credentials)
+        private void Authenticate(string databaseName, MongoCredentials credentials)
+        {
+            if (_state == MongoConnectionState.Closed) { throw new InvalidOperationException("Connection is closed."); }
+            lock (_connectionLock)
+            {
+                var nonceCommand = new CommandDocument("getnonce", 1);
+                var commandCollectionName = string.Format("{0}.$cmd", databaseName);
+
+                var commandResult = RunCommand(commandCollectionName, QueryFlags.None, nonceCommand, false);
+                if (!commandResult.Ok)
+                {
+                    throw new MongoAuthenticationException(
+                        "Error getting nonce for authentication.",
+                        new MongoCommandException(commandResult));
+                }
+
+                var nonce = commandResult.Response["nonce"].AsString;
+                var passwordDigest = MongoUtils.Hash(credentials.Username + ":mongo:" + credentials.Password);
+                var digest = MongoUtils.Hash(nonce + credentials.Username + passwordDigest);
+                var authenticateCommand = new CommandDocument
+                {
+                    { "authenticate", 1 },
+                    { "user", credentials.Username },
+                    { "nonce", nonce },
+                    { "key", digest }
+                };
+
+                commandResult = RunCommand(commandCollectionName, QueryFlags.None, authenticateCommand, false);
+                if (!commandResult.Ok)
+                {
+                    var message = string.Format("Invalid credentials for database '{0}'.", databaseName);
+                    throw new MongoAuthenticationException(
+                        message,
+                        new MongoCommandException(commandResult));
+                }
+
+                var authentication = new Authentication(credentials);
+                _authentications.Add(databaseName, authentication);
+            }
+        }
+
         private NetworkStream GetNetworkStream()
         {
             if (_state == MongoConnectionState.Initial)

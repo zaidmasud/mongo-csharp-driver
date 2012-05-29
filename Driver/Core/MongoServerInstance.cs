@@ -330,7 +330,7 @@ namespace MongoDB.Driver
                         }
                         finally
                         {
-                            _connectionPool.ReleaseConnection(connection);
+                            ReleaseConnection(connection);
                         }
                     }
                     catch
@@ -374,12 +374,6 @@ namespace MongoDB.Driver
             }
         }
 
-        internal void Ping(MongoConnection connection)
-        {
-            var pingCommand = new CommandDocument("ping", 1);
-            connection.RunCommand("admin.$cmd", QueryFlags.SlaveOk, pingCommand, true);
-        }
-
         internal void ReleaseConnection(MongoConnection connection)
         {
             _connectionPool.ReleaseConnection(connection);
@@ -397,7 +391,23 @@ namespace MongoDB.Driver
             }
         }
 
-        internal void SetState(
+        // private methods
+        private void OnStateChanged()
+        {
+            if (StateChanged != null)
+            {
+                try { StateChanged(this, null); }
+                catch { } // ignore exceptions
+            }
+        }
+
+        private void Ping(MongoConnection connection)
+        {
+            var pingCommand = new CommandDocument("ping", 1);
+            connection.RunCommand("admin.$cmd", QueryFlags.SlaveOk, pingCommand, true);
+        }
+
+        private void SetState(
             MongoServerState state,
             bool isPrimary,
             bool isSecondary,
@@ -418,7 +428,7 @@ namespace MongoDB.Driver
             }
         }
 
-        internal void VerifyState(MongoConnection connection)
+        private void VerifyState(MongoConnection connection)
         {
             CommandResult isMasterResult = null;
             bool ok = false;
@@ -512,16 +522,6 @@ namespace MongoDB.Driver
                     _buildInfo = null;
                     this.SetState(MongoServerState.Disconnected, false, false, false, false);
                 }
-            }
-        }
-
-        // private methods
-        private void OnStateChanged()
-        {
-            if (StateChanged != null)
-            {
-                try { StateChanged(this, null); }
-                catch { } // ignore exceptions
             }
         }
     }

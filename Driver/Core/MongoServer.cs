@@ -1236,7 +1236,61 @@ namespace MongoDB.Driver
             }
         }
 
-        internal MongoServerInstance ChooseServerInstance(bool slaveOk)
+        internal void ReleaseConnection(MongoConnection connection)
+        {
+            lock (_serverLock)
+            {
+                // if the thread has called RequestStart just verify that the connection it is releasing is the right one
+                int threadId = Thread.CurrentThread.ManagedThreadId;
+                Request request;
+                if (_requests.TryGetValue(threadId, out request))
+                {
+                    if (connection != request.Connection)
+                    {
+                        throw new ArgumentException("Connection being released is not the one assigned to the thread by RequestStart.", "connection");
+                    }
+                    return; // hold on to the connection until RequestDone is called
+                }
+            }
+
+            connection.ServerInstance.ReleaseConnection(connection);
+        }
+
+        internal void RemoveInstance(MongoServerInstance instance)
+        {
+            lock (_stateLock)
+            {
+                // Console.WriteLine("MongoServer[{0}]: Remove MongoServerInstance[{1}].", sequentialId, instance.SequentialId);
+                instance.StateChanged -= InstanceStateChanged;
+                _instances.Remove(instance);
+                InstanceStateChanged(instance, null); // removing an instance can change server state
+            }
+        }
+
+        internal void VerifyInstances(List<MongoServerAddress> instanceAddresses)
+        {
+            lock (_stateLock)
+            {
+                for (int i = _instances.Count - 1; i >= 0; i--)
+                {
+                    if (!instanceAddresses.Contains(_instances[i].Address))
+                    {
+                        RemoveInstance(_instances[i]);
+                    }
+                }
+                foreach (var address in instanceAddresses)
+                {
+                    if (!_instances.Any(instance => instance.Address == address))
+                    {
+                        var instance = new MongoServerInstance(this, address);
+                        AddInstance(instance);
+                    }
+                }
+            }
+        }
+
+        // private methods
+        private MongoServerInstance ChooseServerInstance(bool slaveOk)
         {
             lock (_serverLock)
             {
@@ -1300,60 +1354,6 @@ namespace MongoDB.Driver
             }
         }
 
-        internal void ReleaseConnection(MongoConnection connection)
-        {
-            lock (_serverLock)
-            {
-                // if the thread has called RequestStart just verify that the connection it is releasing is the right one
-                int threadId = Thread.CurrentThread.ManagedThreadId;
-                Request request;
-                if (_requests.TryGetValue(threadId, out request))
-                {
-                    if (connection != request.Connection)
-                    {
-                        throw new ArgumentException("Connection being released is not the one assigned to the thread by RequestStart.", "connection");
-                    }
-                    return; // hold on to the connection until RequestDone is called
-                }
-            }
-
-            connection.ServerInstance.ReleaseConnection(connection);
-        }
-
-        internal void RemoveInstance(MongoServerInstance instance)
-        {
-            lock (_stateLock)
-            {
-                // Console.WriteLine("MongoServer[{0}]: Remove MongoServerInstance[{1}].", sequentialId, instance.SequentialId);
-                instance.StateChanged -= InstanceStateChanged;
-                _instances.Remove(instance);
-                InstanceStateChanged(instance, null); // removing an instance can change server state
-            }
-        }
-
-        internal void VerifyInstances(List<MongoServerAddress> instanceAddresses)
-        {
-            lock (_stateLock)
-            {
-                for (int i = _instances.Count - 1; i >= 0; i--)
-                {
-                    if (!instanceAddresses.Contains(_instances[i].Address))
-                    {
-                        RemoveInstance(_instances[i]);
-                    }
-                }
-                foreach (var address in instanceAddresses)
-                {
-                    if (!_instances.Any(instance => instance.Address == address))
-                    {
-                        var instance = new MongoServerInstance(this, address);
-                        AddInstance(instance);
-                    }
-                }
-            }
-        }
-
-        // private methods
         private void InstanceStateChanged(object sender, object args)
         {
             lock (_stateLock)
