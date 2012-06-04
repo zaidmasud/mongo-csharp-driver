@@ -23,6 +23,7 @@ using System.Threading;
 using MongoDB.Bson;
 using MongoDB.Bson.Serialization;
 using MongoDB.Driver.Internal;
+using System.Diagnostics;
 
 namespace MongoDB.Driver
 {
@@ -32,6 +33,7 @@ namespace MongoDB.Driver
     public class MongoServerInstance
     {
         // private static fields
+        private static readonly TraceSource __trace = TracingConstants.CreateGeneralTraceSource();
         private static int __nextSequentialId;
 
         // public events
@@ -68,7 +70,6 @@ namespace MongoDB.Driver
             _maxMessageLength = MongoDefaults.MaxMessageLength;
             _state = MongoServerState.Disconnected;
             _connectionPool = new MongoConnectionPool(this);
-            // Console.WriteLine("MongoServerInstance[{0}]: {1}", sequentialId, address);
         }
 
         // public properties
@@ -219,16 +220,30 @@ namespace MongoDB.Driver
         /// </summary>
         public void Ping()
         {
-            // use a new connection instead of one from the connection pool
-            var connection = new MongoConnection(this);
-            try
+            using (__trace.TraceStart("{0}::Ping", this))
             {
-                Ping(connection);
+                // use a new connection instead of one from the connection pool
+                var connection = new MongoConnection(this);
+                try
+                {
+                    Ping(connection);
+                }
+                finally
+                {
+                    connection.Close();
+                }
             }
-            finally
-            {
-                connection.Close();
-            }
+        }
+
+        /// <summary>
+        /// Returns a <see cref="System.String"/> that represents this instance.
+        /// </summary>
+        /// <returns>
+        /// A <see cref="System.String"/> that represents this instance.
+        /// </returns>
+        public override string ToString()
+        {
+            return string.Format("MongoServerInstance[{0},{1}]", _sequentialId, _address);
         }
 
         /// <summary>
@@ -236,42 +251,44 @@ namespace MongoDB.Driver
         /// </summary>
         public void VerifyState()
         {
-            lock (_serverInstanceLock)
+            using (__trace.TraceStart("{0}::VerifyState", this))
             {
-                // use a new connection instead of one from the connection pool
-                var connection = new MongoConnection(this);
-                try
+                lock (_serverInstanceLock)
                 {
-                    // Console.WriteLine("MongoServerInstance[{0}]: VerifyState called.", sequentialId);
-                    // if ping fails assume all connections in the connection pool are doomed
+                    // use a new connection instead of one from the connection pool
+                    var connection = new MongoConnection(this);
                     try
                     {
-                        Ping(connection);
-                    }
-                    catch
-                    {
-                        // Console.WriteLine("MongoServerInstance[{0}]: Ping failed: {1}.", sequentialId, ex.Message);
-                        _connectionPool.Clear();
-                    }
+                        // if ping fails assume all connections in the connection pool are doomed
+                        try
+                        {
+                            Ping(connection);
+                        }
+                        catch(Exception ex)
+                        {
+                            __trace.TraceException(TraceEventType.Warning, ex);
+                            _connectionPool.Clear();
+                        }
 
-                    var previousState = _state;
-                    try
-                    {
-                        VerifyState(connection);
+                        var previousState = _state;
+                        try
+                        {
+                            VerifyState(connection);
+                        }
+                        catch(Exception ex)
+                        {
+                            __trace.TraceException(TraceEventType.Warning, ex);
+                            // ignore exceptions (if any occured state will already be set to Disconnected)
+                        }
+                        if (_state != previousState && _state == MongoServerState.Disconnected)
+                        {
+                            _connectionPool.Clear();
+                        }
                     }
-                    catch
+                    finally
                     {
-                        // ignore exceptions (if any occured state will already be set to Disconnected)
-                        // Console.WriteLine("MongoServerInstance[{0}]: VerifyState failed: {1}.", sequentialId, ex.Message);
+                        connection.Close();
                     }
-                    if (_state != previousState && _state == MongoServerState.Disconnected)
-                    {
-                        _connectionPool.Clear();
-                    }
-                }
-                finally
-                {
-                    connection.Close();
                 }
             }
         }
@@ -284,8 +301,10 @@ namespace MongoDB.Driver
             {
                 if (_state != MongoServerState.Connected)
                 {
-                    var message = string.Format("Server instance {0} is no longer connected.", _address);
-                    throw new InvalidOperationException(message);
+                    var message = string.Format("Server instance {0} is no longer connected to {1}.", _sequentialId, _address);
+                    var ex = new InvalidOperationException(message);
+                    __trace.TraceException(TraceEventType.Error, ex);
+                    throw ex;
                 }
             }
             connection = _connectionPool.AcquireConnection(database);
@@ -295,8 +314,9 @@ namespace MongoDB.Driver
             {
                 connection.CheckAuthentication(database); // will authenticate if necessary
             }
-            catch (MongoAuthenticationException)
+            catch (MongoAuthenticationException ex)
             {
+                __trace.TraceException(TraceEventType.Error, ex);
                 // don't let the connection go to waste just because authentication failed
                 _connectionPool.ReleaseConnection(connection);
                 throw;
@@ -305,14 +325,17 @@ namespace MongoDB.Driver
             return connection;
         }
 
+        /// <summary>
+        /// Connects the specified slave ok.
+        /// </summary>
+        /// <param name="slaveOk">if set to <c>true</c> [slave ok].</param>
         internal void Connect(bool slaveOk)
         {
-            // Console.WriteLine("MongoServerInstance[{0}]: Connect(slaveOk={1}) called.", sequentialId, slaveOk);
+            __trace.TraceInformation("{0}::connecting with slaveOk={1}.", this, slaveOk);
             lock (_serverInstanceLock)
             {
                 // note: don't check that state is Disconnected here
                 // when reconnecting to a replica set state can transition from Connected -> Connecting -> Connected
-
                 SetState(MongoServerState.Connecting);
                 _connectException = null;
                 try
@@ -325,7 +348,9 @@ namespace MongoDB.Driver
                             VerifyState(connection);
                             if (!_isPrimary && !slaveOk)
                             {
-                                throw new MongoConnectionException("Server is not a primary and SlaveOk is false.");
+                                var ex = new MongoConnectionException("Server is not a primary and SlaveOk is false.");
+                                __trace.TraceException(TraceEventType.Error, ex);
+                                throw ex;
                             }
                         }
                         finally
@@ -333,8 +358,9 @@ namespace MongoDB.Driver
                             ReleaseConnection(connection);
                         }
                     }
-                    catch
+                    catch(Exception ex)
                     {
+                        __trace.TraceException(TraceEventType.Error, ex);
                         _connectionPool.Clear();
                         throw;
                     }
@@ -343,6 +369,7 @@ namespace MongoDB.Driver
                 }
                 catch (Exception ex)
                 {
+                    __trace.TraceException(TraceEventType.Error, ex);
                     SetState(MongoServerState.Disconnected);
                     _connectException = ex;
                     throw;
@@ -352,7 +379,7 @@ namespace MongoDB.Driver
 
         internal void Disconnect()
         {
-            // Console.WriteLine("MongoServerInstance[{0}]: Disconnect called.", sequentialId);
+            __trace.TraceInformation("{0}::disconnecting.", this);
             lock (_serverInstanceLock)
             {
                 if (_state == MongoServerState.Disconnecting)
@@ -385,6 +412,7 @@ namespace MongoDB.Driver
             {
                 if (_state != state)
                 {
+                    __trace.TraceVerbose("{0}::state changed from {1} to {2}.", this, _state, state);
                     _state = state;
                     OnStateChanged();
                 }
@@ -438,7 +466,9 @@ namespace MongoDB.Driver
                 isMasterResult = connection.RunCommand("admin.$cmd", QueryFlags.SlaveOk, isMasterCommand, false);
                 if (!isMasterResult.Ok)
                 {
-                    throw new MongoCommandException(isMasterResult);
+                    var ex = new MongoCommandException(isMasterResult);
+                    __trace.TraceException(TraceEventType.Error, ex);
+                    throw ex;
                 }
 
                 var isPrimary = isMasterResult.Response["ismaster", false].ToBoolean();
@@ -468,7 +498,9 @@ namespace MongoDB.Driver
                     // short term fix: if buildInfo fails due to auth we don't know the server version; see CSHARP-324
                     if (buildInfoResult.ErrorMessage != "need to login")
                     {
-                        throw new MongoCommandException(buildInfoResult);
+                        var ex = new MongoCommandException(buildInfoResult);
+                        __trace.TraceException(TraceEventType.Error, ex);
+                        throw ex;
                     }
                     buildInfo = null;
                 }
@@ -516,6 +548,7 @@ namespace MongoDB.Driver
             {
                 if (!ok)
                 {
+                    __trace.TraceInformation("{0}:verify state failed.", this);
                     _isMasterResult = isMasterResult;
                     _maxDocumentSize = MongoDefaults.MaxDocumentSize;
                     _maxMessageLength = MongoDefaults.MaxMessageLength;

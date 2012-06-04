@@ -23,6 +23,7 @@ using MongoDB.Bson;
 using MongoDB.Bson.Serialization;
 using MongoDB.Driver.Builders;
 using MongoDB.Driver.Internal;
+using System.Diagnostics;
 
 namespace MongoDB.Driver
 {
@@ -32,6 +33,10 @@ namespace MongoDB.Driver
     /// </summary>
     public abstract class MongoCursor : IEnumerable
     {
+        //private static fields
+        private static readonly TraceSource __trace = TracingConstants.CreateGeneralTraceSource();
+        private static readonly TraceSource __traceData = TracingConstants.CreateDataTraceSource();
+
         // private fields
         private MongoServer _server;
         private MongoDatabase _database;
@@ -260,14 +265,21 @@ namespace MongoDB.Driver
         /// <returns>The number of documents that match the query.</returns>
         public virtual long Count()
         {
-            _isFrozen = true;
-            var command = new CommandDocument
+            using (__trace.TraceStart("{0}::Count"))
             {
-                { "count", _collection.Name },
-                { "query", BsonDocumentWrapper.Create(_query) } // query is optional
-            };
-            var result = _database.RunCommand(command);
-            return result.Response["n"].ToInt64();
+                _isFrozen = true;
+                var command = new CommandDocument
+                {
+                    { "count", _collection.Name },
+                    { "query", BsonDocumentWrapper.Create(_query) } // query is optional
+                };
+                var result = _database.RunCommand(command);
+                if (__traceData.Switch.ShouldTrace(TraceEventType.Verbose))
+                {
+                    __traceData.TraceVerbose("{0}::received {1}", this, result.ToJson());
+                }
+                return result.Response["n"].ToInt64();
+            }
         }
 
         /// <summary>
@@ -286,35 +298,42 @@ namespace MongoDB.Driver
         /// <returns>An explanation of thow the query was executed.</returns>
         public virtual BsonDocument Explain(bool verbose)
         {
-            _isFrozen = true;
-            var clone = Clone<BsonDocument>();
-            clone.SetOption("$explain", true);
-            clone._limit = -clone._limit; // TODO: should this be -1?
-            var explanation = clone.FirstOrDefault();
-            if (!verbose)
+            using (__trace.TraceStart("{0}::Explain"))
             {
-                explanation.Remove("allPlans");
-                explanation.Remove("oldPlan");
-                if (explanation.Contains("shards"))
+                _isFrozen = true;
+                var clone = Clone<BsonDocument>();
+                clone.SetOption("$explain", true);
+                clone._limit = -clone._limit; // TODO: should this be -1?
+                var explanation = clone.FirstOrDefault();
+                if (!verbose)
                 {
-                    var shards = explanation["shards"];
-                    if (shards.BsonType == BsonType.Array)
+                    explanation.Remove("allPlans");
+                    explanation.Remove("oldPlan");
+                    if (explanation.Contains("shards"))
                     {
-                        foreach (BsonDocument shard in shards.AsBsonArray)
+                        var shards = explanation["shards"];
+                        if (shards.BsonType == BsonType.Array)
                         {
+                            foreach (BsonDocument shard in shards.AsBsonArray)
+                            {
+                                shard.Remove("allPlans");
+                                shard.Remove("oldPlan");
+                            }
+                        }
+                        else
+                        {
+                            var shard = shards.AsBsonDocument;
                             shard.Remove("allPlans");
                             shard.Remove("oldPlan");
                         }
                     }
-                    else
-                    {
-                        var shard = shards.AsBsonDocument;
-                        shard.Remove("allPlans");
-                        shard.Remove("oldPlan");
-                    }
                 }
+                if (__traceData.Switch.ShouldTrace(TraceEventType.Verbose))
+                {
+                    __traceData.TraceVerbose("{0}::received {1}", explanation.ToJson());
+                }
+                return explanation;
             }
-            return explanation;
         }
 
         /// <summary>
@@ -558,16 +577,23 @@ namespace MongoDB.Driver
         /// <returns>The size of the result set.</returns>
         public virtual long Size()
         {
-            _isFrozen = true;
-            var command = new CommandDocument
+            using (__trace.TraceStart("{0}::Size"))
             {
-                { "count", _collection.Name },
-                { "query", BsonDocumentWrapper.Create(_query) }, // query is optional
-                { "limit", _limit, _limit != 0 },
-                { "skip", _skip, _skip != 0 }
-            };
-            var result = _database.RunCommand(command);
-            return result.Response["n"].ToInt64();
+                _isFrozen = true;
+                var command = new CommandDocument
+                {
+                    { "count", _collection.Name },
+                    { "query", BsonDocumentWrapper.Create(_query) }, // query is optional
+                    { "limit", _limit, _limit != 0 },
+                    { "skip", _skip, _skip != 0 }
+                };
+                var result = _database.RunCommand(command);
+                if (__traceData.Switch.ShouldTrace(TraceEventType.Verbose))
+                {
+                    __traceData.TraceVerbose("{0}::received {1}", this, result);
+                }
+                return result.Response["n"].ToInt64();
+            }
         }
 
         // protected methods
@@ -598,6 +624,9 @@ namespace MongoDB.Driver
     /// <typeparam name="TDocument">The type of the documents returned.</typeparam>
     public class MongoCursor<TDocument> : MongoCursor, IEnumerable<TDocument>
     {
+        //private fields
+        private readonly Guid _activityId;
+
         // constructors
         /// <summary>
         /// Creates a new MongoCursor. It is very unlikely that you will call this constructor. Instead, see all the Find methods in MongoCollection.
@@ -607,6 +636,8 @@ namespace MongoDB.Driver
         public MongoCursor(MongoCollection collection, IMongoQuery query)
             : base(collection, query)
         {
+            //whatever the activity was when we were created is the activity with which we'll correlate traces.
+            _activityId = Trace.CorrelationManager.ActivityId;
         }
 
         // public methods
@@ -618,7 +649,7 @@ namespace MongoDB.Driver
         public virtual IEnumerator<TDocument> GetEnumerator()
         {
             IsFrozen = true;
-            return new MongoCursorEnumerator<TDocument>(this);
+            return new MongoCursorEnumerator<TDocument>(this, _activityId);
         }
 
         /// <summary>

@@ -24,6 +24,7 @@ using MongoDB.Bson.Serialization;
 using MongoDB.Driver.Builders;
 using MongoDB.Driver.GridFS;
 using MongoDB.Driver.Internal;
+using System.Diagnostics;
 
 namespace MongoDB.Driver
 {
@@ -32,6 +33,9 @@ namespace MongoDB.Driver
     /// </summary>
     public class MongoDatabase
     {
+        //private static fields
+        private static readonly TraceSource __trace = TracingConstants.CreateGeneralTraceSource();
+
         // private fields
         private object _databaseLock = new object();
         private MongoServer _server;
@@ -77,7 +81,11 @@ namespace MongoDB.Driver
                 // make sure commands get routed to the primary server by using slaveOk false
                 commandCollectionSettings.SlaveOk = false;
             }
-            _commandCollection = GetCollection(commandCollectionSettings);
+            using (__trace.TraceStart("MongoDatabase::ctor", this))
+            {
+                _commandCollection = GetCollection(commandCollectionSettings);
+                __trace.TraceInformation("{0}::created with settings {1}", this, _settings);
+            }
         }
 
         // factory methods
@@ -281,15 +289,19 @@ namespace MongoDB.Driver
         /// <param name="user">The user.</param>
         public virtual void AddUser(MongoUser user)
         {
-            var users = GetCollection("system.users");
-            var document = users.FindOne(Query.EQ("user", user.Username));
-            if (document == null)
+            using (__trace.TraceStart("{0}::AddUser", this))
             {
-                document = new BsonDocument("user", user.Username);
+                __trace.TraceInformation("{0}::adding user {1}", this, user.Username);
+                var users = GetCollection("system.users");
+                var document = users.FindOne(Query.EQ("user", user.Username));
+                if (document == null)
+                {
+                    document = new BsonDocument("user", user.Username);
+                }
+                document["readOnly"] = user.IsReadOnly;
+                document["pwd"] = user.PasswordHash;
+                users.Save(document);
             }
-            document["readOnly"] = user.IsReadOnly;
-            document["pwd"] = user.PasswordHash;
-            users.Save(document);
         }
 
         /// <summary>
@@ -322,12 +334,16 @@ namespace MongoDB.Driver
         /// <returns>A CommandResult.</returns>
         public virtual CommandResult CreateCollection(string collectionName, IMongoCollectionOptions options)
         {
-            var command = new CommandDocument("create", collectionName);
-            if (options != null)
+            using (__trace.TraceStart("{0}::CreateCollection", this))
             {
-                command.Merge(options.ToBsonDocument());
+                __trace.TraceInformation("{0}::creating collection {1} with options {2}", this, collectionName, options);
+                var command = new CommandDocument("create", collectionName);
+                if (options != null)
+                {
+                    command.Merge(options.ToBsonDocument());
+                }
+                return RunCommand(command);
             }
-            return RunCommand(command);
         }
 
         /// <summary>
@@ -375,20 +391,25 @@ namespace MongoDB.Driver
         /// <returns>A CommandResult.</returns>
         public virtual CommandResult DropCollection(string collectionName)
         {
-            try
+            using (__trace.TraceStart("{0}::DropCollection", this))
             {
-                var command = new CommandDocument("drop", collectionName);
-                var result = RunCommand(command);
-                _server.IndexCache.Reset(_name, collectionName);
-                return result;
-            }
-            catch (MongoCommandException ex)
-            {
-                if (ex.CommandResult.ErrorMessage == "ns not found")
+                __trace.TraceInformation("{0}::dropping collection {1}", this, collectionName);
+                try
                 {
-                    return ex.CommandResult;
+                    var command = new CommandDocument("drop", collectionName);
+                    var result = RunCommand(command);
+                    _server.IndexCache.Reset(_name, collectionName);
+                    return result;
                 }
-                throw;
+                catch (MongoCommandException ex)
+                {
+                    if (ex.CommandResult.ErrorMessage == "ns not found")
+                    {
+                        return ex.CommandResult;
+                    }
+                    __trace.TraceException(TraceEventType.Error, ex);
+                    throw;
+                }
             }
         }
 
@@ -401,14 +422,17 @@ namespace MongoDB.Driver
         /// <returns>The result of evaluating the code.</returns>
         public virtual BsonValue Eval(EvalFlags flags, BsonJavaScript code, params object[] args)
         {
-            var command = new CommandDocument
+            using (__trace.TraceStart("{0}::Eval", this))
             {
-                { "$eval", code },
-                { "args", BsonArray.Create(args), args != null && args.Length > 0 },
-                { "nolock", true, (flags & EvalFlags.NoLock) != 0 }
-            };
-            var result = RunCommand(command);
-            return result.Response["retval"];
+                var command = new CommandDocument
+                {
+                    { "$eval", code },
+                    { "args", BsonArray.Create(args), args != null && args.Length > 0 },
+                    { "nolock", true, (flags & EvalFlags.NoLock) != 0 }
+                };
+                var result = RunCommand(command);
+                return result.Response["retval"];
+            }
         }
 
         /// <summary>
@@ -451,14 +475,17 @@ namespace MongoDB.Driver
         /// <returns>An instance of nominalType (or null if the document was not found).</returns>
         public virtual object FetchDBRefAs(Type documentType, MongoDBRef dbRef)
         {
-            if (dbRef.DatabaseName != null && dbRef.DatabaseName != _name)
+            using (__trace.TraceStart("{0}::FetchDBRefAs", this))
             {
-                return _server.FetchDBRefAs(documentType, dbRef);
-            }
+                if (dbRef.DatabaseName != null && dbRef.DatabaseName != _name)
+                {
+                    return _server.FetchDBRefAs(documentType, dbRef);
+                }
 
-            var collection = GetCollection(dbRef.CollectionName);
-            var query = Query.EQ("_id", dbRef.Id);
-            return collection.FindOneAs(documentType, query);
+                var collection = GetCollection(dbRef.CollectionName);
+                var query = Query.EQ("_id", dbRef.Id);
+                return collection.FindOneAs(documentType, query);
+            }
         }
 
         /// <summary>
@@ -467,17 +494,20 @@ namespace MongoDB.Driver
         /// <returns>An array of users.</returns>
         public virtual MongoUser[] FindAllUsers()
         {
-            var result = new List<MongoUser>();
-            var users = GetCollection("system.users");
-            foreach (var document in users.FindAll())
+            using (__trace.TraceStart("{0}::FindAllUsers", this))
             {
-                var username = document["user"].AsString;
-                var passwordHash = document["pwd"].AsString;
-                var readOnly = document["readOnly"].ToBoolean();
-                var user = new MongoUser(username, passwordHash, readOnly);
-                result.Add(user);
-            };
-            return result.ToArray();
+                var result = new List<MongoUser>();
+                var users = GetCollection("system.users");
+                foreach (var document in users.FindAll())
+                {
+                    var username = document["user"].AsString;
+                    var passwordHash = document["pwd"].AsString;
+                    var readOnly = document["readOnly"].ToBoolean();
+                    var user = new MongoUser(username, passwordHash, readOnly);
+                    result.Add(user);
+                };
+                return result.ToArray();
+            }
         }
 
         /// <summary>
@@ -487,18 +517,21 @@ namespace MongoDB.Driver
         /// <returns>The user.</returns>
         public virtual MongoUser FindUser(string username)
         {
-            var users = GetCollection("system.users");
-            var query = Query.EQ("user", username);
-            var document = users.FindOne(query);
-            if (document != null)
+            using (__trace.TraceStart("{0}::FindUser", this))
             {
-                var passwordHash = document["pwd"].AsString;
-                var readOnly = document["readOnly"].ToBoolean();
-                return new MongoUser(username, passwordHash, readOnly);
-            }
-            else
-            {
-                return null;
+                var users = GetCollection("system.users");
+                var query = Query.EQ("user", username);
+                var document = users.FindOne(query);
+                if (document != null)
+                {
+                    var passwordHash = document["pwd"].AsString;
+                    var readOnly = document["readOnly"].ToBoolean();
+                    return new MongoUser(username, passwordHash, readOnly);
+                }
+                else
+                {
+                    return null;
+                }
             }
         }
 
@@ -564,18 +597,22 @@ namespace MongoDB.Driver
         /// <returns>An instance of MongoCollection.</returns>
         public virtual MongoCollection GetCollection(MongoCollectionSettings collectionSettings)
         {
-            lock (_databaseLock)
+            using (__trace.TraceStart("{0}::GetCollection"))
             {
-                MongoCollection collection;
-                if (!_collections.TryGetValue(collectionSettings, out collection))
+                lock (_databaseLock)
                 {
-                    var collectionDefinition = typeof(MongoCollection<>);
-                    var collectionType = collectionDefinition.MakeGenericType(collectionSettings.DefaultDocumentType);
-                    var constructorInfo = collectionType.GetConstructor(new Type[] { typeof(MongoDatabase), collectionSettings.GetType() });
-                    collection = (MongoCollection)constructorInfo.Invoke(new object[] { this, collectionSettings });
-                    _collections.Add(collectionSettings, collection);
+                    MongoCollection collection;
+                    if (!_collections.TryGetValue(collectionSettings, out collection))
+                    {
+                        var collectionDefinition = typeof(MongoCollection<>);
+                        var collectionType = collectionDefinition.MakeGenericType(collectionSettings.DefaultDocumentType);
+                        var constructorInfo = collectionType.GetConstructor(new Type[] { typeof(MongoDatabase), collectionSettings.GetType() });
+                        collection = (MongoCollection)constructorInfo.Invoke(new object[] { this, collectionSettings });
+                        _collections.Add(collectionSettings, collection);
+                        __trace.TraceInformation("{0}::added {1}.", this, collection);
+                    }
+                    return collection;
                 }
-                return collection;
             }
         }
 
@@ -644,18 +681,22 @@ namespace MongoDB.Driver
         /// <returns>A list of collection names.</returns>
         public virtual IEnumerable<string> GetCollectionNames()
         {
-            List<string> collectionNames = new List<string>();
-            var namespaces = GetCollection("system.namespaces");
-            var prefix = _name + ".";
-            foreach (var @namespace in namespaces.FindAll())
+            using (__trace.TraceStart("{0}::GetCollectionNames", this))
             {
-                string collectionName = @namespace["name"].AsString;
-                if (!collectionName.StartsWith(prefix, StringComparison.Ordinal)) { continue; }
-                if (collectionName.IndexOf('$') != -1) { continue; }
-                collectionNames.Add(collectionName.Substring(prefix.Length));
+                List<string> collectionNames = new List<string>();
+                var namespaces = GetCollection("system.namespaces");
+                var prefix = _name + ".";
+                foreach (var @namespace in namespaces.FindAll())
+                {
+                    string collectionName = @namespace["name"].AsString;
+                    if (!collectionName.StartsWith(prefix, StringComparison.Ordinal)) { continue; }
+                    if (collectionName.IndexOf('$') != -1) { continue; }
+                    collectionNames.Add(collectionName.Substring(prefix.Length));
+                }
+                collectionNames.Sort();
+                __trace.TraceVerbose("{0}::collections names are [{1}]", this, string.Join(",", collectionNames.ToArray()));
+                return collectionNames;
             }
-            collectionNames.Sort();
-            return collectionNames;
         }
 
         /// <summary>
@@ -664,8 +705,11 @@ namespace MongoDB.Driver
         /// <returns>The current operation.</returns>
         public virtual BsonDocument GetCurrentOp()
         {
-            var collection = GetCollection("$cmd.sys.inprog");
-            return collection.FindOne();
+            using (__trace.TraceStart("{0}::GetCurrentOp", this))
+            {
+                var collection = GetCollection("$cmd.sys.inprog");
+                return collection.FindOne();
+            }
         }
 
         /// <summary>
@@ -684,11 +728,16 @@ namespace MongoDB.Driver
         /// <returns>The last error (<see cref=" GetLastErrorResult"/>)</returns>
         public virtual GetLastErrorResult GetLastError()
         {
-            if (Server.RequestNestingLevel == 0)
+            using (__trace.TraceStart("{0}::GetLastError", this))
             {
-                throw new InvalidOperationException("GetLastError can only be called if RequestStart has been called first.");
+                if (Server.RequestNestingLevel == 0)
+                {
+                    var ex = new InvalidOperationException("GetLastError can only be called if RequestStart has been called first.");
+                    __trace.TraceException(TraceEventType.Error, ex);
+                    throw ex;
+                }
+                return RunCommandAs<GetLastErrorResult>("getlasterror"); // use all lowercase for backward compatibility
             }
-            return RunCommandAs<GetLastErrorResult>("getlasterror"); // use all lowercase for backward compatibility
         }
 
         // TODO: mongo shell has GetPrevError at the database level?
@@ -702,9 +751,12 @@ namespace MongoDB.Driver
         /// <returns>A cursor.</returns>
         public MongoCursor<SystemProfileInfo> GetProfilingInfo(IMongoQuery query)
         {
-            var collectionSettings = new MongoCollectionSettings<SystemProfileInfo>(this, "system.profile") { SlaveOk = false };
-            var collection = GetCollection<SystemProfileInfo>(collectionSettings);
-            return collection.Find(query);
+            using (__trace.TraceStart("{0}::GetProfilingInfo", this))
+            {
+                var collectionSettings = new MongoCollectionSettings<SystemProfileInfo>(this, "system.profile") { SlaveOk = false };
+                var collection = GetCollection<SystemProfileInfo>(collectionSettings);
+                return collection.Find(query);
+            }
         }
 
         /// <summary>
@@ -713,8 +765,11 @@ namespace MongoDB.Driver
         /// <returns>The profiling level.</returns>
         public GetProfilingLevelResult GetProfilingLevel()
         {
-            var command = new CommandDocument("profile", -1);
-            return RunCommandAs<GetProfilingLevelResult>(command);
+            using (__trace.TraceStart("{0}::GetProfilingLevel", this))
+            {
+                var command = new CommandDocument("profile", -1);
+                return RunCommandAs<GetProfilingLevelResult>(command);
+            }
         }
 
         /// <summary>
@@ -733,7 +788,10 @@ namespace MongoDB.Driver
         /// <returns>An instance of DatabaseStatsResult.</returns>
         public virtual DatabaseStatsResult GetStats()
         {
-            return RunCommandAs<DatabaseStatsResult>("dbstats");
+            using (__trace.TraceStart("{0}::GetStats", this))
+            {
+                return RunCommandAs<DatabaseStatsResult>("dbstats");
+            }
         }
 
         /// <summary>
@@ -788,8 +846,12 @@ namespace MongoDB.Driver
         /// <param name="username">The username to remove.</param>
         public virtual void RemoveUser(string username)
         {
-            var users = GetCollection("system.users");
-            users.Remove(Query.EQ("user", username));
+            using (__trace.TraceStart("{0}::RemoveUser", this))
+            {
+                __trace.TraceInformation("{0}::removing user {1}", this, username);
+                var users = GetCollection("system.users");
+                users.Remove(Query.EQ("user", username));
+            }
         }
 
         /// <summary>
@@ -830,28 +892,32 @@ namespace MongoDB.Driver
             bool dropTarget,
             MongoCredentials adminCredentials)
         {
-            if (oldCollectionName == null)
+            using (__trace.TraceStart("{0}::RenameCollection", this))
             {
-                throw new ArgumentNullException("oldCollectionName");
-            }
-            if (newCollectionName == null)
-            {
-                throw new ArgumentNullException("newCollectionName");
-            }
-            string message;
-            if (!IsCollectionNameValid(newCollectionName, out message))
-            {
-                throw new ArgumentOutOfRangeException("newCollectionName", message);
-            }
+                __trace.TraceInformation("{0}::renaming collection from {1} to {2}", this, oldCollectionName, newCollectionName);
+                if (oldCollectionName == null)
+                {
+                    throw new ArgumentNullException("oldCollectionName");
+                }
+                if (newCollectionName == null)
+                {
+                    throw new ArgumentNullException("newCollectionName");
+                }
+                string message;
+                if (!IsCollectionNameValid(newCollectionName, out message))
+                {
+                    throw new ArgumentOutOfRangeException("newCollectionName", message);
+                }
 
-            var command = new CommandDocument
-            {
-                { "renameCollection", string.Format("{0}.{1}", _name, oldCollectionName) },
-                { "to", string.Format("{0}.{1}", _name, newCollectionName) },
-                { "dropTarget", dropTarget, dropTarget } // only added if dropTarget is true
-            };
-            var adminDatabase = _server.GetDatabase("admin", adminCredentials);
-            return adminDatabase.RunCommand(command);
+                var command = new CommandDocument
+                {
+                    { "renameCollection", string.Format("{0}.{1}", _name, oldCollectionName) },
+                    { "to", string.Format("{0}.{1}", _name, newCollectionName) },
+                    { "dropTarget", dropTarget, dropTarget } // only added if dropTarget is true
+                };
+                var adminDatabase = _server.GetDatabase("admin", adminCredentials);
+                return adminDatabase.RunCommand(command);
+            }
         }
 
         /// <summary>
@@ -962,25 +1028,32 @@ namespace MongoDB.Driver
         /// <returns>A TCommandResult</returns>
         public virtual CommandResult RunCommandAs(Type commandResultType, IMongoCommand command)
         {
-            var response = CommandCollection.FindOne(command);
-            if (response == null)
+            using (__trace.TraceStart("{0}::RunCommandAs", this))
             {
-                var commandName = command.ToBsonDocument().GetElement(0).Name;
-                var message = string.Format("Command '{0}' failed. No response returned.", commandName);
-                throw new MongoCommandException(message);
-            }
-            var commandResult = (CommandResult)Activator.CreateInstance(commandResultType); // constructor can't have arguments
-            commandResult.Initialize(command, response); // so two phase construction required
-            if (!commandResult.Ok)
-            {
-                if (commandResult.ErrorMessage == "not master")
+                var response = CommandCollection.FindOne(command);
+                if (response == null)
                 {
-                    // TODO: figure out which instance gave the error and set its state to Unknown
-                    _server.Disconnect();
+                    var commandName = command.ToBsonDocument().GetElement(0).Name;
+                    var message = string.Format("Command '{0}' failed. No response returned.", commandName);
+                    var ex = new MongoCommandException(message);
+                    __trace.TraceException(TraceEventType.Error, ex);
+                    throw ex;
                 }
-                throw new MongoCommandException(commandResult);
+                var commandResult = (CommandResult)Activator.CreateInstance(commandResultType); // constructor can't have arguments
+                commandResult.Initialize(command, response); // so two phase construction required
+                if (!commandResult.Ok)
+                {
+                    if (commandResult.ErrorMessage == "not master")
+                    {
+                        // TODO: figure out which instance gave the error and set its state to Unknown
+                        _server.Disconnect();
+                    }
+                    var ex = new MongoCommandException(commandResult);
+                    __trace.TraceException(TraceEventType.Critical, ex);
+                    throw ex;
+                }
+                return commandResult;
             }
-            return commandResult;
         }
 
         /// <summary>
@@ -1013,12 +1086,16 @@ namespace MongoDB.Driver
         /// <returns>A CommandResult.</returns>
         public virtual CommandResult SetProfilingLevel(ProfilingLevel level, TimeSpan slow)
         {
-            var command = new CommandDocument
+            using (__trace.TraceStart("{0}::SetProfilingLevel", this))
             {
-                { "profile", (int) level },
-                { "slowms", slow.TotalMilliseconds, slow != TimeSpan.Zero } // optional
-            };
-            return RunCommand(command);
+                __trace.TraceInformation("{0}::setting profiling level to {1} with slow queries {2}", this, level, slow);
+                var command = new CommandDocument
+                {
+                    { "profile", (int) level },
+                    { "slowms", slow.TotalMilliseconds, slow != TimeSpan.Zero } // optional
+                };
+                return RunCommand(command);
+            }
         }
 
         /// <summary>

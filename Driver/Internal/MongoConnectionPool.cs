@@ -19,6 +19,7 @@ using System.Linq;
 using System.Net;
 using System.Text;
 using System.Threading;
+using System.Diagnostics;
 
 namespace MongoDB.Driver.Internal
 {
@@ -27,6 +28,9 @@ namespace MongoDB.Driver.Internal
     /// </summary>
     public class MongoConnectionPool
     {
+        // private static fields
+        private static readonly TraceSource __trace = TracingConstants.CreateGeneralTraceSource();
+
         // private fields
         private object _connectionPoolLock = new object();
         private MongoServer _server;
@@ -49,7 +53,7 @@ namespace MongoDB.Driver.Internal
 
             var dueTime = TimeSpan.FromSeconds(0);
             var period = TimeSpan.FromSeconds(10);
-            _timer = new Timer(TimerCallback, null, dueTime, period);
+            _timer = new Timer(TestServers, null, dueTime, period);
         }
 
         // public properties
@@ -85,19 +89,34 @@ namespace MongoDB.Driver.Internal
             get { return _serverInstance; }
         }
 
+        /// <summary>
+        /// Returns a <see cref="System.String"/> that represents this instance.
+        /// </summary>
+        /// <returns>
+        /// A <see cref="System.String"/> that represents this instance.
+        /// </returns>
+        public override string ToString()
+        {
+            return string.Format("MongoConnectionPool[{0},Address={1}]", _serverInstance.SequentialId, _serverInstance.Address);
+        }
+
         // internal methods
         internal MongoConnection AcquireConnection(MongoDatabase database)
         {
             if (database != null && database.Server != _server)
             {
-                throw new ArgumentException("This connection pool is for a different server.", "database");
+                var ex = new ArgumentException("This connection pool is for a different server.", "database");
+                __trace.TraceException(TraceEventType.Error, ex);
+                throw ex;
             }
 
             lock (_connectionPoolLock)
             {
                 if (_waitQueueSize >= _server.Settings.WaitQueueSize)
                 {
-                    throw new MongoConnectionException("Too many threads are already waiting for a connection.");
+                    var ex = new MongoConnectionException("Too many threads are already waiting for a connection.");
+                    __trace.TraceException(TraceEventType.Error, ex);
+                    throw ex;
                 }
 
                 _waitQueueSize += 1;
@@ -130,8 +149,7 @@ namespace MongoDB.Driver.Internal
                                 }
                             }
 
-                            // otherwise replace the least recently used connection with a brand new one
-                            // if this happens a lot the connection pool size should be increased
+                            __trace.TraceInformation("{0}::replacing LRU connection with a new one.  Consider increasing the maximum connection pool size", this);
                             _availableConnections[0].Close();
                             _availableConnections.RemoveAt(0);
                             return new MongoConnection(this);
@@ -144,6 +162,7 @@ namespace MongoDB.Driver.Internal
                             // connection will be opened later outside of the lock
                             var connection = new MongoConnection(this);
                             _poolSize += 1;
+                            __trace.TraceVerbose("{0}::increasing pool size from {1} to {2}.", this, _poolSize - 1, _poolSize);
                             return connection;
                         }
 
@@ -155,7 +174,9 @@ namespace MongoDB.Driver.Internal
                         }
                         else
                         {
-                            throw new TimeoutException("Timeout waiting for a MongoConnection.");
+                            var ex = new TimeoutException("Timeout waiting for a MongoConnection.");
+                            __trace.TraceException(TraceEventType.Critical, ex);
+                            throw ex;
                         }
                     }
                 }
@@ -175,8 +196,10 @@ namespace MongoDB.Driver.Internal
                     connection.Close();
                 }
                 _availableConnections.Clear();
+                __trace.TraceVerbose("{0}::setting pool size to 0, was {1}.", this, _poolSize);
                 _poolSize = 0;
                 _generationId += 1;
+                __trace.TraceVerbose("{0}::increasing generation from {1} to {2}.", this, _generationId - 1, _generationId);
                 Monitor.Pulse(_connectionPoolLock);
             }
         }
@@ -185,12 +208,15 @@ namespace MongoDB.Driver.Internal
         {
             if (connection.ConnectionPool != this)
             {
-                throw new ArgumentException("The connection being released does not belong to this connection pool.", "connection");
+                var ex = new ArgumentException("The connection being released does not belong to this connection pool.", "connection");
+                __trace.TraceException(TraceEventType.Error, ex);
+                throw ex;
             }
 
             // if the connection is no longer open remove it from the pool
             if (connection.State != MongoConnectionState.Open)
             {
+                __trace.TraceVerbose("{0}::removing non-open connection {1}.", connection);
                 RemoveConnection(connection);
                 return;
             }
@@ -201,6 +227,7 @@ namespace MongoDB.Driver.Internal
             {
                 if (DateTime.UtcNow - connection.CreatedAt > _server.Settings.MaxConnectionLifeTime)
                 {
+                    __trace.TraceVerbose("{0}::removing connection {1} as it has reached the maximum lifetime of {2}.", connection, _server.Settings.MaxConnectionIdleTime);
                     RemoveConnection(connection);
                     return;
                 }
@@ -268,6 +295,7 @@ namespace MongoDB.Driver.Internal
                             {
                                 _availableConnections.Add(connection);
                                 _poolSize++;
+                                __trace.TraceVerbose("{0}::increasing pool size from {0} to {1}.", this, _poolSize - 1, _poolSize);
                                 added = true;
                                 Monitor.Pulse(_connectionPoolLock);
                             }
@@ -279,19 +307,19 @@ namespace MongoDB.Driver.Internal
                             connection.Close();
                         }
                     }
-                    catch
+                    catch (Exception ex)
                     {
-                        // TODO: log exception?
+                        __trace.TraceException(TraceEventType.Warning, ex);
                         // wait a bit before trying again
                         Thread.Sleep(TimeSpan.FromSeconds(1));
                     }
                 }
             }
-            catch
+            catch (Exception ex)
             {
+                __trace.TraceException(TraceEventType.Warning, ex);
                 // don't let unhandled exceptions leave EnsureMinConnectionPoolSizeWorkItem
                 // if the minimum connection pool size was not achieved a new work item will be queued shortly
-                // TODO: log exception?
             }
             finally
             {
@@ -308,6 +336,7 @@ namespace MongoDB.Driver.Internal
                 {
                     _availableConnections.Remove(connection); // it might or might not be in availableConnections (but remove it if it is)
                     _poolSize -= 1;
+                    __trace.TraceVerbose("{0}::decreasing pool size from {0} to {1}.", this, _poolSize + 1, _poolSize);
                     _connectionsRemovedSinceLastTimerTick += 1;
                     Monitor.Pulse(_connectionPoolLock);
                 }
@@ -317,89 +346,93 @@ namespace MongoDB.Driver.Internal
             connection.Close();
         }
 
-        private void TimerCallback(object state)
+        private void TestServers(object state)
         {
-            // make sure only one instance of TimerCallback is running at a time
-            if (_inTimerCallback)
+            //need to start a new activity, otherwise it would belong to whatever the activity was that existed the first time the callback was invoked.
+            using (__trace.TraceStartWithoutTransfer("{0}::TestServers", this))
             {
-                // Console.WriteLine("MongoConnectionPool[{0}] TimerCallback skipped because previous callback has not completed.", serverInstance.SequentialId);
-                return;
-            }
-
-            // Console.WriteLine("MongoConnectionPool[{0}]: TimerCallback called.", serverInstance.SequentialId);
-            _inTimerCallback = true;
-            try
-            {
-                var server = _serverInstance.Server;
-                if (server.State == MongoServerState.Disconnected || server.State == MongoServerState.Disconnecting)
+                // make sure only one instance of TimerCallback is running at a time
+                if (_inTimerCallback)
                 {
                     return;
                 }
 
-                // on every timer callback verify the state of the server instance because it might have changed
-                // we do this even if this one instance is currently Disconnected so we can discover when a disconnected instance comes back online
-                _serverInstance.VerifyState();
-
-                // note: the state could have changed to Disconnected when VerifyState was called
-                if (_serverInstance.State == MongoServerState.Disconnected)
+                _inTimerCallback = true;
+                try
                 {
-                    return;
-                }
-
-                MongoConnection connectionToRemove = null;
-                lock (_connectionPoolLock)
-                {
-                    // only remove one connection per timer tick to avoid reconnection storms
-                    if (_connectionsRemovedSinceLastTimerTick == 0)
+                    var server = _serverInstance.Server;
+                    if (server.State == MongoServerState.Disconnected || server.State == MongoServerState.Disconnecting)
                     {
-                        MongoConnection oldestConnection = null;
-                        MongoConnection lruConnection = null;
-                        foreach (var connection in _availableConnections)
-                        {
-                            if (oldestConnection == null || connection.CreatedAt < oldestConnection.CreatedAt)
-                            {
-                                oldestConnection = connection;
-                            }
-                            if (lruConnection == null || connection.LastUsedAt < lruConnection.LastUsedAt)
-                            {
-                                lruConnection = connection;
-                            }
-                        }
-
-                        // remove old connections before idle connections
-                        var now = DateTime.UtcNow;
-                        if (oldestConnection != null && now > oldestConnection.CreatedAt + server.Settings.MaxConnectionLifeTime)
-                        {
-                            connectionToRemove = oldestConnection;
-                        }
-                        else if (_poolSize > server.Settings.MinConnectionPoolSize && lruConnection != null && now > lruConnection.LastUsedAt + server.Settings.MaxConnectionIdleTime)
-                        {
-                            connectionToRemove = lruConnection;
-                        }
+                        return;
                     }
-                    _connectionsRemovedSinceLastTimerTick = 0;
-                }
 
-                // remove connection (if any) outside of lock
-                if (connectionToRemove != null)
-                {
-                    RemoveConnection(connectionToRemove);
-                }
+                    // on every timer callback verify the state of the server instance because it might have changed
+                    // we do this even if this one instance is currently Disconnected so we can discover when a disconnected instance comes back online
+                    _serverInstance.VerifyState();
 
-                if (_poolSize < server.Settings.MinConnectionPoolSize)
-                {
-                    ThreadPool.QueueUserWorkItem(EnsureMinConnectionPoolSizeWorkItem, _generationId);
+                    // note: the state could have changed to Disconnected when VerifyState was called
+                    if (_serverInstance.State == MongoServerState.Disconnected)
+                    {
+                        return;
+                    }
+
+                    MongoConnection connectionToRemove = null;
+                    lock (_connectionPoolLock)
+                    {
+                        // only remove one connection per timer tick to avoid reconnection storms
+                        if (_connectionsRemovedSinceLastTimerTick == 0)
+                        {
+                            MongoConnection oldestConnection = null;
+                            MongoConnection lruConnection = null;
+                            foreach (var connection in _availableConnections)
+                            {
+                                if (oldestConnection == null || connection.CreatedAt < oldestConnection.CreatedAt)
+                                {
+                                    oldestConnection = connection;
+                                }
+                                if (lruConnection == null || connection.LastUsedAt < lruConnection.LastUsedAt)
+                                {
+                                    lruConnection = connection;
+                                }
+                            }
+
+                            // remove old connections before idle connections
+                            var now = DateTime.UtcNow;
+                            if (oldestConnection != null && now > oldestConnection.CreatedAt + server.Settings.MaxConnectionLifeTime)
+                            {
+                                connectionToRemove = oldestConnection;
+                                __trace.TraceVerbose("{0}::removing connection {1} as it has reached the maximum lifetime of {2}.", connectionToRemove, _server.Settings.MaxConnectionIdleTime);
+                            }
+                            else if (_poolSize > server.Settings.MinConnectionPoolSize && lruConnection != null && now > lruConnection.LastUsedAt + server.Settings.MaxConnectionIdleTime)
+                            {
+                                connectionToRemove = lruConnection;
+                                __trace.TraceVerbose("{0}::removing LRU connection {1}.", connectionToRemove);
+                            }
+                        }
+                        _connectionsRemovedSinceLastTimerTick = 0;
+                    }
+
+                    // remove connection (if any) outside of lock
+                    if (connectionToRemove != null)
+                    {
+                        RemoveConnection(connectionToRemove);
+                    }
+
+                    if (_poolSize < server.Settings.MinConnectionPoolSize)
+                    {
+                        ThreadPool.QueueUserWorkItem(EnsureMinConnectionPoolSizeWorkItem, _generationId);
+                    }
                 }
-            }
-            catch
-            {
-                // don't let any unhandled exceptions leave TimerCallback
-                // server state will already have been change by earlier exception handling
-                // TODO: log exception?
-            }
-            finally
-            {
-                _inTimerCallback = false;
+                catch (Exception ex)
+                {
+                    __trace.TraceException(TraceEventType.Warning, ex);
+                    // don't let any unhandled exceptions leave TimerCallback
+                    // server state will already have been change by earlier exception handling
+                }
+                finally
+                {
+                    _inTimerCallback = false;
+                }
             }
         }
     }

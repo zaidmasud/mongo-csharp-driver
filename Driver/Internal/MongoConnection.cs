@@ -24,6 +24,8 @@ using System.Text;
 using MongoDB.Bson;
 using MongoDB.Bson.IO;
 using MongoDB.Bson.Serialization;
+using System.Diagnostics;
+using System.Threading;
 
 namespace MongoDB.Driver.Internal
 {
@@ -51,6 +53,11 @@ namespace MongoDB.Driver.Internal
     /// </summary>
     public class MongoConnection
     {
+        //private static fields
+        private static readonly TraceSource __trace = TracingConstants.CreateGeneralTraceSource();
+        private static readonly TraceSource __traceData = TracingConstants.CreateDataTraceSource();
+        private static int __nextSequentialId;
+
         // private fields
         private object _connectionLock = new object();
         private MongoServerInstance _serverInstance;
@@ -62,6 +69,7 @@ namespace MongoDB.Driver.Internal
         private DateTime _lastUsedAt; // set every time the connection is Released
         private int _messageCounter;
         private int _requestId;
+        private int _sequentialId;
         private Dictionary<string, Authentication> _authentications = new Dictionary<string, Authentication>();
 
         // constructors
@@ -72,6 +80,7 @@ namespace MongoDB.Driver.Internal
             _generationId = connectionPool.GenerationId;
             _createdAt = DateTime.UtcNow;
             _state = MongoConnectionState.Initial;
+            _sequentialId = Interlocked.Increment(ref __nextSequentialId);
         }
 
         internal MongoConnection(MongoServerInstance serverInstance)
@@ -79,6 +88,7 @@ namespace MongoDB.Driver.Internal
             _serverInstance = serverInstance;
             _createdAt = DateTime.UtcNow;
             _state = MongoConnectionState.Initial;
+            _sequentialId = Interlocked.Increment(ref __nextSequentialId);
         }
 
         // public properties
@@ -132,6 +142,14 @@ namespace MongoDB.Driver.Internal
         }
 
         /// <summary>
+        /// Gets the sequential id.
+        /// </summary>
+        public int SequentialId
+        {
+            get { return _sequentialId; }
+        }
+
+        /// <summary>
         /// Gets the server instance this connection is connected to.
         /// </summary>
         public MongoServerInstance ServerInstance
@@ -147,11 +165,22 @@ namespace MongoDB.Driver.Internal
             get { return _state; }
         }
 
+        /// <summary>
+        /// Returns a <see cref="System.String"/> that represents this instance.
+        /// </summary>
+        /// <returns>
+        /// A <see cref="System.String"/> that represents this instance.
+        /// </returns>
+        public override string ToString()
+        {
+            return string.Format("MongoConnection[{0},{1}]", _sequentialId, _serverInstance.Address);
+        }
+
         // internal methods
         // assume that IsAuthenticated was called first and returned false
         internal bool CanAuthenticate(MongoDatabase database)
         {
-            if (_state == MongoConnectionState.Closed) { throw new InvalidOperationException("Connection is closed."); }
+            EnsureOpenConnection();
             if (database == null)
             {
                 return true;
@@ -194,12 +223,14 @@ namespace MongoDB.Driver.Internal
 
         internal void CheckAuthentication(MongoDatabase database)
         {
-            if (_state == MongoConnectionState.Closed) { throw new InvalidOperationException("Connection is closed."); }
+            EnsureOpenConnection();
             if (database.Credentials == null)
             {
                 if (_authentications.Count != 0)
                 {
-                    throw new InvalidOperationException("Connection requires credentials.");
+                    var ex = new InvalidOperationException("Connection requires credentials.");
+                    __trace.TraceException(TraceEventType.Error, ex);
+                    throw ex;
                 }
             }
             else
@@ -214,11 +245,15 @@ namespace MongoDB.Driver.Internal
                         // this shouldn't happen because a connection would have been chosen from the connection pool only if it was viable
                         if (authenticationDatabaseName == "admin")
                         {
-                            throw new MongoInternalException("Connection already authenticated to the admin database with different credentials.");
+                            var ex = new MongoInternalException("Connection already authenticated to the admin database with different credentials.");
+                            __trace.TraceException(TraceEventType.Error, ex);
+                            throw ex;
                         }
                         else
                         {
-                            throw new MongoInternalException("Connection already authenticated to the database with different credentials.");
+                            var ex = new MongoInternalException("Connection already authenticated to the database with different credentials.");
+                            __trace.TraceException(TraceEventType.Error, ex);
+                            throw ex;
                         }
                     }
                     authentication.LastUsed = DateTime.UtcNow;
@@ -228,7 +263,9 @@ namespace MongoDB.Driver.Internal
                     if (authenticationDatabaseName == "admin" && _authentications.Count != 0)
                     {
                         // this shouldn't happen because a connection would have been chosen from the connection pool only if it was viable
-                        throw new MongoInternalException("The connection cannot be authenticated against the admin database because it is already authenticated against other databases.");
+                        var ex = new MongoInternalException("The connection cannot be authenticated against the admin database because it is already authenticated against other databases.");
+                        __trace.TraceException(TraceEventType.Error, ex);
+                        throw ex;
                     }
                     Authenticate(authenticationDatabaseName, database.Credentials);
                 }
@@ -237,6 +274,7 @@ namespace MongoDB.Driver.Internal
 
         internal void Close()
         {
+            __trace.TraceVerbose("{0}::closing.", this);
             lock (_connectionLock)
             {
                 if (_state != MongoConnectionState.Closed)
@@ -247,7 +285,8 @@ namespace MongoDB.Driver.Internal
                         {
                             // even though MSDN says TcpClient.Close doesn't close the underlying socket
                             // it actually does (as proven by disassembling TcpClient and by experimentation)
-                            try { _tcpClient.Close(); } catch { } // ignore exceptions
+                            try { _tcpClient.Close(); }
+                            catch { } // ignore exceptions
                         }
                         _tcpClient = null;
                     }
@@ -258,7 +297,7 @@ namespace MongoDB.Driver.Internal
 
         internal bool IsAuthenticated(MongoDatabase database)
         {
-            if (_state == MongoConnectionState.Closed) { throw new InvalidOperationException("Connection is closed."); }
+            EnsureOpenConnection();
             if (database == null)
             {
                 return true;
@@ -286,11 +325,25 @@ namespace MongoDB.Driver.Internal
             }
         }
 
+        private void EnsureOpenConnection()
+        {
+            if (_state == MongoConnectionState.Closed)
+            {
+                var ex = new InvalidOperationException("Connection is closed.");
+                __trace.TraceException(TraceEventType.Error, ex);
+                throw ex;
+            }
+        }
+
         internal void Open()
         {
+            __trace.TraceVerbose("{0}::opening.", this);
+
             if (_state != MongoConnectionState.Initial)
             {
-                throw new InvalidOperationException("Open called more than once.");
+                var ex = new InvalidOperationException("Open called more than once.");
+                __trace.TraceException(TraceEventType.Error, ex);
+                throw ex;
             }
 
             var ipEndPoint = _serverInstance.GetIPEndPoint();
@@ -321,6 +374,10 @@ namespace MongoDB.Driver.Internal
             };
             using (var message = new MongoQueryMessage(writerSettings, collectionName, queryFlags, 0, 1, command, null))
             {
+                if (__traceData.Switch.ShouldTrace(TraceEventType.Information))
+                {
+                    __traceData.TraceInformation("{0}::command with collectionName({1}), queryFlags({2}), and command({3})", this, collectionName, queryFlags, command.ToJson());
+                }
                 SendMessage(message, SafeMode.False);
             }
 
@@ -333,13 +390,24 @@ namespace MongoDB.Driver.Internal
             if (reply.NumberReturned == 0)
             {
                 var message = string.Format("Command '{0}' failed. No response returned.", commandName);
-                throw new MongoCommandException(message);
+                var ex = new MongoCommandException(message);
+                __trace.TraceException(TraceEventType.Error, ex);
+                throw ex;
             }
 
             var commandResult = new CommandResult(command, reply.Documents[0]);
-            if (throwOnError && !commandResult.Ok)
+            if (__traceData.Switch.ShouldTrace(TraceEventType.Verbose))
             {
-                throw new MongoCommandException(commandResult);
+                __traceData.TraceVerbose("{0}::received {1}", this, commandResult.Response.ToJson());
+            }
+            if (!commandResult.Ok)
+            {
+                var ex = new MongoCommandException(commandResult);
+                __trace.TraceException(TraceEventType.Error, ex);
+                if (throwOnError)
+                {
+                    throw ex;
+                }
             }
 
             return commandResult;
@@ -349,7 +417,7 @@ namespace MongoDB.Driver.Internal
             BsonBinaryReaderSettings readerSettings,
             IBsonSerializationOptions serializationOptions)
         {
-            if (_state == MongoConnectionState.Closed) { throw new InvalidOperationException("Connection is closed."); }
+            EnsureOpenConnection();
             lock (_connectionLock)
             {
                 try
@@ -378,7 +446,7 @@ namespace MongoDB.Driver.Internal
 
         internal SafeModeResult SendMessage(MongoRequestMessage message, SafeMode safeMode)
         {
-            if (_state == MongoConnectionState.Closed) { throw new InvalidOperationException("Connection is closed."); }
+            EnsureOpenConnection();
             lock (_connectionLock)
             {
                 _requestId = message.RequestId;
@@ -387,6 +455,7 @@ namespace MongoDB.Driver.Internal
                 CommandDocument safeModeCommand = null;
                 if (safeMode.Enabled)
                 {
+                    __trace.TraceVerbose("{0}::including getLastError command because safeMode is enabled.", this);
                     safeModeCommand = new CommandDocument
                     {
                         { "getlasterror", 1 }, // use all lowercase for backward compatibility
@@ -396,6 +465,10 @@ namespace MongoDB.Driver.Internal
                         { "w", safeMode.WMode, safeMode.WMode != null },
                         { "wtimeout", (int) safeMode.WTimeout.TotalMilliseconds, safeMode.W > 1 && safeMode.WTimeout != TimeSpan.Zero }
                     };
+                    if (__traceData.Switch.ShouldTrace(TraceEventType.Information))
+                    {
+                        __traceData.TraceInformation("{0}::sending {1}", this, safeModeCommand.ToJson());
+                    }
                     // piggy back on network transmission for message
                     using (var getLastErrorMessage = new MongoQueryMessage(message.Buffer, message.WriterSettings, "admin.$cmd", QueryFlags.None, 0, 1, safeModeCommand, null))
                     {
@@ -432,20 +505,28 @@ namespace MongoDB.Driver.Internal
                     var safeModeResponse = replyMessage.Documents[0];
                     safeModeResult = new SafeModeResult();
                     safeModeResult.Initialize(safeModeCommand, safeModeResponse);
+                    if (__traceData.Switch.ShouldTrace(TraceEventType.Verbose))
+                    {
+                        __traceData.TraceVerbose("{0}::received {1}", this, safeModeResult.Response.ToJson());
+                    }
 
                     if (!safeModeResult.Ok)
                     {
                         var errorMessage = string.Format(
                             "Safemode detected an error '{0}'. (response was {1}).",
                             safeModeResult.ErrorMessage, safeModeResponse.ToJson());
-                        throw new MongoSafeModeException(errorMessage, safeModeResult);
+                        var ex = new MongoSafeModeException(errorMessage, safeModeResult);
+                        __trace.TraceException(TraceEventType.Error, ex);
+                        throw ex;
                     }
                     if (safeModeResult.HasLastErrorMessage)
                     {
                         var errorMessage = string.Format(
                             "Safemode detected an error '{0}'. (Response was {1}).",
                             safeModeResult.LastErrorMessage, safeModeResponse.ToJson());
-                        throw new MongoSafeModeException(errorMessage, safeModeResult);
+                        var ex = new MongoSafeModeException(errorMessage, safeModeResult);
+                        __trace.TraceException(TraceEventType.Error, ex);
+                        throw ex;
                     }
                 }
 
@@ -462,7 +543,8 @@ namespace MongoDB.Driver.Internal
         //    (with the restriction that a particular database can only be authenticated against once and therefore with only one set of credentials)
         private void Authenticate(string databaseName, MongoCredentials credentials)
         {
-            if (_state == MongoConnectionState.Closed) { throw new InvalidOperationException("Connection is closed."); }
+            __trace.TraceVerbose("{0}::authenticating.", this);
+            EnsureOpenConnection();
             lock (_connectionLock)
             {
                 var nonceCommand = new CommandDocument("getnonce", 1);
@@ -471,9 +553,11 @@ namespace MongoDB.Driver.Internal
                 var commandResult = RunCommand(commandCollectionName, QueryFlags.None, nonceCommand, false);
                 if (!commandResult.Ok)
                 {
-                    throw new MongoAuthenticationException(
+                    var ex = new MongoAuthenticationException(
                         "Error getting nonce for authentication.",
                         new MongoCommandException(commandResult));
+                    __trace.TraceException(TraceEventType.Error, ex);
+                    throw ex;
                 }
 
                 var nonce = commandResult.Response["nonce"].AsString;
@@ -488,12 +572,18 @@ namespace MongoDB.Driver.Internal
                 };
 
                 commandResult = RunCommand(commandCollectionName, QueryFlags.None, authenticateCommand, false);
+                if (__traceData.Switch.ShouldTrace(TraceEventType.Verbose))
+                {
+                    __traceData.TraceVerbose("{0}::received {1}", this, commandResult.Response.ToJson());
+                }
                 if (!commandResult.Ok)
                 {
                     var message = string.Format("Invalid credentials for database '{0}'.", databaseName);
-                    throw new MongoAuthenticationException(
+                    var ex = new MongoAuthenticationException(
                         message,
                         new MongoCommandException(commandResult));
+                    __trace.TraceException(TraceEventType.Error, ex);
+                    throw ex;
                 }
 
                 var authentication = new Authentication(credentials);

@@ -27,6 +27,7 @@ using MongoDB.Bson.Serialization.Options;
 using MongoDB.Driver.Builders;
 using MongoDB.Driver.Internal;
 using MongoDB.Driver.Wrappers;
+using System.Diagnostics;
 
 namespace MongoDB.Driver
 {
@@ -35,6 +36,10 @@ namespace MongoDB.Driver
     /// </summary>
     public abstract class MongoCollection
     {
+        //private static field
+        private static readonly TraceSource __trace = TracingConstants.CreateGeneralTraceSource();
+        private static readonly TraceSource __traceData = TracingConstants.CreateDataTraceSource();
+
         // private fields
         private MongoServer _server;
         private MongoDatabase _database;
@@ -67,6 +72,10 @@ namespace MongoDB.Driver
             _database = database;
             _settings = settings.FrozenCopy();
             _name = settings.CollectionName;
+            using (__trace.TraceStart("MongoCollection::ctor"))
+            {
+                __trace.TraceInformation("{0}::created with settings {1}", this, settings);
+            }
         }
 
         // public properties
@@ -119,13 +128,16 @@ namespace MongoDB.Driver
         /// <returns>The number of documents in this collection that match the query.</returns>
         public virtual long Count(IMongoQuery query)
         {
-            var command = new CommandDocument
+            using (__trace.TraceStart("{0}::Count", this))
             {
-                { "count", _name },
-                { "query", BsonDocumentWrapper.Create(query) } // query is optional
-            };
-            var result = _database.RunCommand(command);
-            return result.Response["n"].ToInt64();
+                var command = new CommandDocument
+                {
+                    { "count", _name },
+                    { "query", BsonDocumentWrapper.Create(query) } // query is optional
+                };
+                var result = _database.RunCommand(command);
+                return result.Response["n"].ToInt64();
+            }
         }
 
         /// <summary>
@@ -136,24 +148,28 @@ namespace MongoDB.Driver
         /// <returns>A SafeModeResult.</returns>
         public virtual SafeModeResult CreateIndex(IMongoIndexKeys keys, IMongoIndexOptions options)
         {
-            var keysDocument = keys.ToBsonDocument();
-            var optionsDocument = options.ToBsonDocument();
-            var indexes = _database.GetCollection("system.indexes");
-            var indexName = GetIndexName(keysDocument, optionsDocument);
-            var index = new BsonDocument
+            using (__trace.TraceStart("{0}::CreateIndex", this))
             {
-                { "name", indexName },
-                { "ns", FullName },
-                { "key", keysDocument }
-            };
-            index.Merge(optionsDocument);
-            var insertOptions = new MongoInsertOptions
-            {
-                CheckElementNames = false,
-                SafeMode = SafeMode.True
-            };
-            var result = indexes.Insert(index, insertOptions);
-            return result;
+                var keysDocument = keys.ToBsonDocument();
+                var optionsDocument = options.ToBsonDocument();
+                var indexes = _database.GetCollection("system.indexes");
+                var indexName = GetIndexName(keysDocument, optionsDocument);
+                __trace.TraceInformation("{0}::creating index {1}", this, indexName);
+                var index = new BsonDocument
+                {
+                    { "name", indexName },
+                    { "ns", FullName },
+                    { "key", keysDocument }
+                };
+                index.Merge(optionsDocument);
+                var insertOptions = new MongoInsertOptions
+                {
+                    CheckElementNames = false,
+                    SafeMode = SafeMode.True
+                };
+                var result = indexes.Insert(index, insertOptions);
+                return result;
+            }
         }
 
         /// <summary>
@@ -194,14 +210,17 @@ namespace MongoDB.Driver
         /// <returns>The distint values of the field.</returns>
         public virtual IEnumerable<BsonValue> Distinct(string key, IMongoQuery query)
         {
-            var command = new CommandDocument
+            using (__trace.TraceStart("{0}::Distinct", this))
             {
-                { "distinct", _name },
-                { "key", key },
-                { "query", BsonDocumentWrapper.Create(query) } // query is optional
-            };
-            var result = _database.RunCommand(command);
-            return result.Response["values"].AsBsonArray;
+                var command = new CommandDocument
+                {
+                    { "distinct", _name },
+                    { "key", key },
+                    { "query", BsonDocumentWrapper.Create(query) } // query is optional
+                };
+                var result = _database.RunCommand(command);
+                return result.Response["values"].AsBsonArray;
+            }
         }
 
         /// <summary>
@@ -251,31 +270,35 @@ namespace MongoDB.Driver
         /// <returns>A <see cref="CommandResult"/>.</returns>
         public virtual CommandResult DropIndexByName(string indexName)
         {
-            // remove from cache first (even if command ends up failing)
-            if (indexName == "*")
+            using (__trace.TraceStart("{0}::DropIndexByName", this))
             {
-                _server.IndexCache.Reset(this);
-            }
-            else
-            {
-                _server.IndexCache.Remove(this, indexName);
-            }
-            var command = new CommandDocument
-            {
-                { "deleteIndexes", _name }, // not FullName
-                { "index", indexName }
-            };
-            try
-            {
-                return _database.RunCommand(command);
-            }
-            catch (MongoCommandException ex)
-            {
-                if (ex.CommandResult.ErrorMessage == "ns not found")
+                __trace.TraceInformation("{0}::dropping index {1}", this, indexName);
+                // remove from cache first (even if command ends up failing)
+                if (indexName == "*")
                 {
-                    return ex.CommandResult;
+                    _server.IndexCache.Reset(this);
                 }
-                throw;
+                else
+                {
+                    _server.IndexCache.Remove(this, indexName);
+                }
+                var command = new CommandDocument
+                {
+                    { "deleteIndexes", _name }, // not FullName
+                    { "index", indexName }
+                };
+                try
+                {
+                    return _database.RunCommand(command);
+                }
+                catch (MongoCommandException ex)
+                {
+                    if (ex.CommandResult.ErrorMessage == "ns not found")
+                    {
+                        return ex.CommandResult;
+                    }
+                    throw;
+                }
             }
         }
 
@@ -286,13 +309,17 @@ namespace MongoDB.Driver
         /// <param name="options">The index options(usually an IndexOptionsDocument or created using the IndexOption builder).</param>
         public virtual void EnsureIndex(IMongoIndexKeys keys, IMongoIndexOptions options)
         {
-            var keysDocument = keys.ToBsonDocument();
-            var optionsDocument = options.ToBsonDocument();
-            var indexName = GetIndexName(keysDocument, optionsDocument);
-            if (!_server.IndexCache.Contains(this, indexName))
+            using (__trace.TraceStart("{0}::EnsureIndex", this))
             {
-                CreateIndex(keys, options);
-                _server.IndexCache.Add(this, indexName);
+                var keysDocument = keys.ToBsonDocument();
+                var optionsDocument = options.ToBsonDocument();
+                var indexName = GetIndexName(keysDocument, optionsDocument);
+                __trace.TraceInformation("{0}::ensuring index {1}", this, indexName);
+                if (!_server.IndexCache.Contains(this, indexName))
+                {
+                    CreateIndex(keys, options);
+                    _server.IndexCache.Add(this, indexName);
+                }
             }
         }
 
@@ -311,11 +338,15 @@ namespace MongoDB.Driver
         /// <param name="keyNames">The names of the indexed fields.</param>
         public virtual void EnsureIndex(params string[] keyNames)
         {
-            string indexName = GetIndexName(keyNames);
-            if (!_server.IndexCache.Contains(this, indexName))
+            using (__trace.TraceStart("{0}::EnsureIndex(keyNames)", this))
             {
-                CreateIndex(IndexKeys.Ascending(keyNames), IndexOptions.SetName(indexName));
-                _server.IndexCache.Add(this, indexName);
+                string indexName = GetIndexName(keyNames);
+                __trace.TraceInformation("{0}::ensuring index {1}", this, indexName);
+                if (!_server.IndexCache.Contains(this, indexName))
+                {
+                    CreateIndex(IndexKeys.Ascending(keyNames), IndexOptions.SetName(indexName));
+                    _server.IndexCache.Add(this, indexName);
+                }
             }
         }
 
@@ -414,35 +445,39 @@ namespace MongoDB.Driver
             bool returnNew,
             bool upsert)
         {
-            var command = new CommandDocument
+            using (__trace.TraceStart("{0}::FindAndModify", this))
             {
-                { "findAndModify", _name },
-                { "query", BsonDocumentWrapper.Create(query) },
-                { "sort", BsonDocumentWrapper.Create(sortBy) },
-                { "update", BsonDocumentWrapper.Create(update, true) }, // isUpdateDocument = true
-                { "fields", BsonDocumentWrapper.Create(fields) },
-                { "new", true, returnNew },
-                { "upsert", true, upsert}
-            };
-            try
-            {
-                return _database.RunCommandAs<FindAndModifyResult>(command);
-            }
-            catch (MongoCommandException ex)
-            {
-                if (ex.CommandResult.ErrorMessage == "No matching object found")
+                var command = new CommandDocument
                 {
-                    // create a new command result with what the server should have responded
-                    var response = new BsonDocument
-                    {
-                        { "value", BsonNull.Value },
-                        { "ok", true }
-                    };
-                    var result = new FindAndModifyResult();
-                    result.Initialize(command, response);
-                    return result;
+                    { "findAndModify", _name },
+                    { "query", BsonDocumentWrapper.Create(query) },
+                    { "sort", BsonDocumentWrapper.Create(sortBy) },
+                    { "update", BsonDocumentWrapper.Create(update, true) }, // isUpdateDocument = true
+                    { "fields", BsonDocumentWrapper.Create(fields) },
+                    { "new", true, returnNew },
+                    { "upsert", true, upsert}
+                };
+                try
+                {
+                    return _database.RunCommandAs<FindAndModifyResult>(command);
                 }
-                throw;
+                catch (MongoCommandException ex)
+                {
+                    if (ex.CommandResult.ErrorMessage == "No matching object found")
+                    {
+                        // create a new command result with what the server should have responded
+                        var response = new BsonDocument
+                        {
+                            { "value", BsonNull.Value },
+                            { "ok", true }
+                        };
+                        var result = new FindAndModifyResult();
+                        result.Initialize(command, response);
+                        return result;
+                    }
+                    __trace.TraceException(TraceEventType.Error, ex);
+                    throw;
+                }
             }
         }
 
@@ -454,32 +489,36 @@ namespace MongoDB.Driver
         /// <returns>A <see cref="FindAndModifyResult"/>.</returns>
         public virtual FindAndModifyResult FindAndRemove(IMongoQuery query, IMongoSortBy sortBy)
         {
-            var command = new CommandDocument
+            using (__trace.TraceStart("{0}::FindAndRemove", this))
             {
-                { "findAndModify", _name },
-                { "query", BsonDocumentWrapper.Create(query) },
-                { "sort", BsonDocumentWrapper.Create(sortBy) },
-                { "remove", true }
-            };
-            try
-            {
-                return _database.RunCommandAs<FindAndModifyResult>(command);
-            }
-            catch (MongoCommandException ex)
-            {
-                if (ex.CommandResult.ErrorMessage == "No matching object found")
+                var command = new CommandDocument
                 {
-                    // create a new command result with what the server should have responded
-                    var response = new BsonDocument
-                    {
-                        { "value", BsonNull.Value },
-                        { "ok", true }
-                    };
-                    var result = new FindAndModifyResult();
-                    result.Initialize(command, response);
-                    return result;
+                    { "findAndModify", _name },
+                    { "query", BsonDocumentWrapper.Create(query) },
+                    { "sort", BsonDocumentWrapper.Create(sortBy) },
+                    { "remove", true }
+                };
+                try
+                {
+                    return _database.RunCommandAs<FindAndModifyResult>(command);
                 }
-                throw;
+                catch (MongoCommandException ex)
+                {
+                    if (ex.CommandResult.ErrorMessage == "No matching object found")
+                    {
+                        // create a new command result with what the server should have responded
+                        var response = new BsonDocument
+                        {
+                            { "value", BsonNull.Value },
+                            { "ok", true }
+                        };
+                        var result = new FindAndModifyResult();
+                        result.Initialize(command, response);
+                        return result;
+                    }
+                    __trace.TraceException(TraceEventType.Error, ex);
+                    throw;
+                }
             }
         }
 
@@ -491,7 +530,10 @@ namespace MongoDB.Driver
         /// <returns>A <see cref="MongoCursor{TDocument}"/>.</returns>
         public virtual MongoCursor<TDocument> FindAs<TDocument>(IMongoQuery query)
         {
-            return new MongoCursor<TDocument>(this, query);
+            using (__trace.TraceStart("{0}::FindAs", this))
+            {
+                return new MongoCursor<TDocument>(this, query);
+            }
         }
 
         /// <summary>
@@ -502,7 +544,10 @@ namespace MongoDB.Driver
         /// <returns>A <see cref="MongoCursor{TDocument}"/>.</returns>
         public virtual MongoCursor FindAs(Type documentType, IMongoQuery query)
         {
-            return MongoCursor.Create(documentType, this, query);
+            using (__trace.TraceStart("{0}::FindAs", this, documentType))
+            {
+                return MongoCursor.Create(documentType, this, query);
+            }
         }
 
         /// <summary>
@@ -599,15 +644,18 @@ namespace MongoDB.Driver
             double y,
             IMongoGeoHaystackSearchOptions options)
         {
-            var command = new CommandDocument
+            using (__trace.TraceStart("{0}::GeoHaystackSearchAs", this))
             {
-                { "geoSearch", _name },
-                { "near", new BsonArray { x, y } }
-            };
-            command.Merge(options.ToBsonDocument());
-            var geoHaystackSearchResultDefinition = typeof(GeoHaystackSearchResult<>);
-            var geoHaystackSearchResultType = geoHaystackSearchResultDefinition.MakeGenericType(documentType);
-            return (GeoHaystackSearchResult)_database.RunCommandAs(geoHaystackSearchResultType, command);
+                var command = new CommandDocument
+                {
+                    { "geoSearch", _name },
+                    { "near", new BsonArray { x, y } }
+                };
+                command.Merge(options.ToBsonDocument());
+                var geoHaystackSearchResultDefinition = typeof(GeoHaystackSearchResult<>);
+                var geoHaystackSearchResultType = geoHaystackSearchResultDefinition.MakeGenericType(documentType);
+                return (GeoHaystackSearchResult)_database.RunCommandAs(geoHaystackSearchResultType, command);
+            }
         }
 
         /// <summary>
@@ -645,15 +693,18 @@ namespace MongoDB.Driver
             int limit,
             IMongoGeoNearOptions options)
         {
-            var command = new CommandDocument
+            using (__trace.TraceStart("{0}::GeoNearAs", this))
             {
-                { "geoNear", _name },
-                { "near", new BsonArray { x, y } },
-                { "num", limit },
-                { "query", BsonDocumentWrapper.Create(query) } // query is optional
-            };
-            command.Merge(options.ToBsonDocument());
-            return _database.RunCommandAs<GeoNearResult<TDocument>>(command);
+                var command = new CommandDocument
+                {
+                    { "geoNear", _name },
+                    { "near", new BsonArray { x, y } },
+                    { "num", limit },
+                    { "query", BsonDocumentWrapper.Create(query) } // query is optional
+                };
+                command.Merge(options.ToBsonDocument());
+                return _database.RunCommandAs<GeoNearResult<TDocument>>(command);
+            }
         }
 
         /// <summary>
@@ -688,17 +739,20 @@ namespace MongoDB.Driver
             int limit,
             IMongoGeoNearOptions options)
         {
-            var command = new CommandDocument
+            using (__trace.TraceStart("{0}::GeoNearAs", this))
             {
-                { "geoNear", _name },
-                { "near", new BsonArray { x, y } },
-                { "num", limit },
-                { "query", BsonDocumentWrapper.Create(query) } // query is optional
-            };
-            command.Merge(options.ToBsonDocument());
-            var geoNearResultDefinition = typeof(GeoNearResult<>);
-            var geoNearResultType = geoNearResultDefinition.MakeGenericType(documentType);
-            return (GeoNearResult)_database.RunCommandAs(geoNearResultType, command);
+                var command = new CommandDocument
+                {
+                    { "geoNear", _name },
+                    { "near", new BsonArray { x, y } },
+                    { "num", limit },
+                    { "query", BsonDocumentWrapper.Create(query) } // query is optional
+                };
+                command.Merge(options.ToBsonDocument());
+                var geoNearResultDefinition = typeof(GeoNearResult<>);
+                var geoNearResultType = geoNearResultDefinition.MakeGenericType(documentType);
+                return (GeoNearResult)_database.RunCommandAs(geoNearResultType, command);
+            }
         }
 
         /// <summary>
@@ -707,9 +761,12 @@ namespace MongoDB.Driver
         /// <returns>A list of BsonDocuments that describe the indexes.</returns>
         public virtual GetIndexesResult GetIndexes()
         {
-            var indexes = _database.GetCollection("system.indexes");
-            var query = Query.EQ("ns", FullName);
-            return new GetIndexesResult(indexes.Find(query).ToArray()); // ToArray forces execution of the query
+            using (__trace.TraceStart("{0}::GetIndexes", this))
+            {
+                var indexes = _database.GetCollection("system.indexes");
+                var query = Query.EQ("ns", FullName);
+                return new GetIndexesResult(indexes.Find(query).ToArray()); // ToArray forces execution of the query
+            }
         }
 
         /// <summary>
@@ -718,8 +775,11 @@ namespace MongoDB.Driver
         /// <returns>The stats for this collection as a <see cref="CollectionStatsResult"/>.</returns>
         public virtual CollectionStatsResult GetStats()
         {
-            var command = new CommandDocument("collstats", _name);
-            return _database.RunCommandAs<CollectionStatsResult>(command);
+            using (__trace.TraceStart("{0}::GetStats", this))
+            {
+                var command = new CommandDocument("collstats", _name);
+                return _database.RunCommandAs<CollectionStatsResult>(command);
+            }
         }
 
         /// <summary>
@@ -728,14 +788,17 @@ namespace MongoDB.Driver
         /// <returns>The total data size.</returns>
         public virtual long GetTotalDataSize()
         {
-            var totalSize = GetStats().DataSize;
-            foreach (var index in GetIndexes())
+            using (__trace.TraceStart("{0}::GetTotalDataSize", this))
             {
-                var indexCollectionName = string.Format("{0}.${1}", _name, index.Name);
-                var indexCollection = _database.GetCollection(indexCollectionName);
-                totalSize += indexCollection.GetStats().DataSize;
+                var totalSize = GetStats().DataSize;
+                foreach (var index in GetIndexes())
+                {
+                    var indexCollectionName = string.Format("{0}.${1}", _name, index.Name);
+                    var indexCollection = _database.GetCollection(indexCollectionName);
+                    totalSize += indexCollection.GetStats().DataSize;
+                }
+                return totalSize;
             }
-            return totalSize;
         }
 
         /// <summary>
@@ -744,14 +807,17 @@ namespace MongoDB.Driver
         /// <returns>The total storage size.</returns>
         public virtual long GetTotalStorageSize()
         {
-            var totalSize = GetStats().StorageSize;
-            foreach (var index in GetIndexes())
+            using (__trace.TraceStart("{0}::GetTotalStorageSize", this))
             {
-                var indexCollectionName = string.Format("{0}.${1}", _name, index.Name);
-                var indexCollection = _database.GetCollection(indexCollectionName);
-                totalSize += indexCollection.GetStats().StorageSize;
+                var totalSize = GetStats().StorageSize;
+                foreach (var index in GetIndexes())
+                {
+                    var indexCollectionName = string.Format("{0}.${1}", _name, index.Name);
+                    var indexCollection = _database.GetCollection(indexCollectionName);
+                    totalSize += indexCollection.GetStats().StorageSize;
+                }
+                return totalSize;
             }
-            return totalSize;
         }
 
         /// <summary>
@@ -770,22 +836,25 @@ namespace MongoDB.Driver
             BsonJavaScript reduce,
             BsonJavaScript finalize)
         {
-            var command = new CommandDocument
+            using (__trace.TraceStart("{0}::Group", this))
             {
+                var command = new CommandDocument
                 {
-                    "group", new BsonDocument
                     {
-                        { "ns", _name },
-                        { "condition", BsonDocumentWrapper.Create(query) }, // condition is optional
-                        { "$keyf", keyFunction },
-                        { "initial", initial },
-                        { "$reduce", reduce },
-                        { "finalize", finalize }
+                        "group", new BsonDocument
+                        {
+                            { "ns", _name },
+                            { "condition", BsonDocumentWrapper.Create(query) }, // condition is optional
+                            { "$keyf", keyFunction },
+                            { "initial", initial },
+                            { "$reduce", reduce },
+                            { "finalize", finalize }
+                        }
                     }
-                }
-            };
-            var result = _database.RunCommand(command);
-            return result.Response["retval"].AsBsonArray.Values.Cast<BsonDocument>();
+                };
+                var result = _database.RunCommand(command);
+                return result.Response["retval"].AsBsonArray.Values.Cast<BsonDocument>();
+            }
         }
 
         /// <summary>
@@ -804,7 +873,9 @@ namespace MongoDB.Driver
             BsonJavaScript reduce,
             BsonJavaScript finalize)
         {
-            var command = new CommandDocument
+            using (__trace.TraceStart("{0}::Group", this))
+            {
+                var command = new CommandDocument
             {
                 {
                     "group", new BsonDocument
@@ -818,8 +889,9 @@ namespace MongoDB.Driver
                     }
                 }
             };
-            var result = _database.RunCommand(command);
-            return result.Response["retval"].AsBsonArray.Values.Cast<BsonDocument>();
+                var result = _database.RunCommand(command);
+                return result.Response["retval"].AsBsonArray.Values.Cast<BsonDocument>();
+            }
         }
 
         /// <summary>
@@ -870,9 +942,12 @@ namespace MongoDB.Driver
         /// <returns>True if the index exists.</returns>
         public virtual bool IndexExistsByName(string indexName)
         {
-            var indexes = _database.GetCollection("system.indexes");
-            var query = Query.And(Query.EQ("name", indexName), Query.EQ("ns", FullName));
-            return indexes.Count(query) != 0;
+            using (__trace.TraceStart("{0}::IndexExistsByName", this, indexName))
+            {
+                var indexes = _database.GetCollection("system.indexes");
+                var query = Query.And(Query.EQ("name", indexName), Query.EQ("ns", FullName));
+                return indexes.Count(query) != 0;
+            }
         }
 
         // WARNING: be VERY careful about adding any new overloads of Insert or InsertBatch (just don't do it!)
@@ -1041,80 +1116,95 @@ namespace MongoDB.Driver
         /// <param name="nominalType">The nominal type of the documents to insert.</param>
         /// <param name="documents">The documents to insert.</param>
         /// <param name="options">The options to use for this Insert.</param>
-        /// <returns>A list of SafeModeResults (or null if SafeMode is not being used).</returns>
+        /// <returns>
+        /// A list of SafeModeResults (or null if SafeMode is not being used).
+        /// </returns>
         public virtual IEnumerable<SafeModeResult> InsertBatch(
             Type nominalType,
             IEnumerable documents,
             MongoInsertOptions options)
         {
-            if (documents == null)
+            using (__trace.TraceStart("{0}::InsertBatch", this, nominalType))
             {
-                throw new ArgumentNullException("documents");
-            }
-
-            if (options == null)
-            {
-                throw new ArgumentNullException("options");
-            }
-
-            var connection = _server.AcquireConnection(_database, false); // not slaveOk
-            try
-            {
-                var safeMode = options.SafeMode ?? _settings.SafeMode;
-
-                List<SafeModeResult> results = (safeMode.Enabled) ? new List<SafeModeResult>() : null;
-
-                var writerSettings = GetWriterSettings(connection);
-                using (var message = new MongoInsertMessage(writerSettings, FullName, options.CheckElementNames, options.Flags))
+                if (documents == null)
                 {
-                    message.WriteToBuffer(); // must be called before AddDocument
+                    throw new ArgumentNullException("documents");
+                }
 
-                    foreach (var document in documents)
+                if (options == null)
+                {
+                    throw new ArgumentNullException("options");
+                }
+
+                var connection = _server.AcquireConnection(_database, false); // not slaveOk
+                try
+                {
+                    var safeMode = options.SafeMode ?? _settings.SafeMode;
+
+                    List<SafeModeResult> results = (safeMode.Enabled) ? new List<SafeModeResult>() : null;
+
+                    if (__traceData.Switch.ShouldTrace(TraceEventType.Information))
                     {
-                        if (document == null)
-                        {
-                            throw new ArgumentException("Batch contains one or more null documents.");
-                        }
+                        __traceData.TraceInformation("{0}::inserting with options({1})", this, options.ToJson());
+                    }
 
-                        if (_settings.AssignIdOnInsert)
+                    var writerSettings = GetWriterSettings(connection);
+                    using (var message = new MongoInsertMessage(writerSettings, FullName, options.CheckElementNames, options.Flags))
+                    {
+                        message.WriteToBuffer(); // must be called before AddDocument
+
+                        foreach (var document in documents)
                         {
-                            var serializer = BsonSerializer.LookupSerializer(document.GetType());
-                            var idProvider = serializer as IBsonIdProvider;
-                            if (idProvider != null)
+                            if (document == null)
                             {
-                                object id;
-                                Type idNominalType;
-                                IIdGenerator idGenerator;
-                                if (idProvider.GetDocumentId(document, out id, out idNominalType, out idGenerator))
+                                throw new ArgumentException("Batch contains one or more null documents.");
+                            }
+
+                            if (_settings.AssignIdOnInsert)
+                            {
+                                var serializer = BsonSerializer.LookupSerializer(document.GetType());
+                                var idProvider = serializer as IBsonIdProvider;
+                                if (idProvider != null)
                                 {
-                                    if (idGenerator != null && idGenerator.IsEmpty(id))
+                                    object id;
+                                    Type idNominalType;
+                                    IIdGenerator idGenerator;
+                                    if (idProvider.GetDocumentId(document, out id, out idNominalType, out idGenerator))
                                     {
-                                        id = idGenerator.GenerateId(this, document);
-                                        idProvider.SetDocumentId(document, id);
+                                        if (idGenerator != null && idGenerator.IsEmpty(id))
+                                        {
+                                            id = idGenerator.GenerateId(this, document);
+                                            idProvider.SetDocumentId(document, id);
+                                        }
                                     }
                                 }
                             }
-                        }
-                        message.AddDocument(nominalType, document);
+                            message.AddDocument(nominalType, document);
 
-                        if (message.MessageLength > connection.ServerInstance.MaxMessageLength)
-                        {
-                            byte[] lastDocument = message.RemoveLastDocument();
-                            var intermediateResult = connection.SendMessage(message, safeMode);
-                            if (safeMode.Enabled) { results.Add(intermediateResult); }
-                            message.ResetBatch(lastDocument);
+                            if (__traceData.Switch.ShouldTrace(TraceEventType.Information))
+                            {
+                                __traceData.TraceInformation("{0}::inserting document {1}", this, document.ToJson());
+                            }
+
+                            if (message.MessageLength > connection.ServerInstance.MaxMessageLength)
+                            {
+                                byte[] lastDocument = message.RemoveLastDocument();
+                                var intermediateResult = connection.SendMessage(message, safeMode);
+                                if (safeMode.Enabled) { results.Add(intermediateResult); }
+                                message.ResetBatch(lastDocument);
+                            }
                         }
+
+                        var finalResult = connection.SendMessage(message, safeMode);
+                        if (safeMode.Enabled) { results.Add(finalResult); }
+
+                        return results;
                     }
-
-                    var finalResult = connection.SendMessage(message, safeMode);
-                    if (safeMode.Enabled) { results.Add(finalResult); }
-
-                    return results;
                 }
-            }
-            finally
-            {
-                _server.ReleaseConnection(connection);
+                finally
+                {
+                    _server.ReleaseConnection(connection);
+                }
             }
         }
 
@@ -1124,7 +1214,10 @@ namespace MongoDB.Driver
         /// <returns>True if this collection is capped.</returns>
         public virtual bool IsCapped()
         {
-            return GetStats().IsCapped;
+            using (__trace.TraceStart("{0}::IsCapped", this))
+            {
+                return GetStats().IsCapped;
+            }
         }
 
         /// <summary>
@@ -1139,16 +1232,19 @@ namespace MongoDB.Driver
             BsonJavaScript reduce,
             IMongoMapReduceOptions options)
         {
-            var command = new CommandDocument
+            using (__trace.TraceStart("{0}::MapReduce", this))
             {
-                { "mapreduce", _name },
-                { "map", map },
-                { "reduce", reduce }
-            };
-            command.Add(options.ToBsonDocument());
-            var result = _database.RunCommandAs<MapReduceResult>(command);
-            result.SetInputDatabase(_database);
-            return result;
+                var command = new CommandDocument
+                {
+                    { "mapreduce", _name },
+                    { "map", map },
+                    { "reduce", reduce }
+                };
+                command.Add(options.ToBsonDocument());
+                var result = _database.RunCommandAs<MapReduceResult>(command);
+                result.SetInputDatabase(_database);
+                return result;
+            }
         }
 
         /// <summary>
@@ -1201,8 +1297,12 @@ namespace MongoDB.Driver
         /// <returns>A CommandResult.</returns>
         public virtual CommandResult ReIndex()
         {
-            var command = new CommandDocument("reIndex", _name);
-            return _database.RunCommand(command);
+            using (__trace.TraceStart("{0}::ReIndex", this))
+            {
+                __trace.TraceInformation("{0}::reindexing collection.", this);
+                var command = new CommandDocument("reIndex", _name);
+                return _database.RunCommand(command);
+            }
         }
 
         /// <summary>
@@ -1246,18 +1346,25 @@ namespace MongoDB.Driver
         /// <returns>A SafeModeResult (or null if SafeMode is not being used).</returns>
         public virtual SafeModeResult Remove(IMongoQuery query, RemoveFlags flags, SafeMode safeMode)
         {
-            var connection = _server.AcquireConnection(_database, false); // not slaveOk
-            try
+            using (__trace.TraceStart("{0}::Remove", this))
             {
-                var writerSettings = GetWriterSettings(connection);
-                using (var message = new MongoDeleteMessage(writerSettings, FullName, flags, query))
+                var connection = _server.AcquireConnection(_database, false); // not slaveOk
+                try
                 {
-                    return connection.SendMessage(message, safeMode ?? _settings.SafeMode);
+                    var writerSettings = GetWriterSettings(connection);
+                    if (__traceData.Switch.ShouldTrace(TraceEventType.Information))
+                    {
+                        __traceData.TraceInformation("{0}::remove with query({1}), flags({2}), and safeMode({3})", this, query.ToJson(), flags, safeMode);
+                    }
+                    using (var message = new MongoDeleteMessage(writerSettings, FullName, flags, query))
+                    {
+                        return connection.SendMessage(message, safeMode ?? _settings.SafeMode);
+                    }
                 }
-            }
-            finally
-            {
-                _server.ReleaseConnection(connection);
+                finally
+                {
+                    _server.ReleaseConnection(connection);
+                }
             }
         }
 
@@ -1351,70 +1458,75 @@ namespace MongoDB.Driver
         /// <returns>A SafeModeResult (or null if SafeMode is not being used).</returns>
         public virtual SafeModeResult Save(Type nominalType, object document, MongoInsertOptions options)
         {
-            if (document == null)
+            using (__trace.TraceStart("{0}::Save", this))
             {
-                throw new ArgumentNullException("document");
-            }
-            var serializer = BsonSerializer.LookupSerializer(document.GetType());
-            var idProvider = serializer as IBsonIdProvider;
-            object id;
-            Type idNominalType;
-            IIdGenerator idGenerator;
-            if (idProvider != null && idProvider.GetDocumentId(document, out id, out idNominalType, out idGenerator))
-            {
-                if (id == null && idGenerator == null)
+                if (document == null)
                 {
-                    throw new InvalidOperationException("No IdGenerator found.");
+                    throw new ArgumentNullException("document");
                 }
-
-                if (idGenerator != null && idGenerator.IsEmpty(id))
+                var serializer = BsonSerializer.LookupSerializer(document.GetType());
+                var idProvider = serializer as IBsonIdProvider;
+                object id;
+                Type idNominalType;
+                IIdGenerator idGenerator;
+                if (idProvider != null && idProvider.GetDocumentId(document, out id, out idNominalType, out idGenerator))
                 {
-                    id = idGenerator.GenerateId(this, document);
-                    idProvider.SetDocumentId(document, id);
-                    return Insert(nominalType, document, options);
+                    if (id == null && idGenerator == null)
+                    {
+                        throw new InvalidOperationException("No IdGenerator found.");
+                    }
+
+                    if (idGenerator != null && idGenerator.IsEmpty(id))
+                    {
+                        id = idGenerator.GenerateId(this, document);
+                        idProvider.SetDocumentId(document, id);
+                        return Insert(nominalType, document, options);
+                    }
+                    else
+                    {
+                        BsonValue idBsonValue;
+                        var documentType = document.GetType();
+                        if (BsonClassMap.IsClassMapRegistered(documentType))
+                        {
+                            var classMap = BsonClassMap.LookupClassMap(documentType);
+                            var idMemberMap = classMap.IdMemberMap;
+                            var idSerializer = idMemberMap.GetSerializer(id.GetType());
+                            // we only care about the serialized _id value but we need a dummy document to serialize it into
+                            var bsonDocument = new BsonDocument();
+                            var bsonDocumentWriterSettings = new BsonDocumentWriterSettings
+                            {
+                                GuidRepresentation = _settings.GuidRepresentation
+                            };
+                            var bsonWriter = BsonWriter.Create(bsonDocument, bsonDocumentWriterSettings);
+                            bsonWriter.WriteStartDocument();
+                            bsonWriter.WriteName("_id");
+                            idSerializer.Serialize(bsonWriter, id.GetType(), id, idMemberMap.SerializationOptions);
+                            bsonWriter.WriteEndDocument();
+                            idBsonValue = bsonDocument[0]; // extract the _id value from the dummy document
+                        }
+                        else
+                        {
+                            if (!BsonTypeMapper.TryMapToBsonValue(id, out idBsonValue))
+                            {
+                                idBsonValue = BsonDocumentWrapper.Create(idNominalType, id);
+                            }
+                        }
+
+                        var query = Query.EQ("_id", idBsonValue);
+                        var update = Builders.Update.Replace(nominalType, document);
+                        var updateOptions = new MongoUpdateOptions
+                        {
+                            CheckElementNames = options.CheckElementNames,
+                            Flags = UpdateFlags.Upsert,
+                            SafeMode = options.SafeMode
+                        };
+                        return Update(query, update, updateOptions);
+                    }
                 }
                 else
                 {
-                    BsonValue idBsonValue;
-                    var documentType = document.GetType();
-                    if (BsonClassMap.IsClassMapRegistered(documentType))
-                    {
-                        var classMap = BsonClassMap.LookupClassMap(documentType);
-                        var idMemberMap = classMap.IdMemberMap;
-                        var idSerializer = idMemberMap.GetSerializer(id.GetType());
-                        // we only care about the serialized _id value but we need a dummy document to serialize it into
-                        var bsonDocument = new BsonDocument();
-                        var bsonDocumentWriterSettings = new BsonDocumentWriterSettings
-                        {
-                            GuidRepresentation = _settings.GuidRepresentation
-                        };
-                        var bsonWriter = BsonWriter.Create(bsonDocument, bsonDocumentWriterSettings);
-                        bsonWriter.WriteStartDocument();
-                        bsonWriter.WriteName("_id");
-                        idSerializer.Serialize(bsonWriter, id.GetType(), id, idMemberMap.SerializationOptions);
-                        bsonWriter.WriteEndDocument();
-                        idBsonValue = bsonDocument[0]; // extract the _id value from the dummy document
-                    } else {
-                        if (!BsonTypeMapper.TryMapToBsonValue(id, out idBsonValue))
-                        {
-                            idBsonValue = BsonDocumentWrapper.Create(idNominalType, id);
-                        }
-                    }
-
-                    var query = Query.EQ("_id", idBsonValue);
-                    var update = Builders.Update.Replace(nominalType, document);
-                    var updateOptions = new MongoUpdateOptions
-                    {
-                        CheckElementNames = options.CheckElementNames,
-                        Flags = UpdateFlags.Upsert,
-                        SafeMode = options.SafeMode
-                    };
-                    return Update(query, update, updateOptions);
+                    throw new InvalidOperationException("Save can only be used with documents that have an Id.");
                 }
-            }
-            else
-            {
-                throw new InvalidOperationException("Save can only be used with documents that have an Id.");
             }
         }
 
@@ -1462,33 +1574,41 @@ namespace MongoDB.Driver
         /// <returns>A SafeModeResult (or null if SafeMode is not being used).</returns>
         public virtual SafeModeResult Update(IMongoQuery query, IMongoUpdate update, MongoUpdateOptions options)
         {
-            var updateBuilder = update as UpdateBuilder;
-            if (updateBuilder != null)
+            using (__trace.TraceStart("{0}::Update", this))
             {
-                if (updateBuilder.Document.ElementCount == 0)
+                var updateBuilder = update as UpdateBuilder;
+                if (updateBuilder != null)
                 {
-                    throw new ArgumentException("Update called with an empty UpdateBuilder that has no update operations.");
+                    if (updateBuilder.Document.ElementCount == 0)
+                    {
+                        throw new ArgumentException("Update called with an empty UpdateBuilder that has no update operations.");
+                    }
                 }
-            }
 
-            if (options == null)
-            {
-                throw new ArgumentNullException("options");
-            }
-
-            var connection = _server.AcquireConnection(_database, false); // not slaveOk
-            try
-            {
-                var writerSettings = GetWriterSettings(connection);
-                using (var message = new MongoUpdateMessage(writerSettings, FullName, options.CheckElementNames, options.Flags, query, update))
+                if (options == null)
                 {
-                    var safeMode = options.SafeMode ?? _settings.SafeMode;
-                    return connection.SendMessage(message, safeMode);
+                    throw new ArgumentNullException("options");
                 }
-            }
-            finally
-            {
-                _server.ReleaseConnection(connection);
+
+                if (__traceData.Switch.ShouldTrace(TraceEventType.Information))
+                {
+                    __traceData.TraceInformation("{0}::update with query({1}), update({2}), and options({3})", this, query.ToJson(), update.ToJson(), options.ToJson());
+                }
+
+                var connection = _server.AcquireConnection(_database, false); // not slaveOk
+                try
+                {
+                    var writerSettings = GetWriterSettings(connection);
+                    using (var message = new MongoUpdateMessage(writerSettings, FullName, options.CheckElementNames, options.Flags, query, update))
+                    {
+                        var safeMode = options.SafeMode ?? _settings.SafeMode;
+                        return connection.SendMessage(message, safeMode);
+                    }
+                }
+                finally
+                {
+                    _server.ReleaseConnection(connection);
+                }
             }
         }
 
@@ -1546,8 +1666,11 @@ namespace MongoDB.Driver
         /// <returns>A <see cref="ValidateCollectionResult"/>.</returns>
         public virtual ValidateCollectionResult Validate()
         {
-            var command = new CommandDocument("validate", _name);
-            return _database.RunCommandAs<ValidateCollectionResult>(command);
+            using (__trace.TraceStart("{0}::Validate", this))
+            {
+                var command = new CommandDocument("validate", _name);
+                return _database.RunCommandAs<ValidateCollectionResult>(command);
+            }
         }
 
         // internal methods
