@@ -56,21 +56,19 @@ namespace MongoDB.Driver
             return new DisposableAction(
                 () =>
                 {
-                    if (oldActivityId != Guid.Empty)
+                    if (oldActivityId == Guid.Empty)
                     {
-                        traceSource.TraceTransfer((int)TraceEventType.Transfer, "transfer in", activityId);
+                        Trace.CorrelationManager.ActivityId = activityId;
+                        traceSource.TraceEvent(TraceEventType.Start, (int)TraceEventType.Start, format, args);
                     }
-                    Trace.CorrelationManager.ActivityId = activityId;
-                    traceSource.TraceEvent(TraceEventType.Start, (int)TraceEventType.Start, format, args);
                 },
                 () =>
                 {
-                    if (oldActivityId != Guid.Empty)
+                    if (oldActivityId == Guid.Empty)
                     {
-                        traceSource.TraceTransfer((int)TraceEventType.Transfer, "transfer out", oldActivityId);
+                        traceSource.TraceEvent(TraceEventType.Stop, (int)TraceEventType.Stop, format, args);
+                        Trace.CorrelationManager.ActivityId = oldActivityId;
                     }
-                    traceSource.TraceEvent(TraceEventType.Stop, (int)TraceEventType.Stop, format, args);
-                    Trace.CorrelationManager.ActivityId = oldActivityId;
                 });
         }
 
