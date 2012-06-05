@@ -15,6 +15,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Net;
@@ -24,7 +25,6 @@ using System.Threading;
 using MongoDB.Bson;
 using MongoDB.Bson.Serialization;
 using MongoDB.Driver.Internal;
-using System.Diagnostics;
 
 namespace MongoDB.Driver
 {
@@ -34,7 +34,7 @@ namespace MongoDB.Driver
     public class MongoServer
     {
         // private static fields
-        private static readonly TraceSource __trace = TracingConstants.CreateGeneralTraceSource();
+        private static readonly TraceSource __trace = TraceSources.CreateGeneralTraceSource();
         private static object __staticLock = new object();
         private static Dictionary<MongoServerSettings, MongoServer> __servers = new Dictionary<MongoServerSettings, MongoServer>();
         private static int __nextSequentialId;
@@ -832,9 +832,7 @@ namespace MongoDB.Driver
         /// is created for each combination of database settings.
         /// </summary>
         /// <param name="databaseSettings">The settings to use with this database.</param>
-        /// <returns>
-        /// A new or existing instance of MongoDatabase.
-        /// </returns>
+        /// <returns>A new or existing instance of MongoDatabase.</returns>
         public virtual MongoDatabase GetDatabase(MongoDatabaseSettings databaseSettings)
         {
             using (__trace.TraceStart("{0}:GetDatabase", this))
@@ -1058,35 +1056,37 @@ namespace MongoDB.Driver
         /// </summary>
         public virtual void RequestDone()
         {
-            int threadId = Thread.CurrentThread.ManagedThreadId;
-            MongoConnection connectionToRelease = null;
-
-            Request request;
-            lock (_serverLock)
+            using (__trace.TraceStart("{0}::RequestDone", this))
             {
-                if (_requests.TryGetValue(threadId, out request))
+                int threadId = Thread.CurrentThread.ManagedThreadId;
+                MongoConnection connectionToRelease = null;
+
+                lock (_serverLock)
                 {
-                    if (--request.NestingLevel == 0)
+                    Request request;
+                    if (_requests.TryGetValue(threadId, out request))
                     {
-                        _requests.Remove(threadId);
-                        connectionToRelease = request.Connection;
+                        if (--request.NestingLevel == 0)
+                        {
+                            _requests.Remove(threadId);
+                            connectionToRelease = request.Connection;
+                        }
+                        else
+                        {
+                            __trace.TraceVerbose("{0}::request nesting level decreased from {1} to {2}.", this, request.NestingLevel + 1, request.NestingLevel);
+                            return;
+                        }
                     }
                     else
                     {
-                        __trace.TraceVerbose("{0}::request nesting level decreased from {1} to {2}.", this, request.NestingLevel + 1, request.NestingLevel);
-                        return;
+                        var ex = new InvalidOperationException("Thread is not in a request (did you call RequestStart?).");
+                        __trace.TraceException(TraceEventType.Warning, ex);
+                        throw ex;
                     }
                 }
-                else
-                {
-                    var ex = new InvalidOperationException("Thread is not in a request (did you call RequestStart?).");
-                    __trace.TraceException(TraceEventType.Warning, ex);
-                    throw ex;
-                }
-            }
 
-            connectionToRelease.ServerInstance.ReleaseConnection(connectionToRelease);
-            request.Trace.Dispose();
+                connectionToRelease.ServerInstance.ReleaseConnection(connectionToRelease);
+            }
         }
 
         /// <summary>
@@ -1111,35 +1111,37 @@ namespace MongoDB.Driver
         /// <returns>A helper object that implements IDisposable and calls <see cref="RequestDone"/> from the Dispose method.</returns>
         public virtual IDisposable RequestStart(MongoDatabase initialDatabase, bool slaveOk)
         {
-            var traceStart = __trace.TraceStart("{0}::RequestStart", this);
-            __trace.TraceVerbose("{0}::beginning a request for related operations.", this);
-            int threadId = Thread.CurrentThread.ManagedThreadId;
-
-            lock (_serverLock)
+            using (__trace.TraceStart("{0}::RequestStart", this))
             {
-                Request request;
-                if (_requests.TryGetValue(threadId, out request))
+                __trace.TraceVerbose("{0}::beginning a request for related operations.", this);
+                int threadId = Thread.CurrentThread.ManagedThreadId;
+
+                lock (_serverLock)
                 {
-                    if (!slaveOk && request.SlaveOk)
+                    Request request;
+                    if (_requests.TryGetValue(threadId, out request))
                     {
-                        var ex = new InvalidOperationException("A nested call to RequestStart with slaveOk false is not allowed when the original call to RequestStart was made with slaveOk true.");
-                        __trace.TraceException(TraceEventType.Error, ex);
-                        throw ex;
+                        if (!slaveOk && request.SlaveOk)
+                        {
+                            var ex = new InvalidOperationException("A nested call to RequestStart with slaveOk false is not allowed when the original call to RequestStart was made with slaveOk true.");
+                            __trace.TraceException(TraceEventType.Error, ex);
+                            throw ex;
+                        }
+                        request.NestingLevel++;
+                        __trace.TraceVerbose("{0}::request nesting level increased from {1} to {2}.", this, request.NestingLevel - 1, request.NestingLevel);
+                        return new RequestStartResult(this);
                     }
-                    request.NestingLevel++;
-                    __trace.TraceVerbose("{0}::request nesting level increased from {1} to {2}.", this, request.NestingLevel - 1, request.NestingLevel);
+                }
+
+                var serverInstance = ChooseServerInstance(slaveOk);
+                var connection = serverInstance.AcquireConnection(initialDatabase);
+
+                lock (_serverLock)
+                {
+                    var request = new Request(connection, slaveOk);
+                    _requests.Add(threadId, request);
                     return new RequestStartResult(this);
                 }
-            }
-
-            var serverInstance = ChooseServerInstance(slaveOk);
-            var connection = serverInstance.AcquireConnection(initialDatabase);
-
-            lock (_serverLock)
-            {
-                var request = new Request(connection, slaveOk, traceStart);
-                _requests.Add(threadId, request);
-                return new RequestStartResult(this);
             }
         }
 
@@ -1153,38 +1155,40 @@ namespace MongoDB.Driver
         /// <returns>A helper object that implements IDisposable and calls <see cref="RequestDone"/> from the Dispose method.</returns>
         public virtual IDisposable RequestStart(MongoDatabase initialDatabase, MongoServerInstance serverInstance)
         {
-            var traceStart = __trace.TraceStart("{0}::RequestStart", this, initialDatabase, serverInstance);
-            __trace.TraceVerbose("{0}::beginning a request for related operations.", this);
-            int threadId = Thread.CurrentThread.ManagedThreadId;
-
-            lock (_serverLock)
+            using (__trace.TraceStart("{0}::RequestStart", this, initialDatabase, serverInstance))
             {
-                Request request;
-                if (_requests.TryGetValue(threadId, out request))
+                __trace.TraceVerbose("{0}::beginning a request for related operations.", this);
+                int threadId = Thread.CurrentThread.ManagedThreadId;
+
+                lock (_serverLock)
                 {
-                    if (serverInstance != request.Connection.ServerInstance)
+                    Request request;
+                    if (_requests.TryGetValue(threadId, out request))
                     {
-                        var message = string.Format("RequestStart called for server instance '{0}' but thread is in a RequestStart for server instance '{1}'.",
-                            serverInstance,
-                            request.Connection.ServerInstance);
-                        var ex = new InvalidOperationException(message);
-                        __trace.TraceException(TraceEventType.Error, ex);
-                        throw ex;
+                        if (serverInstance != request.Connection.ServerInstance)
+                        {
+                            var message = string.Format("RequestStart called for server instance '{0}' but thread is in a RequestStart for server instance '{1}'.",
+                                serverInstance,
+                                request.Connection.ServerInstance);
+                            var ex = new InvalidOperationException(message);
+                            __trace.TraceException(TraceEventType.Error, ex);
+                            throw ex;
+                        }
+                        request.NestingLevel++;
+                        __trace.TraceVerbose("{0}::request nesting level increased from {1} to {2}.", this, request.NestingLevel - 1, request.NestingLevel);
+                        return new RequestStartResult(this);
                     }
-                    request.NestingLevel++;
-                    __trace.TraceVerbose("{0}::request nesting level increased from {1} to {2}.", this, request.NestingLevel - 1, request.NestingLevel);
+                }
+
+                var connection = serverInstance.AcquireConnection(initialDatabase);
+                var slaveOk = serverInstance.IsSecondary;
+
+                lock (_serverLock)
+                {
+                    var request = new Request(connection, slaveOk);
+                    _requests.Add(threadId, request);
                     return new RequestStartResult(this);
                 }
-            }
-
-            var connection = serverInstance.AcquireConnection(initialDatabase);
-            var slaveOk = serverInstance.IsSecondary;
-
-            lock (_serverLock)
-            {
-                var request = new Request(connection, slaveOk, traceStart);
-                _requests.Add(threadId, request);
-                return new RequestStartResult(this);
             }
         }
 
@@ -1379,7 +1383,6 @@ namespace MongoDB.Driver
         {
             lock (_stateLock)
             {
-
                 for (int i = _instances.Count - 1; i >= 0; i--)
                 {
                     if (!instanceAddresses.Contains(_instances[i].Address))
@@ -1401,7 +1404,7 @@ namespace MongoDB.Driver
         // private methods
         private MongoServerInstance ChooseServerInstance(bool slaveOk)
         {
-            const int maxAttempts = 2;
+            const int maxAttempts = 2; // must be exactly 2
             lock (_serverLock)
             {
                 // first try to choose an instance given the current state
@@ -1412,6 +1415,7 @@ namespace MongoDB.Driver
                     {
                         if (slaveOk)
                         {
+                            // round robin the connected secondaries, fall back to primary if no secondary found
                             lock (_stateLock)
                             {
                                 for (int i = 0; i < _instances.Count; i++)
@@ -1551,15 +1555,13 @@ namespace MongoDB.Driver
             // private fields
             private readonly MongoConnection _connection;
             private bool _slaveOk;
-            private readonly IDisposable _trace;
             private int _nestingLevel;
 
             // constructors
-            public Request(MongoConnection connection, bool slaveOk, IDisposable trace)
+            public Request(MongoConnection connection, bool slaveOk)
             {
                 _connection = connection;
                 _slaveOk = slaveOk;
-                _trace = trace;
                 _nestingLevel = 1;
             }
 
@@ -1579,11 +1581,6 @@ namespace MongoDB.Driver
             {
                 get { return _slaveOk; }
                 internal set { _slaveOk = value; }
-            }
-
-            internal IDisposable Trace
-            {
-                get { return _trace; }
             }
         }
 

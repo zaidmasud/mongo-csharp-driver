@@ -15,17 +15,17 @@
 
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Net;
 using System.Net.Sockets;
 using System.Text;
+using System.Threading;
 
 using MongoDB.Bson;
 using MongoDB.Bson.IO;
 using MongoDB.Bson.Serialization;
-using System.Diagnostics;
-using System.Threading;
 
 namespace MongoDB.Driver.Internal
 {
@@ -53,9 +53,9 @@ namespace MongoDB.Driver.Internal
     /// </summary>
     public class MongoConnection
     {
-        //private static fields
-        private static readonly TraceSource __trace = TracingConstants.CreateGeneralTraceSource();
-        private static readonly TraceSource __traceData = TracingConstants.CreateDataTraceSource();
+        // private static fields
+        private static readonly TraceSource __trace = TraceSources.CreateGeneralTraceSource();
+        private static readonly TraceSource __traceData = TraceSources.CreateDataTraceSource();
         private static int __nextSequentialId;
 
         // private fields
@@ -177,9 +177,16 @@ namespace MongoDB.Driver.Internal
         }
 
         // internal methods
-        // assume that IsAuthenticated was called first and returned false
         internal bool CanAuthenticate(MongoDatabase database)
         {
+            // check whether the connection can be used with the given database (and credentials)
+            // the following are the only valid authentication states for a connection:
+            // 1. the connection is not authenticated against any database
+            // 2. the connection has a single authentication against the admin database (with a particular set of credentials)
+            // 3. the connection has one or more authentications against any databases other than admin
+            //    (with the restriction that a particular database can only be authenticated against once and therefore with only one set of credentials)
+            // assume that IsAuthenticated was called first and returned false
+
             EnsureOpenConnection();
             if (database == null)
             {
@@ -322,16 +329,6 @@ namespace MongoDB.Driver.Internal
                         return false;
                     }
                 }
-            }
-        }
-
-        private void EnsureOpenConnection()
-        {
-            if (_state == MongoConnectionState.Closed)
-            {
-                var ex = new InvalidOperationException("Connection is closed.");
-                __trace.TraceException(TraceEventType.Error, ex);
-                throw ex;
             }
         }
 
@@ -535,12 +532,6 @@ namespace MongoDB.Driver.Internal
         }
 
         // private methods
-        // check whether the connection can be used with the given database (and credentials)
-        // the following are the only valid authentication states for a connection:
-        // 1. the connection is not authenticated against any database
-        // 2. the connection has a single authentication against the admin database (with a particular set of credentials)
-        // 3. the connection has one or more authentications against any databases other than admin
-        //    (with the restriction that a particular database can only be authenticated against once and therefore with only one set of credentials)
         private void Authenticate(string databaseName, MongoCredentials credentials)
         {
             __trace.TraceVerbose("{0}::authenticating.", this);
@@ -588,6 +579,16 @@ namespace MongoDB.Driver.Internal
 
                 var authentication = new Authentication(credentials);
                 _authentications.Add(databaseName, authentication);
+            }
+        }
+
+        private void EnsureOpenConnection()
+        {
+            if (_state == MongoConnectionState.Closed)
+            {
+                var ex = new InvalidOperationException("Connection is closed.");
+                __trace.TraceException(TraceEventType.Error, ex);
+                throw ex;
             }
         }
 

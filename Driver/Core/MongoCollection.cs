@@ -16,6 +16,7 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Text;
@@ -27,7 +28,6 @@ using MongoDB.Bson.Serialization.Options;
 using MongoDB.Driver.Builders;
 using MongoDB.Driver.Internal;
 using MongoDB.Driver.Wrappers;
-using System.Diagnostics;
 
 namespace MongoDB.Driver
 {
@@ -36,9 +36,9 @@ namespace MongoDB.Driver
     /// </summary>
     public abstract class MongoCollection
     {
-        //private static field
-        private static readonly TraceSource __trace = TracingConstants.CreateGeneralTraceSource();
-        private static readonly TraceSource __traceData = TracingConstants.CreateDataTraceSource();
+        // private static fields
+        private static readonly TraceSource __trace = TraceSources.CreateGeneralTraceSource();
+        private static readonly TraceSource __traceData = TraceSources.CreateDataTraceSource();
 
         // private fields
         private MongoServer _server;
@@ -876,19 +876,19 @@ namespace MongoDB.Driver
             using (__trace.TraceStart("{0}::Group", this))
             {
                 var command = new CommandDocument
-            {
                 {
-                    "group", new BsonDocument
                     {
-                        { "ns", _name },
-                        { "condition", BsonDocumentWrapper.Create(query) }, // condition is optional
-                        { "key", BsonDocumentWrapper.Create(keys) },
-                        { "initial", initial },
-                        { "$reduce", reduce },
-                        { "finalize", finalize }
+                        "group", new BsonDocument
+                        {
+                            { "ns", _name },
+                            { "condition", BsonDocumentWrapper.Create(query) }, // condition is optional
+                            { "key", BsonDocumentWrapper.Create(keys) },
+                            { "initial", initial },
+                            { "$reduce", reduce },
+                            { "finalize", finalize }
+                        }
                     }
-                }
-            };
+                };
                 var result = _database.RunCommand(command);
                 return result.Response["retval"].AsBsonArray.Values.Cast<BsonDocument>();
             }
@@ -1116,9 +1116,7 @@ namespace MongoDB.Driver
         /// <param name="nominalType">The nominal type of the documents to insert.</param>
         /// <param name="documents">The documents to insert.</param>
         /// <param name="options">The options to use for this Insert.</param>
-        /// <returns>
-        /// A list of SafeModeResults (or null if SafeMode is not being used).
-        /// </returns>
+        /// <returns>A list of SafeModeResults (or null if SafeMode is not being used).</returns>
         public virtual IEnumerable<SafeModeResult> InsertBatch(
             Type nominalType,
             IEnumerable documents,

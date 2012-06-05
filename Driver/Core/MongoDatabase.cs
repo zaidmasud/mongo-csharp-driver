@@ -15,6 +15,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Text;
@@ -24,7 +25,6 @@ using MongoDB.Bson.Serialization;
 using MongoDB.Driver.Builders;
 using MongoDB.Driver.GridFS;
 using MongoDB.Driver.Internal;
-using System.Diagnostics;
 
 namespace MongoDB.Driver
 {
@@ -33,8 +33,8 @@ namespace MongoDB.Driver
     /// </summary>
     public class MongoDatabase
     {
-        //private static fields
-        private static readonly TraceSource __trace = TracingConstants.CreateGeneralTraceSource();
+        // private static fields
+        private static readonly TraceSource __trace = TraceSources.CreateGeneralTraceSource();
 
         // private fields
         private object _databaseLock = new object();

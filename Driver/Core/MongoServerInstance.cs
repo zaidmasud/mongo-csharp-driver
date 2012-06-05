@@ -15,6 +15,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Net;
 using System.Text;
@@ -23,7 +24,6 @@ using System.Threading;
 using MongoDB.Bson;
 using MongoDB.Bson.Serialization;
 using MongoDB.Driver.Internal;
-using System.Diagnostics;
 
 namespace MongoDB.Driver
 {
@@ -33,7 +33,7 @@ namespace MongoDB.Driver
     public class MongoServerInstance
     {
         // private static fields
-        private static readonly TraceSource __trace = TracingConstants.CreateGeneralTraceSource();
+        private static readonly TraceSource __trace = TraceSources.CreateGeneralTraceSource();
         private static int __nextSequentialId;
 
         // public events
@@ -264,7 +264,7 @@ namespace MongoDB.Driver
                         {
                             Ping(connection);
                         }
-                        catch(Exception ex)
+                        catch (Exception ex)
                         {
                             __trace.TraceException(TraceEventType.Warning, ex);
                             _connectionPool.Clear();
@@ -275,7 +275,7 @@ namespace MongoDB.Driver
                         {
                             VerifyState(connection);
                         }
-                        catch(Exception ex)
+                        catch (Exception ex)
                         {
                             __trace.TraceException(TraceEventType.Warning, ex);
                             // ignore exceptions (if any occured state will already be set to Disconnected)
@@ -325,10 +325,6 @@ namespace MongoDB.Driver
             return connection;
         }
 
-        /// <summary>
-        /// Connects the specified slave ok.
-        /// </summary>
-        /// <param name="slaveOk">if set to <c>true</c> [slave ok].</param>
         internal void Connect(bool slaveOk)
         {
             __trace.TraceInformation("{0}::connecting with slaveOk={1}.", this, slaveOk);
@@ -358,7 +354,7 @@ namespace MongoDB.Driver
                             ReleaseConnection(connection);
                         }
                     }
-                    catch(Exception ex)
+                    catch (Exception ex)
                     {
                         __trace.TraceException(TraceEventType.Error, ex);
                         _connectionPool.Clear();

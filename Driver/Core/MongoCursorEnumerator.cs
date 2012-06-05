@@ -16,6 +16,7 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Net;
 using System.Text;
@@ -25,7 +26,6 @@ using MongoDB.Bson.IO;
 using MongoDB.Bson.Serialization;
 using MongoDB.Driver.Builders;
 using MongoDB.Driver.Internal;
-using System.Diagnostics;
 
 namespace MongoDB.Driver
 {
@@ -35,9 +35,9 @@ namespace MongoDB.Driver
     /// <typeparam name="TDocument">The type of the documents returned.</typeparam>
     public class MongoCursorEnumerator<TDocument> : IEnumerator<TDocument>
     {
-        //private static readonly 
-        private static readonly TraceSource __trace = TracingConstants.CreateGeneralTraceSource();
-        private static readonly TraceSource __traceData = TracingConstants.CreateDataTraceSource();
+        // private static fields 
+        private static readonly TraceSource __trace = TraceSources.CreateGeneralTraceSource();
+        private static readonly TraceSource __traceData = TraceSources.CreateDataTraceSource();
 
         // private fields
         private readonly Guid _activityId = Guid.NewGuid();
@@ -55,26 +55,16 @@ namespace MongoDB.Driver
 
         // constructors
         /// <summary>
-        /// Initializes a new instance of the MongoCursorEnumerator class.
+        /// Initializes a new instance of the <see cref="MongoCursorEnumerator&lt;TDocument&gt;"/> class.
         /// </summary>
         /// <param name="cursor">The cursor to be enumerated.</param>
-        public MongoCursorEnumerator(MongoCursor<TDocument> cursor)
+        /// <param name="activityId">The activity id.</param>
+        internal MongoCursorEnumerator(MongoCursor<TDocument> cursor, Guid activityId)
         {
             _cursor = cursor;
             _positiveLimit = cursor.Limit >= 0 ? cursor.Limit : -cursor.Limit;
-        }
-
-        /// <summary>
-        /// Initializes a new instance of the <see cref="MongoCursorEnumerator&lt;TDocument&gt;"/> class.
-        /// </summary>
-        /// <param name="cursor">The cursor.</param>
-        /// <param name="activityId">The activity id.</param>
-        internal MongoCursorEnumerator(MongoCursor<TDocument> cursor, Guid activityId)
-            : this(cursor)
-        {
             _activityId = activityId;
         }
-
 
         // public properties
         /// <summary>
@@ -284,14 +274,14 @@ namespace MongoDB.Driver
                     numberToReturn = _cursor.BatchSize;
                 }
 
-                var query = WrapQuery();
+                var wrappedQuery = WrapQuery();
                 if (__traceData.Switch.ShouldTrace(TraceEventType.Information))
                 {
-                    TraceWithActivityId(() => __traceData.TraceInformation("{0}::finding with query({1}), collectionName({2}), flags({3}), skip({4}), limit({5})", this, query.ToJson(), _cursor.Collection.FullName, _cursor.Flags, _cursor.Skip, _cursor.Limit));
+                    TraceWithActivityId(() => __traceData.TraceInformation("{0}::finding with query({1}), collectionName({2}), flags({3}), skip({4}), limit({5})", this, wrappedQuery.ToJson(), _cursor.Collection.FullName, _cursor.Flags, _cursor.Skip, _cursor.Limit));
                 }
 
                 var writerSettings = _cursor.Collection.GetWriterSettings(connection);
-                using (var message = new MongoQueryMessage(writerSettings, _cursor.Collection.FullName, _cursor.Flags, _cursor.Skip, numberToReturn, query, _cursor.Fields))
+                using (var message = new MongoQueryMessage(writerSettings, _cursor.Collection.FullName, _cursor.Flags, _cursor.Skip, numberToReturn, wrappedQuery, _cursor.Fields))
                 {
                     return GetReply(connection, message);
                 }
@@ -392,10 +382,16 @@ namespace MongoDB.Driver
 
         private void TraceWithActivityId(Action traceAction)
         {
-            var oldId = Trace.CorrelationManager.ActivityId;
+            var oldActivityId = Trace.CorrelationManager.ActivityId;
             Trace.CorrelationManager.ActivityId = _activityId;
-            traceAction();
-            Trace.CorrelationManager.ActivityId = oldId;
+            try
+            {
+                traceAction();
+            }
+            finally
+            {
+                Trace.CorrelationManager.ActivityId = oldActivityId;
+            }
         }
     }
 }

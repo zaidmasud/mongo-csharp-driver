@@ -15,11 +15,11 @@
 
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Net;
 using System.Text;
 using System.Threading;
-using System.Diagnostics;
 
 namespace MongoDB.Driver.Internal
 {
@@ -29,7 +29,7 @@ namespace MongoDB.Driver.Internal
     public class MongoConnectionPool
     {
         // private static fields
-        private static readonly TraceSource __trace = TracingConstants.CreateGeneralTraceSource();
+        private static readonly TraceSource __trace = TraceSources.CreateGeneralTraceSource();
 
         // private fields
         private object _connectionPoolLock = new object();
@@ -53,7 +53,7 @@ namespace MongoDB.Driver.Internal
 
             var dueTime = TimeSpan.FromSeconds(0);
             var period = TimeSpan.FromSeconds(10);
-            _timer = new Timer(TestServers, null, dueTime, period);
+            _timer = new Timer(TimerCallback, null, dueTime, period);
         }
 
         // public properties
@@ -346,10 +346,10 @@ namespace MongoDB.Driver.Internal
             connection.Close();
         }
 
-        private void TestServers(object state)
+        private void TimerCallback(object state)
         {
-            //need to start a new activity, otherwise it would belong to whatever the activity was that existed the first time the callback was invoked.
-            using (__trace.TraceStartWithoutTransfer("{0}::TestServers", this))
+            // need to start a new activity, otherwise it would belong to whatever the activity was that existed the first time the callback was invoked
+            using (__trace.TraceStartNewActivity("{0}::TestServers", this))
             {
                 // make sure only one instance of TimerCallback is running at a time
                 if (_inTimerCallback)

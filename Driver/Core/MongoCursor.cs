@@ -16,6 +16,7 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Text;
 
@@ -23,7 +24,6 @@ using MongoDB.Bson;
 using MongoDB.Bson.Serialization;
 using MongoDB.Driver.Builders;
 using MongoDB.Driver.Internal;
-using System.Diagnostics;
 
 namespace MongoDB.Driver
 {
@@ -33,9 +33,9 @@ namespace MongoDB.Driver
     /// </summary>
     public abstract class MongoCursor : IEnumerable
     {
-        //private static fields
-        private static readonly TraceSource __trace = TracingConstants.CreateGeneralTraceSource();
-        private static readonly TraceSource __traceData = TracingConstants.CreateDataTraceSource();
+        // private static fields
+        private static readonly TraceSource __trace = TraceSources.CreateGeneralTraceSource();
+        private static readonly TraceSource __traceData = TraceSources.CreateDataTraceSource();
 
         // private fields
         private MongoServer _server;
@@ -624,7 +624,7 @@ namespace MongoDB.Driver
     /// <typeparam name="TDocument">The type of the documents returned.</typeparam>
     public class MongoCursor<TDocument> : MongoCursor, IEnumerable<TDocument>
     {
-        //private fields
+        // private fields
         private readonly Guid _activityId;
 
         // constructors
@@ -636,7 +636,7 @@ namespace MongoDB.Driver
         public MongoCursor(MongoCollection collection, IMongoQuery query)
             : base(collection, query)
         {
-            //whatever the activity was when we were created is the activity with which we'll correlate traces.
+            // whatever the activity was when we were created is the activity with which we'll correlate traces
             _activityId = Trace.CorrelationManager.ActivityId;
         }
 
