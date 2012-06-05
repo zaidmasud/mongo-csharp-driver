@@ -17,6 +17,7 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
+using System.Reflection;
 using System.Text;
 
 using MongoDB.Bson;
@@ -33,6 +34,7 @@ namespace MongoDB.Driver
     public abstract class MongoCursor : IEnumerable
     {
         // private fields
+        private readonly IBsonSerializer _serializer;
         private MongoServer _server;
         private MongoDatabase _database;
         private MongoCollection _collection;
@@ -47,6 +49,14 @@ namespace MongoDB.Driver
         private IBsonSerializationOptions _serializationOptions;
         private bool _isFrozen; // prevent any further modifications once enumeration has begun
 
+        /// <summary>
+        /// Gets the bson serializer that will be used to deserialize the results from the server.
+        /// </summary>
+        internal IBsonSerializer BsonSerializer
+        {
+            get { return _serializer; }
+        }
+
         // constructors
         /// <summary>
         /// Creates a new MongoCursor. It is very unlikely that you will call this constructor. Instead, see all the Find methods in MongoCollection.
@@ -60,6 +70,18 @@ namespace MongoDB.Driver
             _collection = collection;
             _query = query;
             _slaveOk = collection.Settings.SlaveOk;
+        }
+
+        /// <summary>
+        /// Initializes a new instance of the <see cref="MongoCursor"/> class.
+        /// </summary>
+        /// <param name="collection">The collection.</param>
+        /// <param name="query">The query.</param>
+        /// <param name="serializer">The serializer.</param>
+        internal protected MongoCursor(MongoCollection collection, IMongoQuery query, IBsonSerializer serializer)
+            : this(collection, query)
+        {
+            _serializer = serializer;
         }
 
         // public properties
@@ -222,6 +244,22 @@ namespace MongoDB.Driver
             var cursorType = cursorDefinition.MakeGenericType(documentType);
             var constructorInfo = cursorType.GetConstructor(new Type[] { typeof(MongoCollection), typeof(IMongoQuery) });
             return (MongoCursor)constructorInfo.Invoke(new object[] { collection, query });
+        }
+
+        /// <summary>
+        /// Creates a cursor.
+        /// </summary>
+        /// <param name="documentType">The type of the returned documents.</param>
+        /// <param name="collection">The collection to query.</param>
+        /// <param name="query">A query.</param>
+        /// <param name="serializer">The serializer to use when deserializing documents.</param>
+        /// <returns>A cursor.</returns>
+        internal static MongoCursor Create(Type documentType, MongoCollection collection, IMongoQuery query, IBsonSerializer serializer)
+        {
+            var cursorDefinition = typeof(MongoCursor<>);
+            var cursorType = cursorDefinition.MakeGenericType(documentType);
+            var constructorInfo = cursorType.GetConstructor(BindingFlags.Instance | BindingFlags.NonPublic, null, new Type[] { typeof(MongoCollection), typeof(IMongoQuery), typeof(IBsonSerializer) }, null);
+            return (MongoCursor)constructorInfo.Invoke(new object[] { collection, query, serializer });
         }
 
         // public methods
@@ -606,6 +644,17 @@ namespace MongoDB.Driver
         /// <param name="query">The query.</param>
         public MongoCursor(MongoCollection collection, IMongoQuery query)
             : base(collection, query)
+        {
+        }
+
+        /// <summary>
+        /// Initializes a new instance of the <see cref="MongoCursor&lt;TDocument&gt;"/> class.
+        /// </summary>
+        /// <param name="collection">The collection.</param>
+        /// <param name="query">The query.</param>
+        /// <param name="serializer">The serializer.</param>
+        internal MongoCursor(MongoCollection collection, IMongoQuery query, IBsonSerializer serializer)
+            : base(collection, query, serializer)
         {
         }
 

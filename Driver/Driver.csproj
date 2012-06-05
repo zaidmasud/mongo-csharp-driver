@@ -185,6 +185,9 @@
     <Compile Include="Internal\MongoUpdateMessage.cs" />
     <Compile Include="Internal\ReplicaSetConnector.cs" />
     <Compile Include="Linq\Expressions\ExpressionVisitorGeneric.cs" />
+    <Compile Include="Linq\Translators\Projection.cs" />
+    <Compile Include="Linq\Translators\ProjectionDeserializer.cs" />
+    <Compile Include="Linq\Translators\ProjectionTranslator.cs" />
     <Compile Include="Linq\Utils\BsonSerializationInfoFinder.cs" />
     <Compile Include="Linq\Utils\BsonSerializationInfoHelper.cs" />
     <Compile Include="Linq\Expressions\ExpressionNormalizer.cs" />

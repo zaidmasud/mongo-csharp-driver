@@ -42,10 +42,21 @@ namespace MongoDB.Driver.Linq.Utils
         /// Gets the serialization info for the given expression.
         /// </summary>
         /// <param name="node">The expression.</param>
-        /// <returns></returns>
+        /// <returns>The item BsonSerializationInfo for the expression.</returns>
         public BsonSerializationInfo GetSerializationInfo(Expression node)
         {
             return BsonSerializationInfoFinder.GetSerializationInfo(node, _serializationInfoCache);
+        }
+
+        /// <summary>
+        /// Tries to get the serialization info for the given expression.
+        /// </summary>
+        /// <param name="node">The node.</param>
+        /// <param name="serializationInfo">The serialization info.</param>
+        /// <returns>true if BsonSerialization was found; otherwise false;</returns>
+        public bool TryGetSerializationInfo(Expression node, out BsonSerializationInfo serializationInfo)
+        {
+            return BsonSerializationInfoFinder.TryGetSerializationInfo(node, _serializationInfoCache, out serializationInfo);
         }
 
         /// <summary>

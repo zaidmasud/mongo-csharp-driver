@@ -46,7 +46,7 @@ namespace MongoDB.DriverUnitTests.Jira.CSharp475
             var db = server.GetDatabase("csharp475");
             var collection = db.GetCollection<Base>("ProjectTest");
             collection.Drop();
-            
+
             var t1 = new T1 { A = "T1.A", B = "T1.B" };
             collection.Insert(t1);
 

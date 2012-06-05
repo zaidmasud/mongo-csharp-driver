@@ -19,7 +19,6 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
 using System.Linq.Expressions;
-using System.Text;
 
 using MongoDB.Bson;
 using MongoDB.Bson.Serialization;
@@ -38,7 +37,7 @@ namespace MongoDB.Driver.Linq
         private LambdaExpression _where;
         private Type _ofType;
         private List<OrderByClause> _orderBy;
-        private LambdaExpression _projection;
+        private Projection _projection;
         private Expression _skip;
         private Expression _take;
         private Func<IEnumerable, object> _elementSelector; // used for First, Last, etc...
@@ -76,7 +75,7 @@ namespace MongoDB.Driver.Linq
         /// <summary>
         /// Gets the Expression that defines the projection (or null if not specified).
         /// </summary>
-        public LambdaExpression Projection
+        public Projection Projection
         {
             get { return _projection; }
         }
@@ -137,7 +136,17 @@ namespace MongoDB.Driver.Linq
                 return ExecuteDistinct(query);
             }
 
-            var cursor = Collection.FindAs(DocumentType, query);
+            var documentType = DocumentType;
+            MongoCursor cursor = null;
+            if (_projection != null && _projection.Serializer != null)
+            {
+                documentType = _projection.DocumentType;
+                cursor = MongoCursor.Create(documentType, Collection, query, _projection.Serializer);
+            }
+            else
+            {
+                cursor = MongoCursor.Create(documentType, Collection, query);
+            }
 
             if (_orderBy != null)
             {
@@ -162,21 +171,26 @@ namespace MongoDB.Driver.Linq
                 cursor.SetLimit(ToInt32(_take));
             }
 
+            if (_projection != null && _projection.MongoFields != null)
+            {
+                cursor.SetFields(_projection.MongoFields);
+            }
+
             var projection = _projection;
             if (_ofType != null)
             {
                 if (projection == null)
                 {
-                    var paramExpression = Expression.Parameter(DocumentType, "x");
+                    var paramExpression = Expression.Parameter(documentType, "x");
                     var convertExpression = Expression.Convert(paramExpression, _ofType);
-                    projection = Expression.Lambda(convertExpression, paramExpression);
+                    projection = new Projection(documentType, Expression.Lambda(convertExpression, paramExpression), null);
                 }
-                else
+                else if (projection.Serializer == null)
                 {
-                    var paramExpression = Expression.Parameter(DocumentType, "x");
+                    var paramExpression = Expression.Parameter(documentType, "x");
                     var convertExpression = Expression.Convert(paramExpression, _ofType);
-                    var body = ExpressionParameterReplacer.ReplaceParameter(projection.Body, projection.Parameters[0], convertExpression);
-                    projection = Expression.Lambda(body, paramExpression);
+                    var body = ExpressionParameterReplacer.ReplaceParameter(projection.Projector.Body, projection.Projector.Parameters[0], convertExpression);
+                    projection = new Projection(documentType, Expression.Lambda(body, paramExpression), projection.OriginalProjector);
                 }
             }
 
@@ -187,12 +201,12 @@ namespace MongoDB.Driver.Linq
             }
             else
             {
-                var lambdaType = projection.GetType();
+                var lambdaType = projection.Projector.GetType();
                 var delegateType = lambdaType.GetGenericArguments()[0];
                 var sourceType = delegateType.GetGenericArguments()[0];
                 var resultType = delegateType.GetGenericArguments()[1];
                 var projectorType = typeof(Projector<,>).MakeGenericType(sourceType, resultType);
-                var compiledProjection = projection.Compile();
+                var compiledProjection = projection.Projector.Compile();
                 var projector = Activator.CreateInstance(projectorType, cursor, compiledProjection);
                 enumerable = (IEnumerable)projector;
             }
@@ -302,7 +316,7 @@ namespace MongoDB.Driver.Linq
                 throw new NotSupportedException("Distinct must be used with Select to identify the field whose distinct values are to be found.");
             }
 
-            var keyExpression = _projection.Body;
+            var keyExpression = _projection.OriginalProjector.Body;
             var serializationInfo = _serializationInfoHelper.GetSerializationInfo(keyExpression);
             var dottedElementName = serializationInfo.ElementName;
             var source = Collection.Distinct(dottedElementName, query);
@@ -545,7 +559,7 @@ namespace MongoDB.Driver.Linq
                         var message = string.Format("{0} must be used with either Select or a selector argument, but not both.", methodName);
                         throw new NotSupportedException(message);
                     }
-                    _projection = (LambdaExpression)StripQuote(methodCallExpression.Arguments[1]);
+                    _projection = new ProjectionTranslator().TranslateProjection((LambdaExpression)StripQuote(methodCallExpression.Arguments[1]));
                     break;
                 default:
                     throw new ArgumentOutOfRangeException("methodCallExpression");
@@ -558,22 +572,22 @@ namespace MongoDB.Driver.Linq
 
             // implement Max/Min by sorting on the relevant field(s) and taking the first result
             _orderBy = new List<OrderByClause>();
-            if (_projection.Body.NodeType == ExpressionType.New)
+            if (_projection.OriginalProjector.Body.NodeType == ExpressionType.New)
             {
                 // take the individual constructor arguments and make new lambdas out of them for the OrderByClauses
-                var newExpression = (NewExpression)_projection.Body;
+                var newExpression = (NewExpression)_projection.OriginalProjector.Body;
                 foreach (var keyExpression in newExpression.Arguments)
                 {
                     var delegateTypeGenericDefinition = typeof(Func<,>);
-                    var delegateType = delegateTypeGenericDefinition.MakeGenericType(_projection.Parameters[0].Type, keyExpression.Type);
-                    var keyLambda = Expression.Lambda(delegateType, keyExpression, _projection.Parameters);
+                    var delegateType = delegateTypeGenericDefinition.MakeGenericType(_projection.OriginalProjector.Parameters[0].Type, keyExpression.Type);
+                    var keyLambda = Expression.Lambda(delegateType, keyExpression, _projection.OriginalProjector.Parameters);
                     var clause = new OrderByClause(keyLambda, (methodName == "Min") ? OrderByDirection.Ascending : OrderByDirection.Descending);
                     _orderBy.Add(clause);
                 }
             }
             else
             {
-                var clause = new OrderByClause(_projection, (methodName == "Min") ? OrderByDirection.Ascending : OrderByDirection.Descending);
+                var clause = new OrderByClause(_projection.OriginalProjector, (methodName == "Min") ? OrderByDirection.Ascending : OrderByDirection.Descending);
                 _orderBy.Add(clause);
             }
 
@@ -751,7 +765,7 @@ namespace MongoDB.Driver.Linq
             {
                 return;
             }
-            _projection = lambdaExpression;
+            _projection = new ProjectionTranslator().TranslateProjection(lambdaExpression);
         }
 
         private void TranslateSkip(MethodCallExpression methodCallExpression)

@@ -1518,7 +1518,8 @@ namespace MongoDB.DriverUnitTests.Linq
             var selectQuery = (SelectQuery)translatedQuery;
             Assert.IsNull(selectQuery.Where);
             Assert.IsNull(selectQuery.OrderBy);
-            Assert.AreEqual("(C c) => c.X", ExpressionFormatter.ToString(selectQuery.Projection));
+            Assert.IsNotNull(selectQuery.Projection.MongoFields);
+            Assert.AreEqual("{ \"_id\" : 0, \"x\" : 1 }", selectQuery.Projection.MongoFields.ToJson());
             Assert.IsNull(selectQuery.Skip);
             Assert.IsNull(selectQuery.Take);
 
@@ -1528,6 +1529,114 @@ namespace MongoDB.DriverUnitTests.Linq
             Assert.AreEqual(5, results.Count);
             Assert.AreEqual(2, results.First());
             Assert.AreEqual(4, results.Last());
+        }
+
+        [Test]
+        public void TestProjectionWithMultipleFields()
+        {
+            var query = from c in _collection.AsQueryable<C>()
+                        select new { c.X, c.Y };
+
+            var translatedQuery = MongoQueryTranslator.Translate(query);
+            Assert.IsInstanceOf<SelectQuery>(translatedQuery);
+            Assert.AreSame(_collection, translatedQuery.Collection);
+            Assert.AreSame(typeof(C), translatedQuery.DocumentType);
+
+            var selectQuery = (SelectQuery)translatedQuery;
+            Assert.IsNull(selectQuery.Where);
+            Assert.IsNull(selectQuery.OrderBy);
+            Assert.IsNotNull(selectQuery.Projection.MongoFields);
+            Assert.AreEqual("{ \"_id\" : 0, \"x\" : 1, \"y\" : 1 }", selectQuery.Projection.MongoFields.ToJson());
+            Assert.IsNull(selectQuery.Skip);
+            Assert.IsNull(selectQuery.Take);
+
+            Assert.IsNull(selectQuery.BuildQuery());
+
+            var results = query.ToList();
+            Assert.AreEqual(5, results.Count);
+            Assert.AreEqual(2, results.First().X);
+            Assert.AreEqual(4, results.Last().X);
+        }
+
+        [Test]
+        public void TestProjectionWithRepeatedField()
+        {
+            var query = from c in _collection.AsQueryable<C>()
+                        select new { c.X, c.Y, Q = new { c.X, c.D } };
+
+            var translatedQuery = MongoQueryTranslator.Translate(query);
+            Assert.IsInstanceOf<SelectQuery>(translatedQuery);
+            Assert.AreSame(_collection, translatedQuery.Collection);
+            Assert.AreSame(typeof(C), translatedQuery.DocumentType);
+
+            var selectQuery = (SelectQuery)translatedQuery;
+            Assert.IsNull(selectQuery.Where);
+            Assert.IsNull(selectQuery.OrderBy);
+            Assert.IsNotNull(selectQuery.Projection.MongoFields);
+            Assert.AreEqual("{ \"_id\" : 0, \"d\" : 1, \"x\" : 1, \"y\" : 1 }", selectQuery.Projection.MongoFields.ToJson());
+            Assert.IsNull(selectQuery.Skip);
+            Assert.IsNull(selectQuery.Take);
+
+            Assert.IsNull(selectQuery.BuildQuery());
+
+            var results = query.ToList();
+            Assert.AreEqual(5, results.Count);
+            Assert.AreEqual(2, results.First().Q.X);
+            Assert.AreEqual(4, results.Last().Q.X);
+        }
+
+        [Test]
+        public void TestProjectionWithRedundantDocumentFieldSelection()
+        {
+            var query = from c in _collection.AsQueryable<C>()
+                        select new { c.X, c.D, Q = new { c.D.Z } };
+
+            var translatedQuery = MongoQueryTranslator.Translate(query);
+            Assert.IsInstanceOf<SelectQuery>(translatedQuery);
+            Assert.AreSame(_collection, translatedQuery.Collection);
+            Assert.AreSame(typeof(C), translatedQuery.DocumentType);
+
+            var selectQuery = (SelectQuery)translatedQuery;
+            Assert.IsNull(selectQuery.Where);
+            Assert.IsNull(selectQuery.OrderBy);
+            Assert.IsNotNull(selectQuery.Projection.MongoFields);
+            Assert.AreEqual("{ \"_id\" : 0, \"d\" : 1, \"x\" : 1 }", selectQuery.Projection.MongoFields.ToJson());
+            Assert.IsNull(selectQuery.Skip);
+            Assert.IsNull(selectQuery.Take);
+
+            Assert.IsNull(selectQuery.BuildQuery());
+
+            var results = query.ToList();
+            Assert.AreEqual(5, results.Count);
+            Assert.AreEqual(22, results.First().Q.Z);
+            Assert.AreEqual(44, results.Last().Q.Z);
+        }
+
+        [Test]
+        public void TestProjectionWithBinaryOperation()
+        {
+            var query = from c in _collection.AsQueryable<C>()
+                        select new { XPlusY = c.X + c.Y };
+
+            var translatedQuery = MongoQueryTranslator.Translate(query);
+            Assert.IsInstanceOf<SelectQuery>(translatedQuery);
+            Assert.AreSame(_collection, translatedQuery.Collection);
+            Assert.AreSame(typeof(C), translatedQuery.DocumentType);
+
+            var selectQuery = (SelectQuery)translatedQuery;
+            Assert.IsNull(selectQuery.Where);
+            Assert.IsNull(selectQuery.OrderBy);
+            Assert.IsNotNull(selectQuery.Projection.MongoFields);
+            Assert.AreEqual("{ \"_id\" : 0, \"x\" : 1, \"y\" : 1 }", selectQuery.Projection.MongoFields.ToJson());
+            Assert.IsNull(selectQuery.Skip);
+            Assert.IsNull(selectQuery.Take);
+
+            Assert.IsNull(selectQuery.BuildQuery());
+
+            var results = query.ToList();
+            Assert.AreEqual(5, results.Count);
+            Assert.AreEqual(13, results.First().XPlusY);
+            Assert.AreEqual(48, results.Last().XPlusY);
         }
 
         [Test]

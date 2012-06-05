@@ -24,6 +24,7 @@ using System.Text;
 using MongoDB.Bson;
 using MongoDB.Bson.IO;
 using MongoDB.Bson.Serialization;
+using MongoDB.Bson.Serialization.Serializers;
 
 namespace MongoDB.Driver.Internal
 {
@@ -397,7 +398,7 @@ namespace MongoDB.Driver.Internal
                 GuidRepresentation = GuidRepresentation.Unspecified,
                 MaxDocumentSize = _serverInstance.MaxDocumentSize
             };
-            var reply = ReceiveMessage<BsonDocument>(readerSettings, null);
+            var reply = ReceiveMessage<BsonDocument>(BsonDocumentSerializer.Instance, readerSettings, null);
             if (reply.NumberReturned == 0)
             {
                 var message = string.Format("Command '{0}' failed. No response returned.", commandName);
@@ -414,6 +415,7 @@ namespace MongoDB.Driver.Internal
         }
 
         internal MongoReplyMessage<TDocument> ReceiveMessage<TDocument>(
+            IBsonSerializer serializer,
             BsonBinaryReaderSettings readerSettings,
             IBsonSerializationOptions serializationOptions)
         {
@@ -431,7 +433,7 @@ namespace MongoDB.Driver.Internal
                             networkStream.ReadTimeout = readTimeout;
                         }
                         buffer.LoadFrom(networkStream);
-                        var reply = new MongoReplyMessage<TDocument>(readerSettings);
+                        var reply = new MongoReplyMessage<TDocument>(serializer, readerSettings);
                         reply.ReadFrom(buffer, serializationOptions);
                         return reply;
                     }
@@ -496,7 +498,7 @@ namespace MongoDB.Driver.Internal
                         GuidRepresentation = message.WriterSettings.GuidRepresentation,
                         MaxDocumentSize = _serverInstance.MaxDocumentSize
                     };
-                    var replyMessage = ReceiveMessage<BsonDocument>(readerSettings, null);
+                    var replyMessage = ReceiveMessage<BsonDocument>(BsonDocumentSerializer.Instance, readerSettings, null);
                     var safeModeResponse = replyMessage.Documents[0];
                     safeModeResult = new SafeModeResult();
                     safeModeResult.Initialize(safeModeCommand, safeModeResponse);
@@ -606,5 +608,7 @@ namespace MongoDB.Driver.Internal
                 set { _lastUsed = value; }
             }
         }
+
+        public IBsonSerializer BsonDocumentSerializerreaderSettings { get; set; }
     }
 }
