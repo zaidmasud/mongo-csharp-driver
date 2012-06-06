@@ -51,29 +51,19 @@ namespace MongoDB.Driver
 
         // constructors
         /// <summary>
-        /// Creates a new MongoCursor. It is very unlikely that you will call this constructor. Instead, see all the Find methods in MongoCollection.
-        /// </summary>
-        /// <param name="collection">The collection.</param>
-        /// <param name="query">The query.</param>
-        protected MongoCursor(MongoCollection collection, IMongoQuery query)
-        {
-            _server = collection.Database.Server;
-            _database = collection.Database;
-            _collection = collection;
-            _query = query;
-            _slaveOk = collection.Settings.SlaveOk;
-        }
-
-        /// <summary>
         /// Initializes a new instance of the <see cref="MongoCursor"/> class.
         /// </summary>
         /// <param name="collection">The collection.</param>
         /// <param name="query">The query.</param>
         /// <param name="serializer">The serializer.</param>
         internal protected MongoCursor(MongoCollection collection, IMongoQuery query, IBsonSerializer serializer)
-            : this(collection, query)
         {
+            _server = collection.Database.Server;
+            _database = collection.Database;
+            _collection = collection;
+            _query = query;
             _serializer = serializer;
+            _slaveOk = collection.Settings.SlaveOk;
         }
 
         // public properties
@@ -231,22 +221,6 @@ namespace MongoDB.Driver
             get { return _serializer; }
         }
 
-        // public static methods
-        /// <summary>
-        /// Creates a cursor.
-        /// </summary>
-        /// <param name="documentType">The type of the returned documents.</param>
-        /// <param name="collection">The collection to query.</param>
-        /// <param name="query">A query.</param>
-        /// <returns>A cursor.</returns>
-        public static MongoCursor Create(Type documentType, MongoCollection collection, IMongoQuery query)
-        {
-            var cursorDefinition = typeof(MongoCursor<>);
-            var cursorType = cursorDefinition.MakeGenericType(documentType);
-            var constructorInfo = cursorType.GetConstructor(new Type[] { typeof(MongoCollection), typeof(IMongoQuery) });
-            return (MongoCursor)constructorInfo.Invoke(new object[] { collection, query });
-        }
-		
         // internal static methods
         /// <summary>
         /// Creates a cursor.
@@ -639,16 +613,6 @@ namespace MongoDB.Driver
     public class MongoCursor<TDocument> : MongoCursor, IEnumerable<TDocument>
     {
         // constructors
-        /// <summary>
-        /// Creates a new MongoCursor. It is very unlikely that you will call this constructor. Instead, see all the Find methods in MongoCollection.
-        /// </summary>
-        /// <param name="collection">The collection.</param>
-        /// <param name="query">The query.</param>
-        public MongoCursor(MongoCollection collection, IMongoQuery query)
-            : base(collection, query)
-        {
-        }
-
         /// <summary>
         /// Initializes a new instance of the <see cref="MongoCursor&lt;TDocument&gt;"/> class.
         /// </summary>

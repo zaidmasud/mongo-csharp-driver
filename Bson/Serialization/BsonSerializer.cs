@@ -211,24 +211,8 @@ namespace MongoDB.Bson.Serialization
                 return ((IBsonSerializable)bsonDocument).Deserialize(bsonReader, nominalType, options);
             }
 
-            // if nominalType is an interface find out the actualType and use it instead
-            if (nominalType.IsInterface)
-            {
-                var discriminatorConvention = LookupDiscriminatorConvention(nominalType);
-                var actualType = discriminatorConvention.GetActualType(bsonReader, nominalType);
-                if (actualType == nominalType)
-                {
-                    var message = string.Format("Unable to determine actual type of object to deserialize. NominalType is the interface {0}.", nominalType);
-                    throw new FileFormatException(message);
-                }
-                var serializer = LookupSerializer(actualType);
-                return serializer.Deserialize(bsonReader, actualType, options);
-            }
-            else
-            {
-                var serializer = LookupSerializer(nominalType);
-                return serializer.Deserialize(bsonReader, nominalType, options);
-            }
+            var serializer = LookupSerializer(nominalType);
+            return serializer.Deserialize(bsonReader, nominalType, options);
         }
 
         /// <summary>

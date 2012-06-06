@@ -294,8 +294,7 @@ namespace MongoDB.Driver
         {
             var readerSettings = _cursor.Collection.GetReaderSettings(connection);
             connection.SendMessage(message, SafeMode.False); // safemode doesn't apply to queries
-            var serializer = _cursor.Serializer ?? new GlobalStaticDeserializer();
-            var reply = connection.ReceiveMessage<TDocument>(readerSettings, serializer, _cursor.SerializationOptions);
+            var reply = connection.ReceiveMessage<TDocument>(readerSettings, _cursor.Serializer, _cursor.SerializationOptions);
             _responseFlags = reply.ResponseFlags;
             _openCursorId = reply.CursorId;
             return reply;
@@ -342,17 +341,6 @@ namespace MongoDB.Driver
                 var wrappedQuery = new QueryDocument("$query", query);
                 wrappedQuery.Merge(_cursor.Options);
                 return wrappedQuery;
-            }
-        }
-
-        /// <summary>
-        /// This serializer merely wraps the global static BsonSerializer.Deserialize method so that we can pass an instance to the MongoConnection.ReceiveMessage method.
-        /// </summary>
-        private class GlobalStaticDeserializer : BsonBaseSerializer
-        {
-            public override object Deserialize(BsonReader bsonReader, Type nominalType, Type actualType, IBsonSerializationOptions options)
-            {
-                return BsonSerializer.Deserialize(bsonReader, nominalType, options);
             }
         }
     }

@@ -175,6 +175,12 @@ namespace MongoDB.Bson.Serialization
                 return collectionSerializer;
             }
 
+            // this check must be after we check for collection interfaces
+            if (type.IsInterface)
+            {
+                return InterfaceSerializer.Instance;
+            }
+
             return null;
         }
 

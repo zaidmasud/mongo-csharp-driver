@@ -147,7 +147,8 @@ namespace MongoDB.Driver.Linq
             else
             {
                 cursorDocumentType = DocumentType;
-                cursor = MongoCursor.Create(cursorDocumentType, Collection, query);
+                var serializer = BsonSerializer.LookupSerializer(cursorDocumentType);
+                cursor = MongoCursor.Create(cursorDocumentType, Collection, query, serializer);
             }
 
             if (_orderBy != null)
