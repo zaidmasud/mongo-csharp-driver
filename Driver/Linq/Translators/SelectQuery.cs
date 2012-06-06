@@ -19,6 +19,7 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
 using System.Linq.Expressions;
+using System.Text;
 
 using MongoDB.Bson;
 using MongoDB.Bson.Serialization;
@@ -136,16 +137,17 @@ namespace MongoDB.Driver.Linq
                 return ExecuteDistinct(query);
             }
 
-            var documentType = DocumentType;
-            MongoCursor cursor = null;
+            Type cursorDocumentType;
+            MongoCursor cursor;
             if (_projection != null && _projection.Serializer != null)
             {
-                documentType = _projection.DocumentType;
-                cursor = MongoCursor.Create(documentType, Collection, query, _projection.Serializer);
+                cursorDocumentType = _projection.DocumentType;
+                cursor = MongoCursor.Create(cursorDocumentType, Collection, query, _projection.Serializer);
             }
             else
             {
-                cursor = MongoCursor.Create(documentType, Collection, query);
+                cursorDocumentType = DocumentType;
+                cursor = MongoCursor.Create(cursorDocumentType, Collection, query);
             }
 
             if (_orderBy != null)
@@ -181,16 +183,16 @@ namespace MongoDB.Driver.Linq
             {
                 if (projection == null)
                 {
-                    var paramExpression = Expression.Parameter(documentType, "x");
+                    var paramExpression = Expression.Parameter(cursorDocumentType, "x");
                     var convertExpression = Expression.Convert(paramExpression, _ofType);
-                    projection = new Projection(documentType, Expression.Lambda(convertExpression, paramExpression), null);
+                    projection = new Projection(cursorDocumentType, Expression.Lambda(convertExpression, paramExpression), null);
                 }
                 else if (projection.Serializer == null)
                 {
-                    var paramExpression = Expression.Parameter(documentType, "x");
+                    var paramExpression = Expression.Parameter(cursorDocumentType, "x");
                     var convertExpression = Expression.Convert(paramExpression, _ofType);
                     var body = ExpressionParameterReplacer.ReplaceParameter(projection.Projector.Body, projection.Projector.Parameters[0], convertExpression);
-                    projection = new Projection(documentType, Expression.Lambda(body, paramExpression), projection.OriginalProjector);
+                    projection = new Projection(cursorDocumentType, Expression.Lambda(body, paramExpression), projection.OriginalProjector);
                 }
             }
 
@@ -559,7 +561,7 @@ namespace MongoDB.Driver.Linq
                         var message = string.Format("{0} must be used with either Select or a selector argument, but not both.", methodName);
                         throw new NotSupportedException(message);
                     }
-                    _projection = new ProjectionTranslator().TranslateProjection((LambdaExpression)StripQuote(methodCallExpression.Arguments[1]));
+                    _projection = ProjectionTranslator.TranslateProjection((LambdaExpression)StripQuote(methodCallExpression.Arguments[1]));
                     break;
                 default:
                     throw new ArgumentOutOfRangeException("methodCallExpression");
@@ -765,7 +767,7 @@ namespace MongoDB.Driver.Linq
             {
                 return;
             }
-            _projection = new ProjectionTranslator().TranslateProjection(lambdaExpression);
+            _projection = ProjectionTranslator.TranslateProjection(lambdaExpression);
         }
 
         private void TranslateSkip(MethodCallExpression methodCallExpression)

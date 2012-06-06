@@ -34,11 +34,11 @@ namespace MongoDB.Driver
     public abstract class MongoCursor : IEnumerable
     {
         // private fields
+        private readonly MongoServer _server;
+        private readonly MongoDatabase _database;
+        private readonly MongoCollection _collection;
+        private readonly IMongoQuery _query;
         private readonly IBsonSerializer _serializer;
-        private MongoServer _server;
-        private MongoDatabase _database;
-        private MongoCollection _collection;
-        private IMongoQuery _query;
         private IMongoFields _fields;
         private BsonDocument _options;
         private QueryFlags _flags;
@@ -48,14 +48,6 @@ namespace MongoDB.Driver
         private int _batchSize; // number of documents to return in each reply
         private IBsonSerializationOptions _serializationOptions;
         private bool _isFrozen; // prevent any further modifications once enumeration has begun
-
-        /// <summary>
-        /// Gets the bson serializer that will be used to deserialize the results from the server.
-        /// </summary>
-        internal IBsonSerializer BsonSerializer
-        {
-            get { return _serializer; }
-        }
 
         // constructors
         /// <summary>
@@ -230,6 +222,15 @@ namespace MongoDB.Driver
             protected set { _isFrozen = value; }
         }
 
+        // internal properties
+        /// <summary>
+        /// Gets the serializer that will be used to deserialize the results from the server.
+        /// </summary>
+        internal IBsonSerializer Serializer
+        {
+            get { return _serializer; }
+        }
+
         // public static methods
         /// <summary>
         /// Creates a cursor.
@@ -245,7 +246,8 @@ namespace MongoDB.Driver
             var constructorInfo = cursorType.GetConstructor(new Type[] { typeof(MongoCollection), typeof(IMongoQuery) });
             return (MongoCursor)constructorInfo.Invoke(new object[] { collection, query });
         }
-
+		
+        // internal static methods
         /// <summary>
         /// Creates a cursor.
         /// </summary>
@@ -280,7 +282,7 @@ namespace MongoDB.Driver
         /// <returns>A clone of the cursor.</returns>
         public virtual MongoCursor Clone(Type documentType)
         {
-            var clone = Create(documentType, _collection, _query);
+            var clone = Create(documentType, _collection, _query, _serializer);
             clone._options = _options == null ? null : (BsonDocument)_options.Clone();
             clone._flags = _flags;
             clone._slaveOk = _slaveOk;

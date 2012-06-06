@@ -29,8 +29,8 @@ namespace MongoDB.Driver.Internal
     internal class MongoReplyMessage<TDocument> : MongoMessage
     {
         // private fields
-        private readonly IBsonSerializer _serializer;
         private readonly BsonBinaryReaderSettings _readerSettings;
+        private readonly IBsonSerializer _serializer;
         private ResponseFlags _responseFlags;
         private long _cursorId;
         private int _startingFrom;
@@ -38,11 +38,11 @@ namespace MongoDB.Driver.Internal
         private List<TDocument> _documents;
 
         // constructors
-        internal MongoReplyMessage(IBsonSerializer serializer, BsonBinaryReaderSettings readerSettings)
+        internal MongoReplyMessage(BsonBinaryReaderSettings readerSettings, IBsonSerializer serializer)
             : base(MessageOpcode.Reply)
         {
-            _serializer = serializer;
             _readerSettings = readerSettings;
+            _serializer = serializer;
         }
 
         // internal properties

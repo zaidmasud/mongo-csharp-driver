@@ -23,9 +23,9 @@ using System.Text;
 using MongoDB.Bson;
 using MongoDB.Bson.IO;
 using MongoDB.Bson.Serialization;
+using MongoDB.Bson.Serialization.Serializers;
 using MongoDB.Driver.Builders;
 using MongoDB.Driver.Internal;
-using MongoDB.Bson.Serialization.Serializers;
 
 namespace MongoDB.Driver
 {
@@ -294,8 +294,8 @@ namespace MongoDB.Driver
         {
             var readerSettings = _cursor.Collection.GetReaderSettings(connection);
             connection.SendMessage(message, SafeMode.False); // safemode doesn't apply to queries
-            var serializer = _cursor.BsonSerializer ?? new GlobalStaticDeserializer();
-            var reply = connection.ReceiveMessage<TDocument>(serializer, readerSettings, _cursor.SerializationOptions);
+            var serializer = _cursor.Serializer ?? new GlobalStaticDeserializer();
+            var reply = connection.ReceiveMessage<TDocument>(readerSettings, serializer, _cursor.SerializationOptions);
             _responseFlags = reply.ResponseFlags;
             _openCursorId = reply.CursorId;
             return reply;
