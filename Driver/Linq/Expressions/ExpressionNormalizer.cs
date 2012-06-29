@@ -120,7 +120,7 @@ namespace MongoDB.Driver.Linq
         {
             if (node.NodeType == ExpressionType.Convert || node.NodeType == ExpressionType.ConvertChecked)
             {
-                if (node.Type.IsAssignableFrom(node.Operand.Type))
+                if (node.Type == typeof(IEnumerable<char>) && node.Operand.Type == typeof(string))
                 {
                     // ignore the unnecessary conversion added by VB
                     return Visit(node.Operand);

@@ -307,41 +307,59 @@ namespace MongoDB.Driver.Linq
                         value = Enum.ToObject(enumType, value); // serialize enum instead of underlying integer
                     }
                 }
-                else if (
-                    unaryExpression.Type.IsGenericType &&
-                    unaryExpression.Type.GetGenericTypeDefinition() == typeof(Nullable<>) &&
-                    unaryExpression.Operand.Type.IsGenericType &&
-                    unaryExpression.Operand.Type.GetGenericTypeDefinition() == typeof(Nullable<>) &&
-                    unaryExpression.Operand.Type.GetGenericArguments()[0].IsEnum)
+                else if (unaryExpression.Type.IsGenericType && unaryExpression.Type.GetGenericTypeDefinition() == typeof(Nullable<>))
                 {
-                    var enumType = unaryExpression.Operand.Type.GetGenericArguments()[0];
-                    if (unaryExpression.Type.GetGenericArguments()[0] == Enum.GetUnderlyingType(enumType))
+                    if (value == null && (!unaryExpression.Operand.Type.IsGenericType || unaryExpression.Operand.Type.GetGenericTypeDefinition() != typeof(Nullable<>)))
                     {
-                        serializationInfo = _serializationInfoHelper.GetSerializationInfo(unaryExpression.Operand);
-                        if (value != null)
+                        if (operatorType == ExpressionType.GreaterThan || operatorType == ExpressionType.LessThan)
                         {
-                            value = Enum.ToObject(enumType, value); // serialize enum instead of underlying integer
+                            return BuildBooleanQuery(false);
+                        }
+
+                        serializationInfo = _serializationInfoHelper.GetSerializationInfo(variableExpression);
+                        switch (operatorType)
+                        {
+                            case ExpressionType.GreaterThanOrEqual:
+                                return Query.GTE(serializationInfo.ElementName, BsonNull.Value);
+                            case ExpressionType.LessThanOrEqual: 
+                                return Query.LTE(serializationInfo.ElementName, BsonNull.Value);
+                            case ExpressionType.Equal:
+                                return Query.EQ(serializationInfo.ElementName, BsonNull.Value);
+                            case ExpressionType.NotEqual: 
+                                return Query.NE(serializationInfo.ElementName, BsonNull.Value);
+                        }
+                    }
+                    else if (unaryExpression.Operand.Type.IsGenericType &&
+                        unaryExpression.Operand.Type.GetGenericTypeDefinition() == typeof(Nullable<>) &&
+                        unaryExpression.Operand.Type.GetGenericArguments()[0].IsEnum)
+                    {
+                        var enumType = unaryExpression.Operand.Type.GetGenericArguments()[0];
+                        if (unaryExpression.Type.GetGenericArguments()[0] == Enum.GetUnderlyingType(enumType))
+                        {
+                            serializationInfo = _serializationInfoHelper.GetSerializationInfo(unaryExpression.Operand);
+                            if (value != null)
+                            {
+                                value = Enum.ToObject(enumType, value); // serialize enum instead of underlying integer
+                            }
                         }
                     }
                 }
             }
-            else
+
+            if (serializationInfo == null)
             {
                 serializationInfo = _serializationInfoHelper.GetSerializationInfo(variableExpression);
             }
 
-            if (serializationInfo != null)
+            var serializedValue = _serializationInfoHelper.SerializeValue(serializationInfo, value);
+            switch (operatorType)
             {
-                var serializedValue = _serializationInfoHelper.SerializeValue(serializationInfo, value);
-                switch (operatorType)
-                {
-                    case ExpressionType.Equal: return Query.EQ(serializationInfo.ElementName, serializedValue);
-                    case ExpressionType.GreaterThan: return Query.GT(serializationInfo.ElementName, serializedValue);
-                    case ExpressionType.GreaterThanOrEqual: return Query.GTE(serializationInfo.ElementName, serializedValue);
-                    case ExpressionType.LessThan: return Query.LT(serializationInfo.ElementName, serializedValue);
-                    case ExpressionType.LessThanOrEqual: return Query.LTE(serializationInfo.ElementName, serializedValue);
-                    case ExpressionType.NotEqual: return Query.NE(serializationInfo.ElementName, serializedValue);
-                }
+                case ExpressionType.Equal: return Query.EQ(serializationInfo.ElementName, serializedValue);
+                case ExpressionType.GreaterThan: return Query.GT(serializationInfo.ElementName, serializedValue);
+                case ExpressionType.GreaterThanOrEqual: return Query.GTE(serializationInfo.ElementName, serializedValue);
+                case ExpressionType.LessThan: return Query.LT(serializationInfo.ElementName, serializedValue);
+                case ExpressionType.LessThanOrEqual: return Query.LTE(serializationInfo.ElementName, serializedValue);
+                case ExpressionType.NotEqual: return Query.NE(serializationInfo.ElementName, serializedValue);
             }
 
             return null;
