@@ -307,31 +307,13 @@ namespace MongoDB.Driver.Linq
                         value = Enum.ToObject(enumType, value); // serialize enum instead of underlying integer
                     }
                 }
-                else if (unaryExpression.Type.IsGenericType && unaryExpression.Type.GetGenericTypeDefinition() == typeof(Nullable<>))
+                else if (
+                    unaryExpression.Type.IsGenericType &&
+                    unaryExpression.Type.GetGenericTypeDefinition() == typeof(Nullable<>))
                 {
-                    if (value == null && (!unaryExpression.Operand.Type.IsGenericType || unaryExpression.Operand.Type.GetGenericTypeDefinition() != typeof(Nullable<>)))
-                    {
-                        if (operatorType == ExpressionType.GreaterThan || operatorType == ExpressionType.LessThan)
-                        {
-                            return BuildBooleanQuery(false);
-                        }
-
-                        serializationInfo = _serializationInfoHelper.GetSerializationInfo(variableExpression);
-                        switch (operatorType)
-                        {
-                            case ExpressionType.GreaterThanOrEqual:
-                                return Query.GTE(serializationInfo.ElementName, BsonNull.Value);
-                            case ExpressionType.LessThanOrEqual: 
-                                return Query.LTE(serializationInfo.ElementName, BsonNull.Value);
-                            case ExpressionType.Equal:
-                                return Query.EQ(serializationInfo.ElementName, BsonNull.Value);
-                            case ExpressionType.NotEqual: 
-                                return Query.NE(serializationInfo.ElementName, BsonNull.Value);
-                        }
-                    }
-                    else if (unaryExpression.Operand.Type.IsGenericType &&
-                        unaryExpression.Operand.Type.GetGenericTypeDefinition() == typeof(Nullable<>) &&
-                        unaryExpression.Operand.Type.GetGenericArguments()[0].IsEnum)
+                    if (unaryExpression.Operand.Type.IsGenericType &&
+                         unaryExpression.Operand.Type.GetGenericTypeDefinition() == typeof(Nullable<>) &&
+                         unaryExpression.Operand.Type.GetGenericArguments()[0].IsEnum)
                     {
                         var enumType = unaryExpression.Operand.Type.GetGenericArguments()[0];
                         if (unaryExpression.Type.GetGenericArguments()[0] == Enum.GetUnderlyingType(enumType))
@@ -343,23 +325,44 @@ namespace MongoDB.Driver.Linq
                             }
                         }
                     }
+                    else if (!unaryExpression.Operand.Type.IsGenericType) // if it's not generic it can't be Nullable<T>
+                    {
+                        if (value != null)
+                        {
+                            serializationInfo = _serializationInfoHelper.GetSerializationInfo(unaryExpression.Operand);
+                            // value is already OK because Nullable<T> is boxed as T
+                        }
+                        else
+                        {
+                            if (operatorType == ExpressionType.NotEqual)
+                            {
+                                return BuildBooleanQuery(true);
+                            }
+                            else
+                            {
+                                return BuildBooleanQuery(false);
+                            }
+                        }
+                    }
                 }
             }
-
-            if (serializationInfo == null)
+            else
             {
                 serializationInfo = _serializationInfoHelper.GetSerializationInfo(variableExpression);
             }
 
-            var serializedValue = _serializationInfoHelper.SerializeValue(serializationInfo, value);
-            switch (operatorType)
+            if (serializationInfo != null)
             {
-                case ExpressionType.Equal: return Query.EQ(serializationInfo.ElementName, serializedValue);
-                case ExpressionType.GreaterThan: return Query.GT(serializationInfo.ElementName, serializedValue);
-                case ExpressionType.GreaterThanOrEqual: return Query.GTE(serializationInfo.ElementName, serializedValue);
-                case ExpressionType.LessThan: return Query.LT(serializationInfo.ElementName, serializedValue);
-                case ExpressionType.LessThanOrEqual: return Query.LTE(serializationInfo.ElementName, serializedValue);
-                case ExpressionType.NotEqual: return Query.NE(serializationInfo.ElementName, serializedValue);
+                var serializedValue = _serializationInfoHelper.SerializeValue(serializationInfo, value);
+                switch (operatorType)
+                {
+                    case ExpressionType.Equal: return Query.EQ(serializationInfo.ElementName, serializedValue);
+                    case ExpressionType.GreaterThan: return Query.GT(serializationInfo.ElementName, serializedValue);
+                    case ExpressionType.GreaterThanOrEqual: return Query.GTE(serializationInfo.ElementName, serializedValue);
+                    case ExpressionType.LessThan: return Query.LT(serializationInfo.ElementName, serializedValue);
+                    case ExpressionType.LessThanOrEqual: return Query.LTE(serializationInfo.ElementName, serializedValue);
+                    case ExpressionType.NotEqual: return Query.NE(serializationInfo.ElementName, serializedValue);
+                }
             }
 
             return null;
