@@ -294,7 +294,8 @@ namespace MongoDB.Driver
                 { "count", _collection.Name },
                 { "query", BsonDocumentWrapper.Create(_query), _query != null } // query is optional
             };
-            var result = _database.RunCommand(command);
+            var readOptions = new MongoReadOptions { ReadPreference = _readPreference };
+            var result = _database.RunCommand(command, readOptions);
             return result.Response["n"].ToInt64();
         }
 
@@ -611,7 +612,8 @@ namespace MongoDB.Driver
                 { "limit", _limit, _limit != 0 },
                 { "skip", _skip, _skip != 0 }
             };
-            var result = _database.RunCommand(command);
+            var readOptions = new MongoReadOptions { ReadPreference = _readPreference };
+            var result = _database.RunCommand(command, readOptions);
             return result.Response["n"].ToInt64();
         }
 

@@ -464,13 +464,14 @@ namespace MongoDB.Driver.GridFS
         public void Refresh()
         {
             MongoCursor<BsonDocument> cursor;
+            var readOptions = new MongoReadOptions { ReadPreference = _gridFS.Database.Settings.ReadPreference };
             if (_id != null)
             {
-                cursor = _gridFS.Files.Find(Query.EQ("_id", _id));
+                cursor = _gridFS.Files.Find(Query.EQ("_id", _id), readOptions);
             }
             else
             {
-                cursor = _gridFS.Files.Find(Query.EQ("filename", _name)).SetSortOrder(SortBy.Descending("uploadDate"));
+                cursor = _gridFS.Files.Find(Query.EQ("filename", _name), readOptions).SetSortOrder(SortBy.Descending("uploadDate"));
             }
             var fileInfo = cursor.SetLimit(1).FirstOrDefault();
             CacheFileInfo(fileInfo); // fileInfo will be null if file does not exist

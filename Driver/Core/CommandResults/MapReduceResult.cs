@@ -162,7 +162,9 @@ namespace MongoDB.Driver
                 {
                     outputDatabase = _inputDatabase.Server[outputDatabaseName];
                 }
-                return outputDatabase[CollectionName].FindAll();
+                var outputCollection = outputDatabase.GetCollection(CollectionName);
+                var readOptions = new MongoReadOptions { ReadPreference = ReadPreference.Primary };
+                return outputCollection.FindAll(readOptions);
             }
         }
 
@@ -199,7 +201,9 @@ namespace MongoDB.Driver
                 {
                     outputDatabase = _inputDatabase.Server[outputDatabaseName];
                 }
-                return outputDatabase[CollectionName].FindAllAs(documentType).Cast<object>();
+                var outputCollection = outputDatabase.GetCollection(CollectionName);
+                var readOptions = new MongoReadOptions { ReadPreference = ReadPreference.Primary };
+                return outputCollection.FindAllAs(documentType, readOptions).Cast<object>();
             }
         }
 

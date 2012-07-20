@@ -277,7 +277,8 @@ namespace MongoDB.Driver
         public virtual void AddUser(MongoUser user)
         {
             var users = GetCollection("system.users");
-            var document = users.FindOne(Query.EQ("user", user.Username));
+            var readOptions = new MongoReadOptions { ReadPreference = ReadPreference.Primary };
+            var document = users.FindOne(Query.EQ("user", user.Username), readOptions);
             if (document == null)
             {
                 document = new BsonDocument("user", user.Username);
@@ -292,9 +293,9 @@ namespace MongoDB.Driver
         /// </summary>
         /// <param name="collectionName">The name of the collection.</param>
         /// <returns>True if the collection exists.</returns>
-        public virtual bool CollectionExists(string collectionName)
+        public virtual bool CollectionExists(string collectionName, MongoReadOptions readOptions)
         {
-            return GetCollectionNames().Contains(collectionName);
+            return GetCollectionNames(readOptions).Contains(collectionName);
         }
 
         /// <summary>
@@ -322,7 +323,8 @@ namespace MongoDB.Driver
             {
                 command.Merge(options.ToBsonDocument());
             }
-            return RunCommand(command);
+            var readOptions = new MongoReadOptions { ReadPreference = ReadPreference.Primary };
+            return RunCommand(command, readOptions);
         }
 
         /// <summary>
@@ -373,7 +375,8 @@ namespace MongoDB.Driver
             try
             {
                 var command = new CommandDocument("drop", collectionName);
-                var result = RunCommand(command);
+                var readOptions = new MongoReadOptions { ReadPreference = ReadPreference.Primary };
+                var result = RunCommand(command, readOptions);
                 _server.IndexCache.Reset(_name, collectionName);
                 return result;
             }
@@ -402,7 +405,8 @@ namespace MongoDB.Driver
                 { "args", BsonArray.Create(args), args != null && args.Length > 0 },
                 { "nolock", true, (flags & EvalFlags.NoLock) != 0 }
             };
-            var result = RunCommand(command);
+            var readOptions = new MongoReadOptions { ReadPreference = _settings.ReadPreference };
+            var result = RunCommand(command, readOptions);
             return result.Response["retval"];
         }
 
@@ -422,9 +426,9 @@ namespace MongoDB.Driver
         /// </summary>
         /// <param name="dbRef">The <see cref="MongoDBRef"/> to fetch.</param>
         /// <returns>A BsonDocument (or null if the document was not found).</returns>
-        public virtual BsonDocument FetchDBRef(MongoDBRef dbRef)
+        public virtual BsonDocument FetchDBRef(MongoDBRef dbRef, MongoReadOptions readOptions)
         {
-            return FetchDBRefAs<BsonDocument>(dbRef);
+            return FetchDBRefAs<BsonDocument>(dbRef, readOptions);
         }
 
         /// <summary>
@@ -433,9 +437,9 @@ namespace MongoDB.Driver
         /// <typeparam name="TDocument">The nominal type of the document to fetch.</typeparam>
         /// <param name="dbRef">The <see cref="MongoDBRef"/> to fetch.</param>
         /// <returns>A <typeparamref name="TDocument"/> (or null if the document was not found).</returns>
-        public virtual TDocument FetchDBRefAs<TDocument>(MongoDBRef dbRef)
+        public virtual TDocument FetchDBRefAs<TDocument>(MongoDBRef dbRef, MongoReadOptions readOptions)
         {
-            return (TDocument)FetchDBRefAs(typeof(TDocument), dbRef);
+            return (TDocument)FetchDBRefAs(typeof(TDocument), dbRef, readOptions);
         }
 
         /// <summary>
@@ -444,16 +448,16 @@ namespace MongoDB.Driver
         /// <param name="documentType">The nominal type of the document to fetch.</param>
         /// <param name="dbRef">The <see cref="MongoDBRef"/> to fetch.</param>
         /// <returns>An instance of nominalType (or null if the document was not found).</returns>
-        public virtual object FetchDBRefAs(Type documentType, MongoDBRef dbRef)
+        public virtual object FetchDBRefAs(Type documentType, MongoDBRef dbRef, MongoReadOptions readOptions)
         {
             if (dbRef.DatabaseName != null && dbRef.DatabaseName != _name)
             {
-                return _server.FetchDBRefAs(documentType, dbRef);
+                return _server.FetchDBRefAs(documentType, dbRef, readOptions);
             }
 
             var collection = GetCollection(dbRef.CollectionName);
             var query = Query.EQ("_id", dbRef.Id);
-            return collection.FindOneAs(documentType, query);
+            return collection.FindOneAs(documentType, query, readOptions);
         }
 
         /// <summary>
@@ -464,7 +468,8 @@ namespace MongoDB.Driver
         {
             var result = new List<MongoUser>();
             var users = GetCollection("system.users");
-            foreach (var document in users.FindAll())
+            var readOptions = new MongoReadOptions { ReadPreference = ReadPreference.Primary };
+            foreach (var document in users.FindAll(readOptions))
             {
                 var username = document["user"].AsString;
                 var passwordHash = document["pwd"].AsString;
@@ -484,7 +489,8 @@ namespace MongoDB.Driver
         {
             var users = GetCollection("system.users");
             var query = Query.EQ("user", username);
-            var document = users.FindOne(query);
+            var readOptions = new MongoReadOptions { ReadPreference = ReadPreference.Primary };
+            var document = users.FindOne(query, readOptions);
             if (document != null)
             {
                 var passwordHash = document["pwd"].AsString;
@@ -637,12 +643,12 @@ namespace MongoDB.Driver
         /// Gets a list of the names of all the collections in this database.
         /// </summary>
         /// <returns>A list of collection names.</returns>
-        public virtual IEnumerable<string> GetCollectionNames()
+        public virtual IEnumerable<string> GetCollectionNames(MongoReadOptions readOptions)
         {
             List<string> collectionNames = new List<string>();
             var namespaces = GetCollection("system.namespaces");
             var prefix = _name + ".";
-            foreach (var @namespace in namespaces.FindAll())
+            foreach (var @namespace in namespaces.FindAll(readOptions))
             {
                 string collectionName = @namespace["name"].AsString;
                 if (!collectionName.StartsWith(prefix, StringComparison.Ordinal)) { continue; }
@@ -660,7 +666,8 @@ namespace MongoDB.Driver
         public virtual BsonDocument GetCurrentOp()
         {
             var collection = GetCollection("$cmd.sys.inprog");
-            return collection.FindOne();
+            var readOptions = new MongoReadOptions { ReadPreference = _settings.ReadPreference };
+            return collection.FindOne(readOptions);
         }
 
         /// <summary>
@@ -683,7 +690,8 @@ namespace MongoDB.Driver
             {
                 throw new InvalidOperationException("GetLastError can only be called if RequestStart has been called first.");
             }
-            return RunCommandAs<GetLastErrorResult>("getlasterror"); // use all lowercase for backward compatibility
+            var readOptions = new MongoReadOptions { ReadPreference = ReadPreference.Primary };
+            return RunCommandAs<GetLastErrorResult>("getlasterror", readOptions); // use all lowercase for backward compatibility
         }
 
         // TODO: mongo shell has GetPrevError at the database level?
@@ -695,11 +703,11 @@ namespace MongoDB.Driver
         /// </summary>
         /// <param name="query">A query to select which documents to return.</param>
         /// <returns>A cursor.</returns>
-        public MongoCursor<SystemProfileInfo> GetProfilingInfo(IMongoQuery query)
+        public MongoCursor<SystemProfileInfo> GetProfilingInfo(IMongoQuery query, MongoReadOptions readOptions)
         {
             var collectionSettings = new MongoCollectionSettings<SystemProfileInfo>(this, "system.profile") { ReadPreference = ReadPreference.Primary };
             var collection = GetCollection<SystemProfileInfo>(collectionSettings);
-            return collection.Find(query);
+            return collection.Find(query, readOptions);
         }
 
         /// <summary>
@@ -709,7 +717,8 @@ namespace MongoDB.Driver
         public GetProfilingLevelResult GetProfilingLevel()
         {
             var command = new CommandDocument("profile", -1);
-            return RunCommandAs<GetProfilingLevelResult>(command);
+            var readOptions = new MongoReadOptions { ReadPreference = _settings.ReadPreference };
+            return RunCommandAs<GetProfilingLevelResult>(command, readOptions);
         }
 
         /// <summary>
@@ -726,9 +735,9 @@ namespace MongoDB.Driver
         /// Gets the current database stats.
         /// </summary>
         /// <returns>An instance of DatabaseStatsResult.</returns>
-        public virtual DatabaseStatsResult GetStats()
+        public virtual DatabaseStatsResult GetStats(MongoReadOptions readOptions)
         {
-            return RunCommandAs<DatabaseStatsResult>("dbstats");
+            return RunCommandAs<DatabaseStatsResult>("dbstats", readOptions);
         }
 
         /// <summary>
@@ -846,7 +855,8 @@ namespace MongoDB.Driver
                 { "dropTarget", dropTarget, dropTarget } // only added if dropTarget is true
             };
             var adminDatabase = _server.GetDatabase("admin", adminCredentials);
-            return adminDatabase.RunCommand(command);
+            var readOptions = new MongoReadOptions { ReadPreference = ReadPreference.Primary };
+            return adminDatabase.RunCommand(command, readOptions);
         }
 
         /// <summary>
@@ -923,9 +933,9 @@ namespace MongoDB.Driver
         /// </summary>
         /// <param name="command">The command object.</param>
         /// <returns>A CommandResult</returns>
-        public virtual CommandResult RunCommand(IMongoCommand command)
+        public virtual CommandResult RunCommand(IMongoCommand command, MongoReadOptions readOptions)
         {
-            return RunCommandAs<CommandResult>(command);
+            return RunCommandAs<CommandResult>(command, readOptions);
         }
 
         /// <summary>
@@ -933,9 +943,9 @@ namespace MongoDB.Driver
         /// </summary>
         /// <param name="commandName">The name of the command.</param>
         /// <returns>A CommandResult</returns>
-        public virtual CommandResult RunCommand(string commandName)
+        public virtual CommandResult RunCommand(string commandName, MongoReadOptions readOptions)
         {
-            return RunCommandAs<CommandResult>(commandName);
+            return RunCommandAs<CommandResult>(commandName, readOptions);
         }
 
         /// <summary>
@@ -944,10 +954,10 @@ namespace MongoDB.Driver
         /// <typeparam name="TCommandResult">The type of the returned command result.</typeparam>
         /// <param name="command">The command object.</param>
         /// <returns>A TCommandResult</returns>
-        public virtual TCommandResult RunCommandAs<TCommandResult>(IMongoCommand command)
+        public virtual TCommandResult RunCommandAs<TCommandResult>(IMongoCommand command, MongoReadOptions readOptions)
             where TCommandResult : CommandResult, new()
         {
-            return (TCommandResult)RunCommandAs(typeof(TCommandResult), command);
+            return (TCommandResult)RunCommandAs(typeof(TCommandResult), command, readOptions);
         }
 
         /// <summary>
@@ -956,10 +966,10 @@ namespace MongoDB.Driver
         /// <typeparam name="TCommandResult">The type of the returned command result.</typeparam>
         /// <param name="commandName">The name of the command.</param>
         /// <returns>A TCommandResult</returns>
-        public virtual TCommandResult RunCommandAs<TCommandResult>(string commandName)
+        public virtual TCommandResult RunCommandAs<TCommandResult>(string commandName, MongoReadOptions readOptions)
             where TCommandResult : CommandResult, new()
         {
-            return (TCommandResult)RunCommandAs(typeof(TCommandResult), commandName);
+            return (TCommandResult)RunCommandAs(typeof(TCommandResult), commandName, readOptions);
         }
 
         /// <summary>
@@ -968,9 +978,9 @@ namespace MongoDB.Driver
         /// <param name="commandResultType">The command result type.</param>
         /// <param name="command">The command object.</param>
         /// <returns>A TCommandResult</returns>
-        public virtual CommandResult RunCommandAs(Type commandResultType, IMongoCommand command)
+        public virtual CommandResult RunCommandAs(Type commandResultType, IMongoCommand command, MongoReadOptions readOptions)
         {
-            var response = CommandCollection.FindOne(command);
+            var response = CommandCollection.FindOne(command, readOptions);
             if (response == null)
             {
                 var commandName = command.ToBsonDocument().GetElement(0).Name;
@@ -997,10 +1007,10 @@ namespace MongoDB.Driver
         /// <param name="commandResultType">The command result type.</param>
         /// <param name="commandName">The name of the command.</param>
         /// <returns>A TCommandResult</returns>
-        public virtual CommandResult RunCommandAs(Type commandResultType, string commandName)
+        public virtual CommandResult RunCommandAs(Type commandResultType, string commandName, MongoReadOptions readOptions)
         {
             var command = new CommandDocument(commandName, 1);
-            return RunCommandAs(commandResultType, command);
+            return RunCommandAs(commandResultType, command, readOptions);
         }
 
         /// <summary>
@@ -1026,7 +1036,8 @@ namespace MongoDB.Driver
                 { "profile", (int) level },
                 { "slowms", slow.TotalMilliseconds, slow != TimeSpan.Zero } // optional
             };
-            return RunCommand(command);
+            var readOptions = new MongoReadOptions { ReadPreference = ReadPreference.Primary };
+            return RunCommand(command, readOptions);
         }
 
         /// <summary>

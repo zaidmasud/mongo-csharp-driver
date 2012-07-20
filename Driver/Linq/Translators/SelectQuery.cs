@@ -145,7 +145,8 @@ namespace MongoDB.Driver.Linq
                 return ExecuteDistinct(query);
             }
 
-            var cursor = Collection.FindAs(DocumentType, query);
+            var readOptions = new MongoReadOptions { ReadPreference = Collection.Settings.ReadPreference };
+            var cursor = Collection.FindAs(DocumentType, query, readOptions);
 
             if (_orderBy != null)
             {
@@ -327,7 +328,8 @@ namespace MongoDB.Driver.Linq
             }
 
             var dottedElementName = serializationInfo.ElementName;
-            var source = Collection.Distinct(dottedElementName, query);
+            var readOptions = new MongoReadOptions { ReadPreference = Collection.Settings.ReadPreference };
+            var source = Collection.Distinct(dottedElementName, query, readOptions);
 
             var deserializationProjectorGenericDefinition = typeof(DeserializationProjector<>);
             var deserializationProjectorType = deserializationProjectorGenericDefinition.MakeGenericType(keyExpression.Type);

@@ -268,7 +268,8 @@ namespace MongoDB.Driver.GridFS
                     for (var n = 0L; n < numberOfChunks; n++)
                     {
                         var query = Query.And(Query.EQ("files_id", fileInfo.Id), Query.EQ("n", n));
-                        var chunk = _chunks.FindOne(query);
+                        var readOptions = new MongoReadOptions { ReadPreference = _database.Settings.ReadPreference };
+                        var chunk = _chunks.FindOne(query, readOptions);
                         if (chunk == null)
                         {
                             string errorMessage = string.Format("Chunk {0} missing for GridFS file '{1}'.", n, fileInfo.Name);
@@ -434,7 +435,8 @@ namespace MongoDB.Driver.GridFS
             }
 
             // only create indexes if number of GridFS files is still small (to avoid performance surprises)
-            var count = _files.Count();
+            var readOptions = new MongoReadOptions { ReadPreference = ReadPreference.Primary };
+            var count = _files.Count(readOptions);
             if (count < maxFiles)
             {
                 _files.EnsureIndex("filename", "uploadDate");
@@ -459,9 +461,9 @@ namespace MongoDB.Driver.GridFS
         /// </summary>
         /// <param name="query">The GridFS file.</param>
         /// <returns>True if the GridFS file exists.</returns>
-        public bool Exists(IMongoQuery query)
+        public bool Exists(IMongoQuery query, MongoReadOptions readOptions)
         {
-            return _files.Count(query) > 0;
+            return _files.Count(query, readOptions) > 0;
         }
 
         /// <summary>
@@ -469,9 +471,9 @@ namespace MongoDB.Driver.GridFS
         /// </summary>
         /// <param name="remoteFileName">The GridFS file.</param>
         /// <returns>True if the GridFS file exists.</returns>
-        public bool Exists(string remoteFileName)
+        public bool Exists(string remoteFileName, MongoReadOptions readOptions)
         {
-            return Exists(Query.EQ("filename", remoteFileName));
+            return Exists(Query.EQ("filename", remoteFileName), readOptions);
         }
 
         /// <summary>
@@ -479,9 +481,9 @@ namespace MongoDB.Driver.GridFS
         /// </summary>
         /// <param name="id">The GridFS file.</param>
         /// <returns>True if the GridFS file exists.</returns>
-        public bool ExistsById(BsonValue id)
+        public bool ExistsById(BsonValue id, MongoReadOptions readOptions)
         {
-            return Exists(Query.EQ("_id", id));
+            return Exists(Query.EQ("_id", id), readOptions);
         }
 
         /// <summary>
@@ -492,7 +494,8 @@ namespace MongoDB.Driver.GridFS
         public MongoCursor<MongoGridFSFileInfo> Find(IMongoQuery query)
         {
             var serializationOptions = new MongoGridFSFileInfo.SerializationOptions { GridFS = this };
-            return _files.FindAs<MongoGridFSFileInfo>(query).SetSerializationOptions(serializationOptions);
+            var options = new MongoReadOptions { ReadPreference = _database.Settings.ReadPreference };
+            return _files.FindAs<MongoGridFSFileInfo>(query, options).SetSerializationOptions(serializationOptions);
         }
 
         /// <summary>
@@ -532,18 +535,19 @@ namespace MongoDB.Driver.GridFS
         /// <returns>The matching GridFS file.</returns>
         public MongoGridFSFileInfo FindOne(IMongoQuery query, int version)
         {
+            var readOptions = new MongoReadOptions { ReadPreference = _database.Settings.ReadPreference };
             BsonDocument fileInfo;
             if (version > 0)
             {
-                fileInfo = _files.Find(query).SetSortOrder(SortBy.Ascending("uploadDate")).SetSkip(version - 1).SetLimit(1).FirstOrDefault();
+                fileInfo = _files.Find(query, readOptions).SetSortOrder(SortBy.Ascending("uploadDate")).SetSkip(version - 1).SetLimit(1).FirstOrDefault();
             }
             else if (version < 0)
             {
-                fileInfo = _files.Find(query).SetSortOrder(SortBy.Descending("uploadDate")).SetSkip(-version - 1).SetLimit(1).FirstOrDefault();
+                fileInfo = _files.Find(query, readOptions).SetSortOrder(SortBy.Descending("uploadDate")).SetSkip(-version - 1).SetLimit(1).FirstOrDefault();
             }
             else
             {
-                fileInfo = _files.FindOne(query);
+                fileInfo = _files.FindOne(query, readOptions);
             }
 
             if (fileInfo != null)
@@ -831,7 +835,8 @@ namespace MongoDB.Driver.GridFS
                         { "filemd5", files_id },
                         { "root", _settings.Root }
                     };
-                    var md5Result = _database.RunCommand(md5Command);
+                    var readOptions = new MongoReadOptions { ReadPreference = ReadPreference.Primary };
+                    var md5Result = _database.RunCommand(md5Command, readOptions);
                     md5Server = md5Result.Response["md5"].AsString;
                 }
 

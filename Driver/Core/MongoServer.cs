@@ -586,7 +586,8 @@ namespace MongoDB.Driver
         {
             MongoDatabase database = GetDatabase(databaseName, credentials);
             var command = new CommandDocument("dropDatabase", 1);
-            var result = database.RunCommand(command);
+            var readOptions = new MongoReadOptions { ReadPreference = ReadPreference.Primary };
+            var result = database.RunCommand(command, readOptions);
             _indexCache.Reset(databaseName);
             return result;
         }
@@ -596,9 +597,9 @@ namespace MongoDB.Driver
         /// </summary>
         /// <param name="dbRef">The <see cref="MongoDBRef"/> to fetch.</param>
         /// <returns>A BsonDocument (or null if the document was not found).</returns>
-        public virtual BsonDocument FetchDBRef(MongoDBRef dbRef)
+        public virtual BsonDocument FetchDBRef(MongoDBRef dbRef, MongoReadOptions readOptions)
         {
-            return FetchDBRefAs<BsonDocument>(dbRef);
+            return FetchDBRefAs<BsonDocument>(dbRef, readOptions);
         }
 
         /// <summary>
@@ -607,9 +608,9 @@ namespace MongoDB.Driver
         /// <typeparam name="TDocument">The nominal type of the document to fetch.</typeparam>
         /// <param name="dbRef">The <see cref="MongoDBRef"/> to fetch.</param>
         /// <returns>A <typeparamref name="TDocument"/> (or null if the document was not found).</returns>
-        public virtual TDocument FetchDBRefAs<TDocument>(MongoDBRef dbRef)
+        public virtual TDocument FetchDBRefAs<TDocument>(MongoDBRef dbRef, MongoReadOptions readOptions)
         {
-            return (TDocument)FetchDBRefAs(typeof(TDocument), dbRef);
+            return (TDocument)FetchDBRefAs(typeof(TDocument), dbRef, readOptions);
         }
 
         /// <summary>
@@ -618,7 +619,7 @@ namespace MongoDB.Driver
         /// <param name="documentType">The nominal type of the document to fetch.</param>
         /// <param name="dbRef">The <see cref="MongoDBRef"/> to fetch.</param>
         /// <returns>The document (or null if the document was not found).</returns>
-        public virtual object FetchDBRefAs(Type documentType, MongoDBRef dbRef)
+        public virtual object FetchDBRefAs(Type documentType, MongoDBRef dbRef, MongoReadOptions readOptions)
         {
             if (dbRef.DatabaseName == null)
             {
@@ -626,7 +627,7 @@ namespace MongoDB.Driver
             }
 
             var database = GetDatabase(dbRef.DatabaseName);
-            return database.FetchDBRefAs(documentType, dbRef);
+            return database.FetchDBRefAs(documentType, dbRef, readOptions);
         }
 
         /// <summary>
@@ -748,7 +749,8 @@ namespace MongoDB.Driver
         public virtual IEnumerable<string> GetDatabaseNames(MongoCredentials adminCredentials)
         {
             var adminDatabase = GetDatabase("admin", adminCredentials);
-            var result = adminDatabase.RunCommand("listDatabases");
+            var readOptions = new MongoReadOptions { ReadPreference = ReadPreference.Primary };
+            var result = adminDatabase.RunCommand("listDatabases", readOptions);
             var databaseNames = new List<string>();
             foreach (BsonDocument database in result.Response["databases"].AsBsonArray.Values)
             {
@@ -1005,7 +1007,8 @@ namespace MongoDB.Driver
                 try
                 {
                     var adminDatabase = GetDatabase("admin", adminCredentials);
-                    adminDatabase.RunCommand("shutdown");
+                    var readOptions = new MongoReadOptions { ReadPreference = _settings.ReadPreference };
+                    adminDatabase.RunCommand("shutdown", readOptions);
                 }
                 catch (EndOfStreamException)
                 {

@@ -450,7 +450,8 @@ namespace MongoDB.Driver.GridFS
             var chunkCount = (_length + _fileInfo.ChunkSize - 1) / _fileInfo.ChunkSize;
             var chunksFound = new HashSet<long>();
             var foundExtraChunks = false;
-            foreach (var chunk in _gridFS.Chunks.Find(query).SetFields(fields))
+            var readOptions = new MongoReadOptions { ReadPreference = ReadPreference.Primary };
+            foreach (var chunk in _gridFS.Chunks.Find(query, readOptions).SetFields(fields))
             {
                 var n = chunk["n"].ToInt64();
                 chunksFound.Add(n);
@@ -491,7 +492,8 @@ namespace MongoDB.Driver.GridFS
         {
             if (_chunkIsDirty) { SaveChunk(); }
             var query = Query.And(Query.EQ("files_id", _fileInfo.Id), Query.EQ("n", chunkIndex));
-            var document = _gridFS.Chunks.FindOne(query);
+            var readOptions = new MongoReadOptions { ReadPreference = ReadPreference.Primary };
+            var document = _gridFS.Chunks.FindOne(query, readOptions);
             if (document == null)
             {
                 if (_chunk == null)
@@ -539,7 +541,8 @@ namespace MongoDB.Driver.GridFS
 
             var query = Query.And(Query.EQ("files_id", _fileInfo.Id), Query.EQ("n", chunkIndex));
             var fields = Fields.Include("_id");
-            var document = _gridFS.Chunks.Find(query).SetFields(fields).SetLimit(1).FirstOrDefault();
+            var readOptions = new MongoReadOptions { ReadPreference = ReadPreference.Primary };
+            var document = _gridFS.Chunks.Find(query, readOptions).SetFields(fields).SetLimit(1).FirstOrDefault();
             if (document == null)
             {
                 _chunkId = ObjectId.GenerateNewId();
@@ -651,7 +654,8 @@ namespace MongoDB.Driver.GridFS
                     { "filemd5", _fileInfo.Id },
                     { "root", _gridFS.Settings.Root }
                 };
-                var md5Result = _gridFS.Database.RunCommand(md5Command);
+                var readOptions = new MongoReadOptions { ReadPreference = ReadPreference.Primary };
+                var md5Result = _gridFS.Database.RunCommand(md5Command, readOptions);
                 md5 = md5Result.Response["md5"].AsString;
             }
 

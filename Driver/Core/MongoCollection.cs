@@ -108,7 +108,7 @@ namespace MongoDB.Driver
         /// </summary>
         /// <param name="operations">The pipeline operations.</param>
         /// <returns>An AggregateResult.</returns>
-        public virtual AggregateResult Aggregate(IEnumerable<BsonDocument> operations)
+        public virtual AggregateResult Aggregate(MongoReadOptions readOptions, IEnumerable<BsonDocument> operations)
         {
             var pipeline = new BsonArray();
             foreach (var operation in operations)
@@ -121,7 +121,7 @@ namespace MongoDB.Driver
                 { "aggregate", _name },
                 { "pipeline", pipeline }
             };
-            return _database.RunCommandAs<AggregateResult>(aggregateCommand);
+            return _database.RunCommandAs<AggregateResult>(aggregateCommand, readOptions);
         }
 
         /// <summary>
@@ -129,18 +129,18 @@ namespace MongoDB.Driver
         /// </summary>
         /// <param name="operations">The pipeline operations.</param>
         /// <returns>An AggregateResult.</returns>
-        public virtual AggregateResult Aggregate(params BsonDocument[] operations)
+        public virtual AggregateResult Aggregate(MongoReadOptions readOptions, params BsonDocument[] operations)
         {
-            return Aggregate((IEnumerable<BsonDocument>) operations);
+            return Aggregate(readOptions, (IEnumerable<BsonDocument>) operations);
         }
 
         /// <summary>
         /// Counts the number of documents in this collection.
         /// </summary>
         /// <returns>The number of documents in this collection.</returns>
-        public virtual long Count()
+        public virtual long Count(MongoReadOptions readOptions)
         {
-            return Count(Query.Null);
+            return Count(Query.Null, readOptions);
         }
 
         /// <summary>
@@ -148,14 +148,14 @@ namespace MongoDB.Driver
         /// </summary>
         /// <param name="query">The query (usually a QueryDocument or constructed using the Query builder).</param>
         /// <returns>The number of documents in this collection that match the query.</returns>
-        public virtual long Count(IMongoQuery query)
+        public virtual long Count(IMongoQuery query, MongoReadOptions readOptions)
         {
             var command = new CommandDocument
             {
                 { "count", _name },
                 { "query", BsonDocumentWrapper.Create(query), query != null } // query is optional
             };
-            var result = _database.RunCommand(command);
+            var result = _database.RunCommand(command, readOptions);
             return result.Response["n"].ToInt64();
         }
 
@@ -212,9 +212,9 @@ namespace MongoDB.Driver
         /// </summary>
         /// <param name="key">The key of the field.</param>
         /// <returns>The distint values of the field.</returns>
-        public virtual IEnumerable<BsonValue> Distinct(string key)
+        public virtual IEnumerable<BsonValue> Distinct(string key, MongoReadOptions readOptions)
         {
-            return Distinct(key, Query.Null);
+            return Distinct(key, Query.Null, readOptions);
         }
 
         /// <summary>
@@ -223,7 +223,7 @@ namespace MongoDB.Driver
         /// <param name="key">The key of the field.</param>
         /// <param name="query">The query (usually a QueryDocument or constructed using the Query builder).</param>
         /// <returns>The distint values of the field.</returns>
-        public virtual IEnumerable<BsonValue> Distinct(string key, IMongoQuery query)
+        public virtual IEnumerable<BsonValue> Distinct(string key, IMongoQuery query, MongoReadOptions readOptions)
         {
             var command = new CommandDocument
             {
@@ -231,7 +231,7 @@ namespace MongoDB.Driver
                 { "key", key },
                 { "query", BsonDocumentWrapper.Create(query), query != null } // query is optional
             };
-            var result = _database.RunCommand(command);
+            var result = _database.RunCommand(command, readOptions);
             return result.Response["values"].AsBsonArray;
         }
 
@@ -298,7 +298,8 @@ namespace MongoDB.Driver
             };
             try
             {
-                return _database.RunCommand(command);
+                var readOptions = new MongoReadOptions { ReadPreference = ReadPreference.Primary };
+                return _database.RunCommand(command, readOptions);
             }
             catch (MongoCommandException ex)
             {
@@ -356,7 +357,8 @@ namespace MongoDB.Driver
         /// <returns>True if this collection exists.</returns>
         public virtual bool Exists()
         {
-            return _database.CollectionExists(_name);
+            var readOptions = new MongoReadOptions { ReadPreference = ReadPreference.Primary };
+            return _database.CollectionExists(_name, readOptions);
         }
 
         /// <summary>
@@ -364,9 +366,9 @@ namespace MongoDB.Driver
         /// </summary>
         /// <typeparam name="TDocument">The nominal type of the documents.</typeparam>
         /// <returns>A <see cref="MongoCursor{TDocument}"/>.</returns>
-        public virtual MongoCursor<TDocument> FindAllAs<TDocument>()
+        public virtual MongoCursor<TDocument> FindAllAs<TDocument>(MongoReadOptions readOptions)
         {
-            return FindAs<TDocument>(Query.Null);
+            return FindAs<TDocument>(Query.Null, readOptions);
         }
 
         /// <summary>
@@ -374,9 +376,9 @@ namespace MongoDB.Driver
         /// </summary>
         /// <param name="documentType">The nominal type of the documents.</param>
         /// <returns>A <see cref="MongoCursor{TDocument}"/>.</returns>
-        public virtual MongoCursor FindAllAs(Type documentType)
+        public virtual MongoCursor FindAllAs(Type documentType, MongoReadOptions readOptions)
         {
-            return FindAs(documentType, Query.Null);
+            return FindAs(documentType, Query.Null, readOptions);
         }
 
         /// <summary>
@@ -457,7 +459,8 @@ namespace MongoDB.Driver
             };
             try
             {
-                return _database.RunCommandAs<FindAndModifyResult>(command);
+                var readOptions = new MongoReadOptions { ReadPreference = ReadPreference.Primary };
+                return _database.RunCommandAs<FindAndModifyResult>(command, readOptions);
             }
             catch (MongoCommandException ex)
             {
@@ -494,7 +497,8 @@ namespace MongoDB.Driver
             };
             try
             {
-                return _database.RunCommandAs<FindAndModifyResult>(command);
+                var readOptions = new MongoReadOptions { ReadPreference = ReadPreference.Primary };
+                return _database.RunCommandAs<FindAndModifyResult>(command, readOptions);
             }
             catch (MongoCommandException ex)
             {
@@ -520,9 +524,10 @@ namespace MongoDB.Driver
         /// <typeparam name="TDocument">The type to deserialize the documents as.</typeparam>
         /// <param name="query">The query (usually a QueryDocument or constructed using the Query builder).</param>
         /// <returns>A <see cref="MongoCursor{TDocument}"/>.</returns>
-        public virtual MongoCursor<TDocument> FindAs<TDocument>(IMongoQuery query)
+        public virtual MongoCursor<TDocument> FindAs<TDocument>(IMongoQuery query, MongoReadOptions readOptions)
         {
-            return new MongoCursor<TDocument>(this, query, _settings.ReadPreference);
+            var readPreference = (readOptions != null) ? (readOptions.ReadPreference ?? _settings.ReadPreference) : _settings.ReadPreference;
+            return new MongoCursor<TDocument>(this, query, readPreference);
         }
 
         /// <summary>
@@ -531,9 +536,10 @@ namespace MongoDB.Driver
         /// <param name="documentType">The nominal type of the documents.</param>
         /// <param name="query">The query (usually a QueryDocument or constructed using the Query builder).</param>
         /// <returns>A <see cref="MongoCursor{TDocument}"/>.</returns>
-        public virtual MongoCursor FindAs(Type documentType, IMongoQuery query)
+        public virtual MongoCursor FindAs(Type documentType, IMongoQuery query, MongoReadOptions readOptions)
         {
-            return MongoCursor.Create(documentType, this, query, _settings.ReadPreference);
+            var readPreference = (readOptions != null) ? (readOptions.ReadPreference ?? _settings.ReadPreference) : _settings.ReadPreference;
+            return MongoCursor.Create(documentType, this, query, readPreference);
         }
 
         /// <summary>
@@ -541,9 +547,9 @@ namespace MongoDB.Driver
         /// </summary>
         /// <typeparam name="TDocument">The type to deserialize the documents as.</typeparam>
         /// <returns>A TDocument (or null if not found).</returns>
-        public virtual TDocument FindOneAs<TDocument>()
+        public virtual TDocument FindOneAs<TDocument>(MongoReadOptions readOptions)
         {
-            return FindAllAs<TDocument>().SetLimit(1).FirstOrDefault();
+            return FindAllAs<TDocument>(readOptions).SetLimit(1).FirstOrDefault();
         }
 
         /// <summary>
@@ -552,9 +558,9 @@ namespace MongoDB.Driver
         /// <typeparam name="TDocument">The type to deserialize the documents as.</typeparam>
         /// <param name="query">The query (usually a QueryDocument or constructed using the Query builder).</param>
         /// <returns>A TDocument (or null if not found).</returns>
-        public virtual TDocument FindOneAs<TDocument>(IMongoQuery query)
+        public virtual TDocument FindOneAs<TDocument>(IMongoQuery query, MongoReadOptions readOptions)
         {
-            return FindAs<TDocument>(query).SetLimit(1).FirstOrDefault();
+            return FindAs<TDocument>(query, readOptions).SetLimit(1).FirstOrDefault();
         }
 
         /// <summary>
@@ -562,9 +568,9 @@ namespace MongoDB.Driver
         /// </summary>
         /// <param name="documentType">The nominal type of the documents.</param>
         /// <returns>A document (or null if not found).</returns>
-        public virtual object FindOneAs(Type documentType)
+        public virtual object FindOneAs(Type documentType, MongoReadOptions readOptions)
         {
-            return FindAllAs(documentType).SetLimit(1).OfType<object>().FirstOrDefault();
+            return FindAllAs(documentType, readOptions).SetLimit(1).OfType<object>().FirstOrDefault();
         }
 
         /// <summary>
@@ -573,9 +579,9 @@ namespace MongoDB.Driver
         /// <param name="documentType">The type to deserialize the documents as.</param>
         /// <param name="query">The query (usually a QueryDocument or constructed using the Query builder).</param>
         /// <returns>A TDocument (or null if not found).</returns>
-        public virtual object FindOneAs(Type documentType, IMongoQuery query)
+        public virtual object FindOneAs(Type documentType, IMongoQuery query, MongoReadOptions readOptions)
         {
-            return FindAs(documentType, query).SetLimit(1).OfType<object>().FirstOrDefault();
+            return FindAs(documentType, query, readOptions).SetLimit(1).OfType<object>().FirstOrDefault();
         }
 
         /// <summary>
@@ -584,9 +590,9 @@ namespace MongoDB.Driver
         /// <typeparam name="TDocument">The nominal type of the document.</typeparam>
         /// <param name="id">The id of the document.</param>
         /// <returns>A TDocument (or null if not found).</returns>
-        public virtual TDocument FindOneByIdAs<TDocument>(BsonValue id)
+        public virtual TDocument FindOneByIdAs<TDocument>(BsonValue id, MongoReadOptions readOptions)
         {
-            return FindOneAs<TDocument>(Query.EQ("_id", id));
+            return FindOneAs<TDocument>(Query.EQ("_id", id), readOptions);
         }
 
         /// <summary>
@@ -595,9 +601,9 @@ namespace MongoDB.Driver
         /// <param name="documentType">The nominal type of the document.</param>
         /// <param name="id">The id of the document.</param>
         /// <returns>A TDocument (or null if not found).</returns>
-        public virtual object FindOneByIdAs(Type documentType, BsonValue id)
+        public virtual object FindOneByIdAs(Type documentType, BsonValue id, MongoReadOptions readOptions)
         {
-            return FindOneAs(documentType, Query.EQ("_id", id));
+            return FindOneAs(documentType, Query.EQ("_id", id), readOptions);
         }
 
         /// <summary>
@@ -611,9 +617,10 @@ namespace MongoDB.Driver
         public virtual GeoHaystackSearchResult<TDocument> GeoHaystackSearchAs<TDocument>(
             double x,
             double y,
-            IMongoGeoHaystackSearchOptions options)
+            IMongoGeoHaystackSearchOptions options,
+            MongoReadOptions readOptions)
         {
-            return (GeoHaystackSearchResult<TDocument>)GeoHaystackSearchAs(typeof(TDocument), x, y, options);
+            return (GeoHaystackSearchResult<TDocument>)GeoHaystackSearchAs(typeof(TDocument), x, y, options, readOptions);
         }
 
         /// <summary>
@@ -628,7 +635,8 @@ namespace MongoDB.Driver
             Type documentType,
             double x,
             double y,
-            IMongoGeoHaystackSearchOptions options)
+            IMongoGeoHaystackSearchOptions options,
+            MongoReadOptions readOptions)
         {
             var command = new CommandDocument
             {
@@ -638,7 +646,7 @@ namespace MongoDB.Driver
             command.Merge(options.ToBsonDocument());
             var geoHaystackSearchResultDefinition = typeof(GeoHaystackSearchResult<>);
             var geoHaystackSearchResultType = geoHaystackSearchResultDefinition.MakeGenericType(documentType);
-            return (GeoHaystackSearchResult)_database.RunCommandAs(geoHaystackSearchResultType, command);
+            return (GeoHaystackSearchResult)_database.RunCommandAs(geoHaystackSearchResultType, command, readOptions);
         }
 
         /// <summary>
@@ -654,9 +662,10 @@ namespace MongoDB.Driver
             IMongoQuery query,
             double x,
             double y,
-            int limit)
+            int limit,
+            MongoReadOptions readOptions)
         {
-            return GeoNearAs<TDocument>(query, x, y, limit, GeoNearOptions.Null);
+            return GeoNearAs<TDocument>(query, x, y, limit, GeoNearOptions.Null, readOptions);
         }
 
         /// <summary>
@@ -674,7 +683,8 @@ namespace MongoDB.Driver
             double x,
             double y,
             int limit,
-            IMongoGeoNearOptions options)
+            IMongoGeoNearOptions options,
+            MongoReadOptions readOptions)
         {
             var command = new CommandDocument
             {
@@ -684,7 +694,7 @@ namespace MongoDB.Driver
                 { "query", BsonDocumentWrapper.Create(query), query != null } // query is optional
             };
             command.Merge(options.ToBsonDocument());
-            return _database.RunCommandAs<GeoNearResult<TDocument>>(command);
+            return _database.RunCommandAs<GeoNearResult<TDocument>>(command, readOptions);
         }
 
         /// <summary>
@@ -696,9 +706,9 @@ namespace MongoDB.Driver
         /// <param name="y">The y coordinate of the starting location.</param>
         /// <param name="limit">The maximum number of results returned.</param>
         /// <returns>A <see cref="GeoNearResult{TDocument}"/>.</returns>
-        public virtual GeoNearResult GeoNearAs(Type documentType, IMongoQuery query, double x, double y, int limit)
+        public virtual GeoNearResult GeoNearAs(Type documentType, IMongoQuery query, double x, double y, int limit, MongoReadOptions readOptions)
         {
-            return GeoNearAs(documentType, query, x, y, limit, GeoNearOptions.Null);
+            return GeoNearAs(documentType, query, x, y, limit, GeoNearOptions.Null, readOptions);
         }
 
         /// <summary>
@@ -717,7 +727,8 @@ namespace MongoDB.Driver
             double x,
             double y,
             int limit,
-            IMongoGeoNearOptions options)
+            IMongoGeoNearOptions options,
+            MongoReadOptions readOptions)
         {
             var command = new CommandDocument
             {
@@ -729,60 +740,68 @@ namespace MongoDB.Driver
             command.Merge(options.ToBsonDocument());
             var geoNearResultDefinition = typeof(GeoNearResult<>);
             var geoNearResultType = geoNearResultDefinition.MakeGenericType(documentType);
-            return (GeoNearResult)_database.RunCommandAs(geoNearResultType, command);
+            return (GeoNearResult)_database.RunCommandAs(geoNearResultType, command, readOptions);
         }
 
         /// <summary>
         /// Gets the indexes for this collection.
         /// </summary>
         /// <returns>A list of BsonDocuments that describe the indexes.</returns>
-        public virtual GetIndexesResult GetIndexes()
+        public virtual GetIndexesResult GetIndexes(MongoReadOptions readOptions)
         {
             var indexes = _database.GetCollection("system.indexes");
             var query = Query.EQ("ns", FullName);
-            return new GetIndexesResult(indexes.Find(query).ToArray()); // ToArray forces execution of the query
+            return new GetIndexesResult(indexes.Find(query, readOptions).ToArray()); // ToArray forces execution of the query
         }
 
         /// <summary>
         /// Gets the stats for this collection.
         /// </summary>
         /// <returns>The stats for this collection as a <see cref="CollectionStatsResult"/>.</returns>
-        public virtual CollectionStatsResult GetStats()
+        public virtual CollectionStatsResult GetStats(MongoReadOptions readOptions)
         {
             var command = new CommandDocument("collstats", _name);
-            return _database.RunCommandAs<CollectionStatsResult>(command);
+            return _database.RunCommandAs<CollectionStatsResult>(command, readOptions);
         }
 
         /// <summary>
         /// Gets the total data size for this collection (data + indexes).
         /// </summary>
         /// <returns>The total data size.</returns>
-        public virtual long GetTotalDataSize()
+        public virtual long GetTotalDataSize(MongoReadOptions readOptions)
         {
-            var totalSize = GetStats().DataSize;
-            foreach (var index in GetIndexes())
+            var readPreference = readOptions.ReadPreference ?? _settings.ReadPreference;
+            using (_database.RequestStart(readPreference))
             {
-                var indexCollectionName = string.Format("{0}.${1}", _name, index.Name);
-                var indexCollection = _database.GetCollection(indexCollectionName);
-                totalSize += indexCollection.GetStats().DataSize;
+                var totalSize = GetStats(readOptions).DataSize;
+                foreach (var index in GetIndexes(readOptions))
+                {
+                    var indexCollectionName = string.Format("{0}.${1}", _name, index.Name);
+                    var indexCollection = _database.GetCollection(indexCollectionName);
+                    totalSize += indexCollection.GetStats(readOptions).DataSize;
+                }
+                return totalSize;
             }
-            return totalSize;
         }
 
         /// <summary>
         /// Gets the total storage size for this collection (data + indexes + overhead).
         /// </summary>
         /// <returns>The total storage size.</returns>
-        public virtual long GetTotalStorageSize()
+        public virtual long GetTotalStorageSize(MongoReadOptions readOptions)
         {
-            var totalSize = GetStats().StorageSize;
-            foreach (var index in GetIndexes())
+            var readPreference = readOptions.ReadPreference ?? _settings.ReadPreference;
+            using (_database.RequestStart(readPreference))
             {
-                var indexCollectionName = string.Format("{0}.${1}", _name, index.Name);
-                var indexCollection = _database.GetCollection(indexCollectionName);
-                totalSize += indexCollection.GetStats().StorageSize;
+                var totalSize = GetStats(readOptions).StorageSize;
+                foreach (var index in GetIndexes(readOptions))
+                {
+                    var indexCollectionName = string.Format("{0}.${1}", _name, index.Name);
+                    var indexCollection = _database.GetCollection(indexCollectionName);
+                    totalSize += indexCollection.GetStats(readOptions).StorageSize;
+                }
+                return totalSize;
             }
-            return totalSize;
         }
 
         /// <summary>
@@ -799,7 +818,8 @@ namespace MongoDB.Driver
             BsonJavaScript keyFunction,
             BsonDocument initial,
             BsonJavaScript reduce,
-            BsonJavaScript finalize)
+            BsonJavaScript finalize,
+            MongoReadOptions readOptions)
         {
             if (keyFunction == null)
             {
@@ -828,7 +848,7 @@ namespace MongoDB.Driver
                     }
                 }
             };
-            var result = _database.RunCommand(command);
+            var result = _database.RunCommand(command, readOptions);
             return result.Response["retval"].AsBsonArray.Values.Cast<BsonDocument>();
         }
 
@@ -846,7 +866,8 @@ namespace MongoDB.Driver
             IMongoGroupBy keys,
             BsonDocument initial,
             BsonJavaScript reduce,
-            BsonJavaScript finalize)
+            BsonJavaScript finalize,
+            MongoReadOptions readOptions)
         {
             if (keys == null)
             {
@@ -875,7 +896,7 @@ namespace MongoDB.Driver
                     }
                 }
             };
-            var result = _database.RunCommand(command);
+            var result = _database.RunCommand(command, readOptions);
             return result.Response["retval"].AsBsonArray.Values.Cast<BsonDocument>();
         }
 
@@ -893,9 +914,10 @@ namespace MongoDB.Driver
             string key,
             BsonDocument initial,
             BsonJavaScript reduce,
-            BsonJavaScript finalize)
+            BsonJavaScript finalize,
+            MongoReadOptions readOptions)
         {
-            return Group(query, GroupBy.Keys(key), initial, reduce, finalize);
+            return Group(query, GroupBy.Keys(key), initial, reduce, finalize, readOptions);
         }
 
         /// <summary>
@@ -929,7 +951,8 @@ namespace MongoDB.Driver
         {
             var indexes = _database.GetCollection("system.indexes");
             var query = Query.And(Query.EQ("name", indexName), Query.EQ("ns", FullName));
-            return indexes.Count(query) != 0;
+            var readOptions = new MongoReadOptions { ReadPreference = ReadPreference.Primary };
+            return indexes.Count(query, readOptions) != 0;
         }
 
         // WARNING: be VERY careful about adding any new overloads of Insert or InsertBatch (just don't do it!)
@@ -1179,9 +1202,9 @@ namespace MongoDB.Driver
         /// Tests whether this collection is capped.
         /// </summary>
         /// <returns>True if this collection is capped.</returns>
-        public virtual bool IsCapped()
+        public virtual bool IsCapped(MongoReadOptions readOptions)
         {
-            return GetStats().IsCapped;
+            return GetStats(readOptions).IsCapped;
         }
 
         /// <summary>
@@ -1194,7 +1217,8 @@ namespace MongoDB.Driver
         public virtual MapReduceResult MapReduce(
             BsonJavaScript map,
             BsonJavaScript reduce,
-            IMongoMapReduceOptions options)
+            IMongoMapReduceOptions options,
+            MongoReadOptions readOptions)
         {
             var command = new CommandDocument
             {
@@ -1203,7 +1227,7 @@ namespace MongoDB.Driver
                 { "reduce", reduce }
             };
             command.Add(options.ToBsonDocument());
-            var result = _database.RunCommandAs<MapReduceResult>(command);
+            var result = _database.RunCommandAs<MapReduceResult>(command, readOptions);
             result.SetInputDatabase(_database);
             return result;
         }
@@ -1220,11 +1244,12 @@ namespace MongoDB.Driver
             IMongoQuery query,
             BsonJavaScript map,
             BsonJavaScript reduce,
-            IMongoMapReduceOptions options)
+            IMongoMapReduceOptions options,
+            MongoReadOptions readOptions)
         {
             // create a new set of options because we don't want to modify caller's data
             options = MapReduceOptions.SetQuery(query).AddOptions(options.ToBsonDocument());
-            return MapReduce(map, reduce, options);
+            return MapReduce(map, reduce, options, readOptions);
         }
 
         /// <summary>
@@ -1234,10 +1259,10 @@ namespace MongoDB.Driver
         /// <param name="map">A JavaScript function called for each document.</param>
         /// <param name="reduce">A JavaScript function called on the values emitted by the map function.</param>
         /// <returns>A <see cref="MapReduceResult"/>.</returns>
-        public virtual MapReduceResult MapReduce(IMongoQuery query, BsonJavaScript map, BsonJavaScript reduce)
+        public virtual MapReduceResult MapReduce(IMongoQuery query, BsonJavaScript map, BsonJavaScript reduce, MongoReadOptions readOptions)
         {
             var options = MapReduceOptions.SetQuery(query).SetOutput(MapReduceOutput.Inline);
-            return MapReduce(map, reduce, options);
+            return MapReduce(map, reduce, options, readOptions);
         }
 
         /// <summary>
@@ -1246,10 +1271,10 @@ namespace MongoDB.Driver
         /// <param name="map">A JavaScript function called for each document.</param>
         /// <param name="reduce">A JavaScript function called on the values emitted by the map function.</param>
         /// <returns>A <see cref="MapReduceResult"/>.</returns>
-        public virtual MapReduceResult MapReduce(BsonJavaScript map, BsonJavaScript reduce)
+        public virtual MapReduceResult MapReduce(BsonJavaScript map, BsonJavaScript reduce, MongoReadOptions readOptions)
         {
             var options = MapReduceOptions.SetOutput(MapReduceOutput.Inline);
-            return MapReduce(map, reduce, options);
+            return MapReduce(map, reduce, options, readOptions);
         }
 
         /// <summary>
@@ -1259,7 +1284,8 @@ namespace MongoDB.Driver
         public virtual CommandResult ReIndex()
         {
             var command = new CommandDocument("reIndex", _name);
-            return _database.RunCommand(command);
+            var readOptions = new MongoReadOptions { ReadPreference = ReadPreference.Primary };
+            return _database.RunCommand(command, readOptions);
         }
 
         /// <summary>
@@ -1601,10 +1627,10 @@ namespace MongoDB.Driver
         /// Validates the integrity of this collection.
         /// </summary>
         /// <returns>A <see cref="ValidateCollectionResult"/>.</returns>
-        public virtual ValidateCollectionResult Validate()
+        public virtual ValidateCollectionResult Validate(MongoReadOptions readOptions)
         {
             var command = new CommandDocument("validate", _name);
-            return _database.RunCommandAs<ValidateCollectionResult>(command);
+            return _database.RunCommandAs<ValidateCollectionResult>(command, readOptions);
         }
 
         // internal methods
@@ -1701,27 +1727,27 @@ namespace MongoDB.Driver
         /// </summary>
         /// <param name="query">The query (usually a QueryDocument or constructed using the Query builder).</param>
         /// <returns>A <see cref="MongoCursor{TDocument}"/>.</returns>
-        public virtual MongoCursor<TDefaultDocument> Find(IMongoQuery query)
+        public virtual MongoCursor<TDefaultDocument> Find(IMongoQuery query, MongoReadOptions readOptions)
         {
-            return FindAs<TDefaultDocument>(query);
+            return FindAs<TDefaultDocument>(query, readOptions);
         }
 
         /// <summary>
         /// Returns a cursor that can be used to find all documents in this collection as TDefaultDocuments.
         /// </summary>
         /// <returns>A <see cref="MongoCursor{TDocument}"/>.</returns>
-        public virtual MongoCursor<TDefaultDocument> FindAll()
+        public virtual MongoCursor<TDefaultDocument> FindAll(MongoReadOptions readOptions)
         {
-            return FindAllAs<TDefaultDocument>();
+            return FindAllAs<TDefaultDocument>(readOptions);
         }
 
         /// <summary>
         /// Returns a cursor that can be used to find one document in this collection as a TDefaultDocument.
         /// </summary>
         /// <returns>A TDefaultDocument (or null if not found).</returns>
-        public virtual TDefaultDocument FindOne()
+        public virtual TDefaultDocument FindOne(MongoReadOptions readOptions)
         {
-            return FindOneAs<TDefaultDocument>();
+            return FindOneAs<TDefaultDocument>(readOptions);
         }
 
         /// <summary>
@@ -1729,9 +1755,9 @@ namespace MongoDB.Driver
         /// </summary>
         /// <param name="query">The query (usually a QueryDocument or constructed using the Query builder).</param>
         /// <returns>A TDefaultDocument (or null if not found).</returns>
-        public virtual TDefaultDocument FindOne(IMongoQuery query)
+        public virtual TDefaultDocument FindOne(IMongoQuery query, MongoReadOptions readOptions)
         {
-            return FindOneAs<TDefaultDocument>(query);
+            return FindOneAs<TDefaultDocument>(query, readOptions);
         }
 
         /// <summary>
@@ -1739,9 +1765,9 @@ namespace MongoDB.Driver
         /// </summary>
         /// <param name="id">The id of the document.</param>
         /// <returns>A TDefaultDocument (or null if not found).</returns>
-        public virtual TDefaultDocument FindOneById(BsonValue id)
+        public virtual TDefaultDocument FindOneById(BsonValue id, MongoReadOptions readOptions)
         {
-            return FindOneByIdAs<TDefaultDocument>(id);
+            return FindOneByIdAs<TDefaultDocument>(id, readOptions);
         }
 
         /// <summary>
@@ -1754,9 +1780,10 @@ namespace MongoDB.Driver
         public virtual GeoHaystackSearchResult<TDefaultDocument> GeoHaystackSearch(
             double x,
             double y,
-            IMongoGeoHaystackSearchOptions options)
+            IMongoGeoHaystackSearchOptions options,
+            MongoReadOptions readOptions)
         {
-            return GeoHaystackSearchAs<TDefaultDocument>(x, y, options);
+            return GeoHaystackSearchAs<TDefaultDocument>(x, y, options, readOptions);
         }
 
         /// <summary>
@@ -1767,9 +1794,9 @@ namespace MongoDB.Driver
         /// <param name="y">The y coordinate of the starting location.</param>
         /// <param name="limit">The maximum number of results returned.</param>
         /// <returns>A <see cref="GeoNearResult{TDefaultDocument}"/>.</returns>
-        public virtual GeoNearResult<TDefaultDocument> GeoNear(IMongoQuery query, double x, double y, int limit)
+        public virtual GeoNearResult<TDefaultDocument> GeoNear(IMongoQuery query, double x, double y, int limit, MongoReadOptions readOptions)
         {
-            return GeoNearAs<TDefaultDocument>(query, x, y, limit);
+            return GeoNearAs<TDefaultDocument>(query, x, y, limit, readOptions);
         }
 
         /// <summary>
@@ -1786,9 +1813,10 @@ namespace MongoDB.Driver
             double x,
             double y,
             int limit,
-            IMongoGeoNearOptions options)
+            IMongoGeoNearOptions options,
+            MongoReadOptions readOptions)
         {
-            return GeoNearAs<TDefaultDocument>(query, x, y, limit, options);
+            return GeoNearAs<TDefaultDocument>(query, x, y, limit, options, readOptions);
         }
 
         /// <summary>
