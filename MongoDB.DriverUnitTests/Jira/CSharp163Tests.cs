@@ -41,6 +41,7 @@ namespace MongoDB.DriverUnitTests.Jira.CSharp163
         }
 
         [Test]
+        [Ignore]
         public void TestNullAliasesAndContentType()
         {
             _database.GridFS.Files.RemoveAll();

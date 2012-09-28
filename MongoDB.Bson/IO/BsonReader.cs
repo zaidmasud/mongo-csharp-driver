@@ -18,6 +18,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text;
+using System.Threading.Tasks;
 
 namespace MongoDB.Bson.IO
 {
@@ -171,9 +172,7 @@ namespace MongoDB.Bson.IO
         /// <returns>A BsonReader.</returns>
         public static BsonReader Create(Stream stream, BsonBinaryReaderSettings settings)
         {
-            var reader = new BsonBinaryReader(null, settings);
-            reader.Buffer.LoadFrom(stream);
-            return reader;
+            return CreateAsync(stream, settings).GetAwaiter().GetResult();
         }
 
         /// <summary>
@@ -196,6 +195,19 @@ namespace MongoDB.Bson.IO
         {
             var json = textReader.ReadToEnd();
             return Create(json);
+        }
+
+        /// <summary>
+        /// Creates a BsonReader for a BSON Stream.
+        /// </summary>
+        /// <param name="stream">The BSON Stream.</param>
+        /// <param name="settings">Optional reader settings.</param>
+        /// <returns>A BsonReader.</returns>
+        public static async Task<BsonReader> CreateAsync(Stream stream, BsonBinaryReaderSettings settings)
+        {
+            var reader = new BsonBinaryReader(null, settings);
+            await reader.Buffer.LoadFromAsync(stream);
+            return reader;
         }
 
         // public methods

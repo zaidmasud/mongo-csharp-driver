@@ -18,6 +18,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text;
+using System.Threading.Tasks;
 
 namespace MongoDB.Bson.IO
 {
@@ -73,14 +74,14 @@ namespace MongoDB.Bson.IO
         /// <summary>
         /// Closes the writer.
         /// </summary>
-        public override void Close()
+        public override async Task CloseAsync()
         {
             // Close can be called on Disposed objects
             if (State != BsonWriterState.Closed)
             {
                 if (State == BsonWriterState.Done)
                 {
-                    Flush();
+                    await FlushAsync();
                 }
                 if (_stream != null && _binaryWriterSettings.CloseOutput)
                 {
@@ -90,11 +91,11 @@ namespace MongoDB.Bson.IO
                 State = BsonWriterState.Closed;
             }
         }
-
+		
         /// <summary>
         /// Flushes any pending data to the output destination.
         /// </summary>
-        public override void Flush()
+        public override async Task FlushAsync()
         {
             if (Disposed) { throw new ObjectDisposedException("BsonBinaryWriter"); }
             if (State == BsonWriterState.Closed)
@@ -107,8 +108,8 @@ namespace MongoDB.Bson.IO
             }
             if (_stream != null)
             {
-                _buffer.WriteTo(_stream);
-                _stream.Flush();
+                await _buffer.WriteToAsync(_stream);
+                await _stream.FlushAsync();
                 _buffer.Clear(); // only clear the buffer if we have written it to a stream
             }
         }

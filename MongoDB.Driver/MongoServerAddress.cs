@@ -20,6 +20,7 @@ using System.Net;
 using System.Net.Sockets;
 using System.Text;
 using System.Text.RegularExpressions;
+using System.Threading.Tasks;
 using System.Xml;
 
 namespace MongoDB.Driver
@@ -190,9 +191,9 @@ namespace MongoDB.Driver
         /// </summary>
         /// <param name="addressFamily">The address family of the returned IPEndPoint.</param>
         /// <returns>The IPEndPoint of the server.</returns>
-        public IPEndPoint ToIPEndPoint(AddressFamily addressFamily)
+        public async Task<IPEndPoint> ToIPEndPointAsync(AddressFamily addressFamily)
         {
-            var ipAddresses = Dns.GetHostAddresses(_host);
+            var ipAddresses = await Dns.GetHostAddressesAsync(_host);
             if (ipAddresses != null && ipAddresses.Length != 0)
             {
                 foreach (var ipAddress in ipAddresses)

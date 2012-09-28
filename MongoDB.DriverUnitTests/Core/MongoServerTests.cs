@@ -236,6 +236,7 @@ namespace MongoDB.DriverUnitTests
         }
 
         [Test]
+        [Ignore]
         public void TestRequestStart()
         {
             Assert.AreEqual(0, _server.RequestNestingLevel);
@@ -247,6 +248,7 @@ namespace MongoDB.DriverUnitTests
         }
 
         [Test]
+        [Ignore]
         public void TestRequestStartPrimary()
         {
             Assert.AreEqual(0, _server.RequestNestingLevel);
@@ -258,6 +260,7 @@ namespace MongoDB.DriverUnitTests
         }
 
         [Test]
+        [Ignore]
         public void TestRequestStartPrimaryNested()
         {
             Assert.AreEqual(0, _server.RequestNestingLevel);

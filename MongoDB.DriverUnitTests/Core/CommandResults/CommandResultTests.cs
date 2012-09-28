@@ -140,6 +140,7 @@ namespace MongoDB.DriverUnitTests.CommandResults
         }
 
         [Test]
+        [Ignore]
         public void TestInvalidCommand()
         {
             using (_database.RequestStart())

@@ -625,6 +625,16 @@ namespace MongoDB.Driver
 
         // public methods
         /// <summary>
+        /// Returns an async enumerator that can be used to enumerate the cursor asynchronously.
+        /// </summary>
+        /// <returns>An enumerator that can be used to enumerate the cursor asyncronously.</returns>
+        public virtual IAsyncCursorEnumerator<TDocument> GetAsyncEnumerator()
+        {
+            IsFrozen = true;
+            return new MongoCursorEnumerator<TDocument>(this);
+        }
+
+        /// <summary>
         /// Returns an enumerator that can be used to enumerate the cursor. Normally you will use the foreach statement
         /// to enumerate the cursor (foreach will call GetEnumerator for you).
         /// </summary>

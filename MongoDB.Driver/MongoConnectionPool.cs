@@ -268,7 +268,7 @@ namespace MongoDB.Driver
                 if (connection.GenerationId == _generationId)
                 {
                     connection.LastUsedAt = DateTime.UtcNow;
-                    _availableConnections.Add(connection);
+                    AddAvailableConnection(connection);
                     Monitor.Pulse(_connectionPoolLock);
                 }
                 else
@@ -285,6 +285,16 @@ namespace MongoDB.Driver
         }
 
         // private methods
+        private void AddAvailableConnection(MongoConnection connection)
+        {
+            if (_availableConnections.Contains(connection))
+            {
+                var message = string.Format("Connection is already in the available connections list");
+                throw new InvalidOperationException(message);
+            }
+            _availableConnections.Add(connection);
+        }
+
         private void EnsureMinConnectionPoolSizeWorkItem(object state)
         {
             // make sure only one instance of EnsureMinConnectionPoolSizeWorkItem is running at a time
@@ -312,7 +322,7 @@ namespace MongoDB.Driver
                     var connection = new MongoConnection(this);
                     try
                     {
-                        connection.Open();
+                        connection.OpenAsync().Wait();
 
                         // compare against MaxConnectionPoolSize instead of MinConnectionPoolSize
                         // because while we were opening this connection many others may have already been created
@@ -322,7 +332,7 @@ namespace MongoDB.Driver
                         {
                             if (_generationId == forGenerationId && _poolSize < _server.Settings.MaxConnectionPoolSize)
                             {
-                                _availableConnections.Add(connection);
+                                AddAvailableConnection(connection);
                                 _poolSize++;
                                 added = true;
                                 Monitor.Pulse(_connectionPoolLock);

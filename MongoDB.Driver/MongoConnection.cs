@@ -22,6 +22,8 @@ using System.Net.Security;
 using System.Net.Sockets;
 using System.Security.Cryptography.X509Certificates;
 using System.Text;
+using System.Threading;
+using System.Threading.Tasks;
 
 using MongoDB.Bson;
 using MongoDB.Bson.IO;
@@ -151,24 +153,22 @@ namespace MongoDB.Driver
         }
 
         // internal methods
-        internal void Authenticate(string databaseName, MongoCredentials credentials)
+        internal async Task AuthenticateAsync(string databaseName, MongoCredentials credentials)
         {
             if (_state == MongoConnectionState.Closed) { throw new InvalidOperationException("Connection is closed."); }
-            lock (_connectionLock)
+            var nonceCommand = new CommandDocument("getnonce", 1);
+            var commandResult = await RunCommandAsync(databaseName, QueryFlags.None, nonceCommand, false);
+            if (!commandResult.Ok)
             {
-                var nonceCommand = new CommandDocument("getnonce", 1);
-                var commandResult = RunCommand(databaseName, QueryFlags.None, nonceCommand, false);
-                if (!commandResult.Ok)
-                {
-                    throw new MongoAuthenticationException(
-                        "Error getting nonce for authentication.",
-                        new MongoCommandException(commandResult));
-                }
+                throw new MongoAuthenticationException(
+                    "Error getting nonce for authentication.",
+                    new MongoCommandException(commandResult));
+            }
 
-                var nonce = commandResult.Response["nonce"].AsString;
-                var passwordDigest = MongoUtils.Hash(credentials.Username + ":mongo:" + credentials.Password);
-                var digest = MongoUtils.Hash(nonce + credentials.Username + passwordDigest);
-                var authenticateCommand = new CommandDocument
+            var nonce = commandResult.Response["nonce"].AsString;
+            var passwordDigest = MongoUtils.Hash(credentials.Username + ":mongo:" + credentials.Password);
+            var digest = MongoUtils.Hash(nonce + credentials.Username + passwordDigest);
+            var authenticateCommand = new CommandDocument
                 {
                     { "authenticate", 1 },
                     { "user", credentials.Username },
@@ -176,18 +176,17 @@ namespace MongoDB.Driver
                     { "key", digest }
                 };
 
-                commandResult = RunCommand(databaseName, QueryFlags.None, authenticateCommand, false);
-                if (!commandResult.Ok)
-                {
-                    var message = string.Format("Invalid credentials for database '{0}'.", databaseName);
-                    throw new MongoAuthenticationException(
-                        message,
-                        new MongoCommandException(commandResult));
-                }
-
-                var authentication = new Authentication(credentials);
-                _authentications.Add(databaseName, authentication);
+            commandResult = await RunCommandAsync(databaseName, QueryFlags.None, authenticateCommand, false);
+            if (!commandResult.Ok)
+            {
+                var message = string.Format("Invalid credentials for database '{0}'.", databaseName);
+                throw new MongoAuthenticationException(
+                    message,
+                    new MongoCommandException(commandResult));
             }
+
+            var authentication = new Authentication(credentials);
+            _authentications.Add(databaseName, authentication);
         }
 
         // check whether the connection can be used with the given database (and credentials)
@@ -241,7 +240,7 @@ namespace MongoDB.Driver
             }
         }
 
-        internal void CheckAuthentication(MongoDatabase database)
+        internal async Task CheckAuthenticationAsync(MongoDatabase database)
         {
             if (_state == MongoConnectionState.Closed) { throw new InvalidOperationException("Connection is closed."); }
             if (database.Credentials == null)
@@ -279,34 +278,33 @@ namespace MongoDB.Driver
                         // this shouldn't happen because a connection would have been chosen from the connection pool only if it was viable
                         throw new MongoInternalException("The connection cannot be authenticated against the admin database because it is already authenticated against other databases.");
                     }
-                    Authenticate(authenticationDatabaseName, database.Credentials);
+                    await AuthenticateAsync(authenticationDatabaseName, database.Credentials);
                 }
             }
         }
 
         internal void Close()
         {
-            lock (_connectionLock)
+            if (_state != MongoConnectionState.Closed)
             {
-                if (_state != MongoConnectionState.Closed)
+                if (_stream != null)
                 {
-                    if (_stream != null)
-                    {
-                        try { _stream.Close(); } catch { } // ignore exceptions
-                        _stream = null;
-                    }
-                    if (_tcpClient != null)
-                    {
-                        if (_tcpClient.Connected)
-                        {
-                            // even though MSDN says TcpClient.Close doesn't close the underlying socket
-                            // it actually does (as proven by disassembling TcpClient and by experimentation)
-                            try { _tcpClient.Close(); } catch { } // ignore exceptions
-                        }
-                        _tcpClient = null;
-                    }
-                    _state = MongoConnectionState.Closed;
+                    try { _stream.Close(); }
+                    catch { } // ignore exceptions
+                    _stream = null;
                 }
+                if (_tcpClient != null)
+                {
+                    if (_tcpClient.Connected)
+                    {
+                        // even though MSDN says TcpClient.Close doesn't close the underlying socket
+                        // it actually does (as proven by disassembling TcpClient and by experimentation)
+                        try { _tcpClient.Close(); }
+                        catch { } // ignore exceptions
+                    }
+                    _tcpClient = null;
+                }
+                _state = MongoConnectionState.Closed;
             }
         }
 
@@ -318,24 +316,21 @@ namespace MongoDB.Driver
                 return true;
             }
 
-            lock (_connectionLock)
+            if (database.Credentials == null)
             {
-                if (database.Credentials == null)
+                return _authentications.Count == 0;
+            }
+            else
+            {
+                var authenticationDatabaseName = database.Credentials.Admin ? "admin" : database.Name;
+                Authentication authentication;
+                if (_authentications.TryGetValue(authenticationDatabaseName, out authentication))
                 {
-                    return _authentications.Count == 0;
+                    return database.Credentials == authentication.Credentials;
                 }
                 else
                 {
-                    var authenticationDatabaseName = database.Credentials.Admin ? "admin" : database.Name;
-                    Authentication authentication;
-                    if (_authentications.TryGetValue(authenticationDatabaseName, out authentication))
-                    {
-                        return database.Credentials == authentication.Credentials;
-                    }
-                    else
-                    {
-                        return false;
-                    }
+                    return false;
                 }
             }
         }
@@ -343,34 +338,31 @@ namespace MongoDB.Driver
         internal void Logout(string databaseName)
         {
             if (_state == MongoConnectionState.Closed) { throw new InvalidOperationException("Connection is closed."); }
-            lock (_connectionLock)
+            var logoutCommand = new CommandDocument("logout", 1);
+            var commandResult = RunCommand(databaseName, QueryFlags.None, logoutCommand, false);
+            if (!commandResult.Ok)
             {
-                var logoutCommand = new CommandDocument("logout", 1);
-                var commandResult = RunCommand(databaseName, QueryFlags.None, logoutCommand, false);
-                if (!commandResult.Ok)
-                {
-                    throw new MongoAuthenticationException(
-                        "Error logging off.",
-                        new MongoCommandException(commandResult));
-                }
-
-                _authentications.Remove(databaseName);
+                throw new MongoAuthenticationException(
+                    "Error logging off.",
+                    new MongoCommandException(commandResult));
             }
+
+            _authentications.Remove(databaseName);
         }
 
-        internal void Open()
+        internal async Task OpenAsync()
         {
             if (_state != MongoConnectionState.Initial)
             {
                 throw new InvalidOperationException("Open called more than once.");
             }
 
-            var ipEndPoint = _serverInstance.GetIPEndPoint();
+            var ipEndPoint = await _serverInstance.GetIPEndPointAsync();
             var tcpClient = new TcpClient(ipEndPoint.AddressFamily);
             tcpClient.NoDelay = true; // turn off Nagle
             tcpClient.ReceiveBufferSize = MongoDefaults.TcpReceiveBufferSize;
             tcpClient.SendBufferSize = MongoDefaults.TcpSendBufferSize;
-            tcpClient.Connect(ipEndPoint);
+            await tcpClient.ConnectAsync(ipEndPoint.Address, ipEndPoint.Port);
 
             var stream = (Stream)tcpClient.GetStream();
             if (_serverInstance.Server.Settings.UseSsl)
@@ -387,7 +379,7 @@ namespace MongoDB.Driver
 
                 try
                 {
-                    sslStream.AuthenticateAsClient(_serverInstance.Address.Host);
+                    await sslStream.AuthenticateAsClientAsync(_serverInstance.Address.Host);
                 }
                 catch
                 {
@@ -413,6 +405,15 @@ namespace MongoDB.Driver
             CommandDocument command,
             bool throwOnError)
         {
+            return RunCommandAsync(databaseName, queryFlags, command, throwOnError).GetAwaiter().GetResult();
+        }
+
+        internal async Task<CommandResult> RunCommandAsync(
+            string databaseName,
+            QueryFlags queryFlags,
+            CommandDocument command,
+            bool throwOnError)
+        {
             var commandName = command.GetElement(0).Name;
 
             var writerSettings = new BsonBinaryWriterSettings
@@ -422,7 +423,7 @@ namespace MongoDB.Driver
             };
             using (var message = new MongoQueryMessage(writerSettings, databaseName + ".$cmd", queryFlags, 0, 1, command, null))
             {
-                SendMessage(message, SafeMode.False, databaseName);
+                await SendMessageAsync(message, SafeMode.False, databaseName);
             }
 
             var readerSettings = new BsonBinaryReaderSettings
@@ -430,7 +431,7 @@ namespace MongoDB.Driver
                 GuidRepresentation = GuidRepresentation.Unspecified,
                 MaxDocumentSize = _serverInstance.MaxDocumentSize
             };
-            var reply = ReceiveMessage<BsonDocument>(readerSettings, null);
+            var reply = await ReceiveMessageAsync<BsonDocument>(readerSettings, null);
             if (reply.NumberReturned == 0)
             {
                 var message = string.Format("Command '{0}' failed. No response returned.", commandName);
@@ -450,45 +451,52 @@ namespace MongoDB.Driver
             BsonBinaryReaderSettings readerSettings,
             IBsonSerializationOptions serializationOptions)
         {
+            return ReceiveMessageAsync<TDocument>(readerSettings, serializationOptions).GetAwaiter().GetResult();
+        }
+
+        internal async Task<MongoReplyMessage<TDocument>> ReceiveMessageAsync<TDocument>(
+            BsonBinaryReaderSettings readerSettings,
+            IBsonSerializationOptions serializationOptions)
+        {
             if (_state == MongoConnectionState.Closed) { throw new InvalidOperationException("Connection is closed."); }
-            lock (_connectionLock)
+            try
             {
-                try
+                using (var buffer = new BsonBuffer())
                 {
-                    using (var buffer = new BsonBuffer())
+                    var networkStream = await GetNetworkStreamAsync();
+                    var readTimeout = (int)_serverInstance.Server.Settings.SocketTimeout.TotalMilliseconds;
+                    if (readTimeout != 0)
                     {
-                        var networkStream = GetNetworkStream();
-                        var readTimeout = (int)_serverInstance.Server.Settings.SocketTimeout.TotalMilliseconds;
-                        if (readTimeout != 0)
-                        {
-                            networkStream.ReadTimeout = readTimeout;
-                        }
-                        buffer.LoadFrom(networkStream);
-                        var reply = new MongoReplyMessage<TDocument>(readerSettings);
-                        reply.ReadFrom(buffer, serializationOptions);
-                        return reply;
+                        networkStream.ReadTimeout = readTimeout;
                     }
+                    await buffer.LoadFromAsync(networkStream);
+                    var reply = new MongoReplyMessage<TDocument>(readerSettings);
+                    reply.ReadFrom(buffer, serializationOptions);
+                    return reply;
                 }
-                catch (Exception ex)
-                {
-                    HandleException(ex);
-                    throw;
-                }
+            }
+            catch (Exception ex)
+            {
+                HandleException(ex);
+                throw;
             }
         }
 
         internal SafeModeResult SendMessage(MongoRequestMessage message, SafeMode safeMode, string databaseName)
         {
-            if (_state == MongoConnectionState.Closed) { throw new InvalidOperationException("Connection is closed."); }
-            lock (_connectionLock)
-            {
-                _requestId = message.RequestId;
+            return SendMessageAsync(message, safeMode, databaseName).GetAwaiter().GetResult();
+        }
 
-                message.WriteToBuffer();
-                CommandDocument safeModeCommand = null;
-                if (safeMode.Enabled)
-                {
-                    safeModeCommand = new CommandDocument
+        internal async Task<SafeModeResult> SendMessageAsync(MongoRequestMessage message, SafeMode safeMode, string databaseName)
+        {
+            if (_state == MongoConnectionState.Closed) { throw new InvalidOperationException("Connection is closed."); }
+            _requestId = message.RequestId;
+
+            message.WriteToBuffer();
+            CommandDocument safeModeCommand = null;
+            if (safeMode.Enabled)
+            {
+                safeModeCommand = new CommandDocument
                     {
                         { "getlasterror", 1 }, // use all lowercase for backward compatibility
                         { "fsync", true, safeMode.FSync },
@@ -497,61 +505,60 @@ namespace MongoDB.Driver
                         { "w", safeMode.WMode, safeMode.WMode != null },
                         { "wtimeout", (int) safeMode.WTimeout.TotalMilliseconds, safeMode.W > 1 && safeMode.WTimeout != TimeSpan.Zero }
                     };
-                    // piggy back on network transmission for message
-                    using (var getLastErrorMessage = new MongoQueryMessage(message.Buffer, message.WriterSettings, databaseName + ".$cmd", QueryFlags.None, 0, 1, safeModeCommand, null))
-                    {
-                        getLastErrorMessage.WriteToBuffer();
-                    }
-                }
-
-                try
+                // piggy back on network transmission for message
+                using (var getLastErrorMessage = new MongoQueryMessage(message.Buffer, message.WriterSettings, databaseName + ".$cmd", QueryFlags.None, 0, 1, safeModeCommand, null))
                 {
-                    var networkStream = GetNetworkStream();
-                    var writeTimeout = (int)_serverInstance.Server.Settings.SocketTimeout.TotalMilliseconds;
-                    if (writeTimeout != 0)
-                    {
-                        networkStream.WriteTimeout = writeTimeout;
-                    }
-                    message.Buffer.WriteTo(networkStream);
-                    _messageCounter++;
+                    getLastErrorMessage.WriteToBuffer();
                 }
-                catch (Exception ex)
-                {
-                    HandleException(ex);
-                    throw;
-                }
-
-                SafeModeResult safeModeResult = null;
-                if (safeMode.Enabled)
-                {
-                    var readerSettings = new BsonBinaryReaderSettings
-                    {
-                        GuidRepresentation = message.WriterSettings.GuidRepresentation,
-                        MaxDocumentSize = _serverInstance.MaxDocumentSize
-                    };
-                    var replyMessage = ReceiveMessage<BsonDocument>(readerSettings, null);
-                    var safeModeResponse = replyMessage.Documents[0];
-                    safeModeResult = new SafeModeResult();
-                    safeModeResult.Initialize(safeModeCommand, safeModeResponse);
-
-                    if (!safeModeResult.Ok)
-                    {
-                        var errorMessage = string.Format(
-                            "Safemode detected an error '{0}'. (response was {1}).",
-                            safeModeResult.ErrorMessage, safeModeResponse.ToJson());
-                        throw new MongoSafeModeException(errorMessage, safeModeResult);
-                    }
-                    if (safeModeResult.HasLastErrorMessage)
-                    {
-                        var errorMessage = string.Format(
-                            "Safemode detected an error '{0}'. (Response was {1}).",
-                            safeModeResult.LastErrorMessage, safeModeResponse.ToJson());
-                        throw new MongoSafeModeException(errorMessage, safeModeResult);
-                    }
-                }
-
-                return safeModeResult;
             }
+
+            try
+            {
+                var networkStream = await GetNetworkStreamAsync();
+                var writeTimeout = (int)_serverInstance.Server.Settings.SocketTimeout.TotalMilliseconds;
+                if (writeTimeout != 0)
+                {
+                    networkStream.WriteTimeout = writeTimeout;
+                }
+                await message.Buffer.WriteToAsync(networkStream);
+                _messageCounter++;
+            }
+            catch (Exception ex)
+            {
+                HandleException(ex);
+                throw;
+            }
+
+            SafeModeResult safeModeResult = null;
+            if (safeMode.Enabled)
+            {
+                var readerSettings = new BsonBinaryReaderSettings
+                {
+                    GuidRepresentation = message.WriterSettings.GuidRepresentation,
+                    MaxDocumentSize = _serverInstance.MaxDocumentSize
+                };
+                var replyMessage = await ReceiveMessageAsync<BsonDocument>(readerSettings, null);
+                var safeModeResponse = replyMessage.Documents[0];
+                safeModeResult = new SafeModeResult();
+                safeModeResult.Initialize(safeModeCommand, safeModeResponse);
+
+                if (!safeModeResult.Ok)
+                {
+                    var errorMessage = string.Format(
+                        "Safemode detected an error '{0}'. (response was {1}).",
+                        safeModeResult.ErrorMessage, safeModeResponse.ToJson());
+                    throw new MongoSafeModeException(errorMessage, safeModeResult);
+                }
+                if (safeModeResult.HasLastErrorMessage)
+                {
+                    var errorMessage = string.Format(
+                        "Safemode detected an error '{0}'. (Response was {1}).",
+                        safeModeResult.LastErrorMessage, safeModeResponse.ToJson());
+                    throw new MongoSafeModeException(errorMessage, safeModeResult);
+                }
+            }
+
+            return safeModeResult;
         }
 
         // private methods
@@ -565,11 +572,11 @@ namespace MongoDB.Driver
             return true;
         }
 
-        private Stream GetNetworkStream()
+        private async Task<Stream> GetNetworkStreamAsync()
         {
             if (_state == MongoConnectionState.Initial)
             {
-                Open();
+                await OpenAsync();
             }
             return _stream;
         }

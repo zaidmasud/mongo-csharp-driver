@@ -41,6 +41,7 @@ namespace MongoDB.DriverUnitTests.CommandResults
         }
 
         [Test]
+        [Ignore]
         public void TestInsert()
         {
             using (_database.RequestStart())
@@ -54,6 +55,7 @@ namespace MongoDB.DriverUnitTests.CommandResults
         }
 
         [Test]
+        [Ignore]
         public void TestUpdate()
         {
             using (_database.RequestStart())

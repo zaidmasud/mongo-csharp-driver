@@ -18,6 +18,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text;
+using System.Threading.Tasks;
 
 namespace MongoDB.Bson.IO
 {
@@ -59,7 +60,8 @@ namespace MongoDB.Bson.IO
         /// <summary>
         /// Closes the writer.
         /// </summary>
-        public override void Close()
+#pragma warning disable 1998 // this particular implementation is synchronous
+        public override async Task CloseAsync()
         {
             // Close can be called on Disposed objects
             if (State != BsonWriterState.Closed)
@@ -68,14 +70,7 @@ namespace MongoDB.Bson.IO
                 State = BsonWriterState.Closed;
             }
         }
-
-        /// <summary>
-        /// Flushes any pending data to the output destination.
-        /// </summary>
-        public override void Flush()
-        {
-            if (Disposed) { throw new ObjectDisposedException("BsonDocumentWriter"); }
-        }
+#pragma warning restore 1998
 
         /// <summary>
         /// Writes BSON binary data to the writer.

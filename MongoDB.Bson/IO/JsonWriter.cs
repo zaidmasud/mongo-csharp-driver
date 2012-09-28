@@ -20,6 +20,7 @@ using System.IO;
 using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
+using System.Threading.Tasks;
 using System.Xml;
 
 namespace MongoDB.Bson.IO
@@ -53,12 +54,12 @@ namespace MongoDB.Bson.IO
         /// <summary>
         /// Closes the writer.
         /// </summary>
-        public override void Close()
+        public override async Task CloseAsync()
         {
             // Close can be called on Disposed objects
             if (State != BsonWriterState.Closed)
             {
-                Flush();
+                await FlushAsync();
                 if (_jsonWriterSettings.CloseOutput)
                 {
                     _textWriter.Close();
@@ -71,10 +72,10 @@ namespace MongoDB.Bson.IO
         /// <summary>
         /// Flushes any pending data to the output destination.
         /// </summary>
-        public override void Flush()
+        public override async Task FlushAsync()
         {
             if (Disposed) { throw new ObjectDisposedException("JsonWriter"); }
-            _textWriter.Flush();
+            await _textWriter.FlushAsync();
         }
 
         /// <summary>

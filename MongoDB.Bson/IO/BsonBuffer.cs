@@ -18,6 +18,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text;
+using System.Threading.Tasks;
 
 namespace MongoDB.Bson.IO
 {
@@ -277,10 +278,7 @@ namespace MongoDB.Bson.IO
         /// <param name="stream">The Stream.</param>
         public void LoadFrom(Stream stream)
         {
-            LoadFrom(stream, 4); // does not advance position
-            int length = ReadInt32(); // advances position 4 bytes
-            LoadFrom(stream, length - 4); // does not advance position
-            Position -= 4; // move back to just before the length field
+            LoadFromAsync(stream).Wait();
         }
 
         /// <summary>
@@ -289,6 +287,28 @@ namespace MongoDB.Bson.IO
         /// <param name="stream">The stream.</param>
         /// <param name="count">The number of bytes to load.</param>
         public void LoadFrom(Stream stream, int count)
+		{
+			LoadFromAsync(stream, count).Wait();
+		}
+		
+        /// <summary>
+        /// Loads the buffer from a Stream (the Stream must be positioned at a 4 byte length field).
+        /// </summary>
+        /// <param name="stream">The Stream.</param>
+        public async Task LoadFromAsync(Stream stream)
+        {
+            await LoadFromAsync(stream, 4); // does not advance position
+            int length = ReadInt32(); // advances position 4 bytes
+            await LoadFromAsync(stream, length - 4); // does not advance position
+            Position -= 4; // move back to just before the length field
+        }
+
+        /// <summary>
+        /// Loads the buffer from a Stream (leaving the position in the buffer unchanged).
+        /// </summary>
+        /// <param name="stream">The stream.</param>
+        /// <param name="count">The number of bytes to load.</param>
+        public async Task LoadFromAsync(Stream stream, int count)
         {
             if (_disposed) { throw new ObjectDisposedException("BsonBuffer"); }
 
@@ -304,7 +324,7 @@ namespace MongoDB.Bson.IO
                 int bytesPending = partialCount;
                 while (bytesPending > 0)
                 {
-                    var bytesRead = stream.Read(localChunk, localChunkOffset, bytesPending);
+                    var bytesRead = await stream.ReadAsync(localChunk, localChunkOffset, bytesPending);
                     if (bytesRead == 0)
                     {
                         throw new EndOfStreamException();
@@ -923,18 +943,28 @@ namespace MongoDB.Bson.IO
         public void WriteTo(Stream stream)
         {
             if (_disposed) { throw new ObjectDisposedException("BsonBuffer"); }
+            WriteToAsync(stream).Wait();
+        }
+
+        /// <summary>
+        /// Writes all the data in the buffer to a Stream.
+        /// </summary>
+        /// <param name="stream">The Stream.</param>
+        public async Task WriteToAsync(Stream stream)
+        {
+            if (_disposed) { throw new ObjectDisposedException("BsonBuffer"); }
             if (_position > 0)
             {
                 var wholeChunks = _position / __chunkSize;
                 for (int chunkIndex = 0; chunkIndex < wholeChunks; chunkIndex++)
                 {
-                    stream.Write(_chunks[chunkIndex], 0, __chunkSize);
+                    await stream.WriteAsync(_chunks[chunkIndex], 0, __chunkSize);
                 }
 
                 var partialChunkSize = _position % __chunkSize;
                 if (partialChunkSize != 0)
                 {
-                    stream.Write(_chunks[wholeChunks], 0, partialChunkSize);
+                    await stream.WriteAsync(_chunks[wholeChunks], 0, partialChunkSize);
                 }
             }
         }

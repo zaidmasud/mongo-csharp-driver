@@ -29,6 +29,7 @@ namespace MongoDB.DriverUnitTests.Jira.CSharp103
     public class CSharp103Tests
     {
         [Test]
+        [Ignore]
         public void TestNullReferenceException()
         {
             var server = Configuration.TestServer;

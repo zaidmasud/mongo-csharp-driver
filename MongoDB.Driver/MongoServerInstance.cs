@@ -18,6 +18,7 @@ using System.Diagnostics;
 using System.Linq;
 using System.Net;
 using System.Threading;
+using System.Threading.Tasks;
 
 namespace MongoDB.Driver
 {
@@ -330,12 +331,21 @@ namespace MongoDB.Driver
         /// <returns>The IP end point of this server instance.</returns>
         public IPEndPoint GetIPEndPoint()
         {
+            return GetIPEndPointAsync().GetAwaiter().GetResult();
+        }
+
+        /// <summary>
+        /// Gets the IP end point of this server instance.
+        /// </summary>
+        /// <returns>The IP end point of this server instance.</returns>
+        public async Task<IPEndPoint> GetIPEndPointAsync()
+        {
             // use a lock free algorithm because DNS lookups are rare and concurrent lookups are tolerable
             // the intermediate variable is important to avoid race conditions
             var ipEndPoint = Interlocked.CompareExchange(ref _ipEndPoint, null, null);
             if (ipEndPoint == null)
             {
-                ipEndPoint = _address.ToIPEndPoint(_server.Settings.AddressFamily);
+                ipEndPoint = await _address.ToIPEndPointAsync(_server.Settings.AddressFamily);
                 Interlocked.CompareExchange(ref _ipEndPoint, _ipEndPoint, null);
             }
             return ipEndPoint;
@@ -392,6 +402,16 @@ namespace MongoDB.Driver
         /// <returns>A MongoConnection.</returns>
         internal MongoConnection AcquireConnection(MongoDatabase database)
         {
+            return AcquireConnectionAsync(database).GetAwaiter().GetResult();
+        }
+
+        /// <summary>
+        /// Acquires the connection.
+        /// </summary>
+        /// <param name="database">The database.</param>
+        /// <returns>A MongoConnection.</returns>
+        internal async Task<MongoConnection> AcquireConnectionAsync(MongoDatabase database)
+        {
             MongoConnection connection;
             lock (_serverInstanceLock)
             {
@@ -406,7 +426,7 @@ namespace MongoDB.Driver
 
             try
             {
-                connection.CheckAuthentication(database); // will authenticate if necessary
+                await connection.CheckAuthenticationAsync(database); // will authenticate if necessary
             }
             catch (MongoAuthenticationException)
             {

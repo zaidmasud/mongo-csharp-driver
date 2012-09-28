@@ -20,6 +20,7 @@ using System.Linq;
 using System.Net;
 using System.Text;
 using System.Threading;
+using System.Threading.Tasks;
 
 using MongoDB.Bson;
 using MongoDB.Bson.Serialization;
@@ -987,6 +988,16 @@ namespace MongoDB.Driver
         // internal methods
         internal MongoConnection AcquireConnection(MongoDatabase database, ReadPreference readPreference)
         {
+            return AcquireConnectionAsync(database, readPreference).GetAwaiter().GetResult();
+        }
+
+        internal MongoConnection AcquireConnection(MongoDatabase database, MongoServerInstance serverInstance)
+        {
+            return AcquireConnectionAsync(database, serverInstance).GetAwaiter().GetResult();
+        }
+
+        internal async Task<MongoConnection> AcquireConnectionAsync(MongoDatabase database, ReadPreference readPreference)
+        {
             MongoConnection requestConnection = null;
             lock (_serverLock)
             {
@@ -1006,15 +1017,15 @@ namespace MongoDB.Driver
             // check authentication outside of lock
             if (requestConnection != null)
             {
-                requestConnection.CheckAuthentication(database); // will throw exception if authentication fails
+                await requestConnection.CheckAuthenticationAsync(database); // will throw exception if authentication fails
                 return requestConnection;
             }
 
             var serverInstance = _serverProxy.ChooseServerInstance(readPreference);
-            return serverInstance.AcquireConnection(database);
+            return await serverInstance.AcquireConnectionAsync(database);
         }
 
-        internal MongoConnection AcquireConnection(MongoDatabase database, MongoServerInstance serverInstance)
+        internal async Task<MongoConnection> AcquireConnectionAsync(MongoDatabase database, MongoServerInstance serverInstance)
         {
             MongoConnection requestConnection = null;
             lock (_serverLock)
@@ -1038,11 +1049,11 @@ namespace MongoDB.Driver
             // check authentication outside of lock
             if (requestConnection != null)
             {
-                requestConnection.CheckAuthentication(database); // will throw exception if authentication fails
+                await requestConnection.CheckAuthenticationAsync(database); // will throw exception if authentication fails
                 return requestConnection;
             }
 
-            return serverInstance.AcquireConnection(database);
+            return await serverInstance.AcquireConnectionAsync(database);
         }
 
         internal void ReleaseConnection(MongoConnection connection)

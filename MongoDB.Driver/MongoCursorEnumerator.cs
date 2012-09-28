@@ -19,6 +19,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Net;
 using System.Text;
+using System.Threading.Tasks;
 
 using MongoDB.Bson;
 using MongoDB.Bson.IO;
@@ -27,10 +28,27 @@ using MongoDB.Bson.Serialization;
 namespace MongoDB.Driver
 {
     /// <summary>
+    /// Represents an enumerator that can be used to iterate asyncronously over the results of a query.
+    /// </summary>
+    /// <typeparam name="TDocument">The type of the documents.</typeparam>
+    public interface IAsyncCursorEnumerator<TDocument> : IDisposable
+    {
+        /// <summary>
+        /// Gets the current document.
+        /// </summary>
+        TDocument Current { get; }
+        /// <summary>
+        /// Moves asyncronously to the next document.
+        /// </summary>
+        /// <returns></returns>
+        Task<bool> MoveNextAsync();
+    }
+
+    /// <summary>
     /// Reprsents an enumerator that fetches the results of a query sent to the server.
     /// </summary>
     /// <typeparam name="TDocument">The type of the documents returned.</typeparam>
-    public class MongoCursorEnumerator<TDocument> : IEnumerator<TDocument>
+    public class MongoCursorEnumerator<TDocument> : IEnumerator<TDocument>, IAsyncCursorEnumerator<TDocument>
     {
         // private fields
         private bool _disposed = false;
@@ -103,7 +121,7 @@ namespace MongoDB.Driver
             {
                 try
                 {
-                    KillCursor();
+                    KillCursorAsync().Wait();
                 }
                 finally
                 {
@@ -117,6 +135,15 @@ namespace MongoDB.Driver
         /// </summary>
         /// <returns>True if another result is available.</returns>
         public bool MoveNext()
+        {
+            return MoveNextAsync().GetAwaiter().GetResult();
+        }
+
+        /// <summary>
+        /// Moves to the next result and returns true if another result is available.
+        /// </summary>
+        /// <returns>True if another result is available.</returns>
+        public async Task<bool> MoveNextAsync()
         {
             if (_disposed) { throw new ObjectDisposedException("MongoCursorEnumerator"); }
             if (_done)
@@ -136,7 +163,7 @@ namespace MongoDB.Driver
 
             if (!_started)
             {
-                _reply = GetFirst();
+                _reply = await GetFirstAsync();
                 if (_reply.Documents.Count == 0)
                 {
                     _reply = null;
@@ -149,7 +176,7 @@ namespace MongoDB.Driver
 
             if (_positiveLimit != 0 && _count == _positiveLimit)
             {
-                KillCursor(); // early exit
+                await KillCursorAsync(); // early exit
                 _reply = null;
                 _done = true;
                 return false;
@@ -164,7 +191,7 @@ namespace MongoDB.Driver
             {
                 if (_openCursorId != 0)
                 {
-                    _reply = GetMore();
+                    _reply = await GetMoreAsync();
                     if (_reply.Documents.Count == 0)
                     {
                         _reply = null;
@@ -200,12 +227,12 @@ namespace MongoDB.Driver
         }
 
         // private methods
-        private MongoConnection AcquireConnection()
+        private async Task<MongoConnection> AcquireConnectionAsync()
         {
             if (_serverInstance == null)
             {
                 // first time we need a connection let Server.AcquireConnection pick the server instance
-                var connection = _cursor.Server.AcquireConnection(_cursor.Database, _cursor.ReadPreference);
+                var connection = await _cursor.Server.AcquireConnectionAsync(_cursor.Database, _cursor.ReadPreference);
                 _serverInstance = connection.ServerInstance;
                 return connection;
             }
@@ -216,9 +243,9 @@ namespace MongoDB.Driver
             }
         }
 
-        private MongoReplyMessage<TDocument> GetFirst()
+        private async Task<MongoReplyMessage<TDocument>> GetFirstAsync()
         {
-            var connection = AcquireConnection();
+            var connection = await AcquireConnectionAsync();
             try
             {
                 // some of these weird conditions are necessary to get commands to run correctly
@@ -248,7 +275,7 @@ namespace MongoDB.Driver
                 var writerSettings = _cursor.Collection.GetWriterSettings(connection);
                 using (var message = new MongoQueryMessage(writerSettings, _cursor.Collection.FullName, _cursor.Flags, _cursor.Skip, numberToReturn, WrapQuery(), _cursor.Fields))
                 {
-                    return GetReply(connection, message);
+                    return await GetReplyAsync(connection, message);
                 }
             }
             finally
@@ -257,9 +284,9 @@ namespace MongoDB.Driver
             }
         }
 
-        private MongoReplyMessage<TDocument> GetMore()
+        private async Task<MongoReplyMessage<TDocument>> GetMoreAsync()
         {
-            var connection = AcquireConnection();
+            var connection = await AcquireConnectionAsync();
             try
             {
                 int numberToReturn;
@@ -278,7 +305,7 @@ namespace MongoDB.Driver
 
                 using (var message = new MongoGetMoreMessage(_cursor.Collection.FullName, numberToReturn, _openCursorId))
                 {
-                    return GetReply(connection, message);
+                    return await GetReplyAsync(connection, message);
                 }
             }
             finally
@@ -287,17 +314,17 @@ namespace MongoDB.Driver
             }
         }
 
-        private MongoReplyMessage<TDocument> GetReply(MongoConnection connection, MongoRequestMessage message)
+        private async Task<MongoReplyMessage<TDocument>> GetReplyAsync(MongoConnection connection, MongoRequestMessage message)
         {
             var readerSettings = _cursor.Collection.GetReaderSettings(connection);
-            connection.SendMessage(message, SafeMode.False, _cursor.Database.Name); // safemode doesn't apply to queries
-            var reply = connection.ReceiveMessage<TDocument>(readerSettings, _cursor.SerializationOptions);
+            await connection.SendMessageAsync(message, SafeMode.False, _cursor.Database.Name); // safemode doesn't apply to queries
+            var reply = await connection.ReceiveMessageAsync<TDocument>(readerSettings, _cursor.SerializationOptions);
             _responseFlags = reply.ResponseFlags;
             _openCursorId = reply.CursorId;
             return reply;
         }
 
-        private void KillCursor()
+        private async Task KillCursorAsync()
         {
             if (_openCursorId != 0)
             {
@@ -305,12 +332,12 @@ namespace MongoDB.Driver
                 {
                     if (_serverInstance != null && _serverInstance.State == MongoServerState.Connected)
                     {
-                        var connection = _cursor.Server.AcquireConnection(_cursor.Database, _serverInstance);
+                        var connection = await _cursor.Server.AcquireConnectionAsync(_cursor.Database, _serverInstance);
                         try
                         {
                             using (var message = new MongoKillCursorsMessage(_openCursorId))
                             {
-                                connection.SendMessage(message, SafeMode.False, _cursor.Database.Name); // no need to use SafeMode for KillCursors
+                                await connection.SendMessageAsync(message, SafeMode.False, _cursor.Database.Name); // no need to use SafeMode for KillCursors
                             }
                         }
                         finally

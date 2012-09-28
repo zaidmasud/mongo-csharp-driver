@@ -41,6 +41,7 @@ namespace MongoDB.DriverUnitTests.CommandResults
         }
 
         [Test]
+        [Ignore]
         public void Test()
         {
             using (_database.RequestStart())

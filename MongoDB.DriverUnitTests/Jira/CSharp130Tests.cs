@@ -53,6 +53,7 @@ namespace MongoDB.DriverUnitTests.Jira.CSharp130
         }
 
         [Test]
+        [Ignore]
         public void TestLastErrorMessage()
         {
             using (_server.RequestStart(_database))

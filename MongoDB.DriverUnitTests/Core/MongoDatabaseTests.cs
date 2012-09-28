@@ -169,6 +169,7 @@ namespace MongoDB.DriverUnitTests
         }
 
         [Test]
+        [Ignore]
         public void TestGetProfilingInfo()
         {
             using (_database.RequestStart())
@@ -244,6 +245,7 @@ namespace MongoDB.DriverUnitTests
         }
 
         [Test]
+        [Ignore]
         public void TestSetProfilingLevel()
         {
             using (_database.RequestStart())

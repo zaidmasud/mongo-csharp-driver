@@ -20,6 +20,7 @@ using System.IO;
 using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
+using System.Threading.Tasks;
 
 namespace MongoDB.Bson.IO
 {
@@ -209,7 +210,21 @@ namespace MongoDB.Bson.IO
         /// <summary>
         /// Closes the writer.
         /// </summary>
-        public abstract void Close();
+        public virtual void Close()
+        {
+            if (_disposed) { throw new ObjectDisposedException(this.GetType().Name); }
+			CloseAsync().Wait();
+        }
+
+        /// <summary>
+        /// Closes the writer.
+        /// </summary>
+#pragma warning disable 1998 // the default implementation is synchronous
+        public virtual async Task CloseAsync()
+        {
+            if (_disposed) { throw new ObjectDisposedException(this.GetType().Name); }
+        }
+#pragma warning restore 1998
 
         /// <summary>
         /// Disposes of any resources used by the writer.
@@ -226,7 +241,21 @@ namespace MongoDB.Bson.IO
         /// <summary>
         /// Flushes any pending data to the output destination.
         /// </summary>
-        public abstract void Flush();
+        public void Flush()
+        {
+            if (_disposed) { throw new ObjectDisposedException(this.GetType().Name); }
+            FlushAsync().Wait();
+        }
+
+        /// <summary>
+        /// Flushes any pending data to the output destination.
+        /// </summary>
+#pragma warning disable 1998 // the default implementation is synchronous
+        public virtual async Task FlushAsync()
+        {
+            if (_disposed) { throw new ObjectDisposedException(this.GetType().Name); }
+        }
+#pragma warning restore 1998
 
         /// <summary>
         /// Writes BSON binary data to the writer.
