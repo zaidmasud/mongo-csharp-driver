@@ -33,8 +33,8 @@ namespace MongoDB.Driver.GridFS
         // private fields
         private MongoDatabase _database;
         private MongoGridFSSettings _settings;
-        private MongoCollection<BsonDocument> _chunks;
-        private MongoCollection<BsonDocument> _files;
+        private MongoCollectionBsonDocument _chunks;
+        private MongoCollectionBsonDocument _files;
 
         // constructors
         /// <summary>
@@ -63,7 +63,7 @@ namespace MongoDB.Driver.GridFS
         /// <summary>
         /// Gets the chunks collection.
         /// </summary>
-        public MongoCollection<BsonDocument> Chunks
+        public MongoCollectionBsonDocument Chunks
         {
             get { return _chunks; }
         }
@@ -79,7 +79,7 @@ namespace MongoDB.Driver.GridFS
         /// <summary>
         /// Gets the files collection.
         /// </summary>
-        public MongoCollection<BsonDocument> Files
+        public MongoCollectionBsonDocument Files
         {
             get { return _files; }
         }
@@ -492,7 +492,8 @@ namespace MongoDB.Driver.GridFS
         public MongoCursor<MongoGridFSFileInfo> Find(IMongoQuery query)
         {
             var serializationOptions = new MongoGridFSFileInfo.SerializationOptions { GridFS = this };
-            return _files.FindAs<MongoGridFSFileInfo>(query).SetSerializationOptions(serializationOptions);
+            var fileInfoCollection = _database.GetCollection<MongoGridFSFileInfo>(_files.Name, _files.Settings);
+            return fileInfoCollection.Find(query).SetSerializationOptions(serializationOptions);
         }
 
         /// <summary>

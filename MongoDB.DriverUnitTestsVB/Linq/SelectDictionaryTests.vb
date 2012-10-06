@@ -131,7 +131,7 @@ Namespace MongoDB.DriverUnitTests.Linq
 
         Private _server As MongoServer
         Private _database As MongoDatabase
-        Private _collection As MongoCollection
+        Private _collection As MongoCollection(Of C)
 
         <TestFixtureSetUp()> _
         Public Sub Setup()

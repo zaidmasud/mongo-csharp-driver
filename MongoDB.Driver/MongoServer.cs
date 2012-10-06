@@ -560,7 +560,17 @@ namespace MongoDB.Driver
         /// <returns>A BsonDocument (or null if the document was not found).</returns>
         public virtual BsonDocument FetchDBRef(MongoDBRef dbRef)
         {
-            return FetchDBRefAs<BsonDocument>(dbRef);
+            if (dbRef == null)
+            {
+                throw new ArgumentNullException("dbRef");
+            }
+            if (dbRef.DatabaseName == null)
+            {
+                throw new ArgumentException("MongoDBRef DatabaseName missing.");
+            }
+
+            var database = GetDatabase(dbRef.DatabaseName);
+            return database.FetchDBRef(dbRef);
         }
 
         /// <summary>
@@ -569,9 +579,19 @@ namespace MongoDB.Driver
         /// <typeparam name="TDocument">The nominal type of the document to fetch.</typeparam>
         /// <param name="dbRef">The <see cref="MongoDBRef"/> to fetch.</param>
         /// <returns>A <typeparamref name="TDocument"/> (or null if the document was not found).</returns>
-        public virtual TDocument FetchDBRefAs<TDocument>(MongoDBRef dbRef)
+        public virtual TDocument FetchDBRef<TDocument>(MongoDBRef dbRef)
         {
-            return (TDocument)FetchDBRefAs(typeof(TDocument), dbRef);
+            if (dbRef == null)
+            {
+                throw new ArgumentNullException("dbRef");
+            }
+            if (dbRef.DatabaseName == null)
+            {
+                throw new ArgumentException("MongoDBRef DatabaseName missing.");
+            }
+
+            var database = GetDatabase(dbRef.DatabaseName);
+            return database.FetchDBRef<TDocument>(dbRef);
         }
 
         /// <summary>
@@ -580,15 +600,19 @@ namespace MongoDB.Driver
         /// <param name="documentType">The nominal type of the document to fetch.</param>
         /// <param name="dbRef">The <see cref="MongoDBRef"/> to fetch.</param>
         /// <returns>The document (or null if the document was not found).</returns>
-        public virtual object FetchDBRefAs(Type documentType, MongoDBRef dbRef)
+        public virtual object FetchDBRef(Type documentType, MongoDBRef dbRef)
         {
+            if (dbRef == null)
+            {
+                throw new ArgumentNullException("dbRef");
+            }
             if (dbRef.DatabaseName == null)
             {
                 throw new ArgumentException("MongoDBRef DatabaseName missing.");
             }
 
             var database = GetDatabase(dbRef.DatabaseName);
-            return database.FetchDBRefAs(documentType, dbRef);
+            return database.FetchDBRef(documentType, dbRef);
         }
 
         /// <summary>

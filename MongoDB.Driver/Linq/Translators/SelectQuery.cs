@@ -144,7 +144,8 @@ namespace MongoDB.Driver.Linq
                 return ExecuteDistinct(query);
             }
 
-            var cursor = Collection.FindAs(DocumentType, query);
+            var collection = Collection.Database.GetCollection(DocumentType, Collection.Name, Collection.Settings);
+            var cursor = collection.Find(query);
 
             if (_orderBy != null)
             {

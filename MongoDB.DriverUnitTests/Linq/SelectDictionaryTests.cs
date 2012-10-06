@@ -55,7 +55,7 @@ namespace MongoDB.DriverUnitTests.Linq
 
         private MongoServer _server;
         private MongoDatabase _database;
-        private MongoCollection _collection;
+        private MongoCollection<C> _collection;
 
         [TestFixtureSetUp]
         public void Setup()

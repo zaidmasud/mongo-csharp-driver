@@ -4453,7 +4453,7 @@ Namespace MongoDB.DriverUnitTests.Linq
 
         <Test()> _
         Public Sub TestWhereSIndexOfAnyBC()
-            Dim tempCollection = _database.GetCollection("temp")
+            Dim tempCollection = _database.GetCollection(Of C)("temp")
             tempCollection.Drop()
             tempCollection.Insert(New C() With {.S = "bxxx"})
             tempCollection.Insert(New C() With {.S = "xbxx"})
@@ -4552,7 +4552,7 @@ Namespace MongoDB.DriverUnitTests.Linq
 
         <Test()> _
         Public Sub TestWhereSIndexOfB()
-            Dim tempCollection = _database.GetCollection("temp")
+            Dim tempCollection = _database.GetCollection(Of C)("temp")
             tempCollection.Drop()
             tempCollection.Insert(New C() With { _
              .S = "bxxx" _
@@ -4665,7 +4665,7 @@ Namespace MongoDB.DriverUnitTests.Linq
 
         <Test()> _
         Public Sub TestWhereSIndexOfXyz()
-            Dim tempCollection = _database.GetCollection("temp")
+            Dim tempCollection = _database.GetCollection(Of C)("temp")
             tempCollection.Drop()
             tempCollection.Insert(New C() With { _
              .S = "xyzaaa" _
@@ -4887,11 +4887,12 @@ Namespace MongoDB.DriverUnitTests.Linq
 
         <Test()> _
         Public Sub TestWhereSIsNullOrEmpty()
-            Dim tempCollection = _database.GetCollection("temp")
+            Dim bsonCollection = _database.GetCollection("temp")
+            Dim tempCollection = _database.GetCollection(Of C)("temp")
             tempCollection.Drop()
             tempCollection.Insert(New C())
             ' serialized document will have no "s" field
-            tempCollection.Insert(New BsonDocument("s", BsonNull.Value))
+            bsonCollection.Insert(New BsonDocument("s", BsonNull.Value))
             ' work around [BsonIgnoreIfNull] on S
             tempCollection.Insert(New C() With { _
              .S = "" _

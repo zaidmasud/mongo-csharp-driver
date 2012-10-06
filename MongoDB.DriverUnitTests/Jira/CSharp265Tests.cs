@@ -73,28 +73,27 @@ namespace MongoDB.DriverUnitTests.Jira.CSharp265
 
         private MongoServer _server;
         private MongoDatabase _database;
-        private MongoCollection<GDA> _collection;
 
         [TestFixtureSetUp]
         public void TestFixtureSetup()
         {
             _server = Configuration.TestServer;
             _database = Configuration.TestDatabase;
-            _collection = Configuration.GetTestCollection<GDA>();
-            _collection.Drop();
+            Configuration.TestCollection.Drop();
         }
 
         [Test]
         public void TestGenericDictionaryArrayRepresentationWithDollar()
         {
+            var collection = Configuration.GetTestCollection<GDA>();
             var d = new GDA { Id = 1, Data = new Dictionary<string, int> { { "$a", 1 } } };
             var expected = "{ '_id' : 1, 'Data' : [['$a', 1]] }".Replace("'", "\"");
             var json = d.ToJson();
             Assert.AreEqual(expected, json);
 
-            _collection.RemoveAll();
-            _collection.Insert(d);
-            var r = _collection.FindOne(Query.EQ("_id", d.Id));
+            collection.RemoveAll();
+            collection.Insert(d);
+            var r = collection.FindOne(Query.EQ("_id", d.Id));
             Assert.AreEqual(d.Id, r.Id);
             Assert.AreEqual(1, r.Data.Count);
             Assert.AreEqual(1, r.Data["$a"]);
@@ -103,14 +102,15 @@ namespace MongoDB.DriverUnitTests.Jira.CSharp265
         [Test]
         public void TestGenericDictionaryArrayRepresentationWithDot()
         {
+            var collection = Configuration.GetTestCollection<GDA>();
             var d = new GDA { Id = 1, Data = new Dictionary<string, int> { { "a.b", 1 } } };
             var expected = "{ '_id' : 1, 'Data' : [['a.b', 1]] }".Replace("'", "\"");
             var json = d.ToJson();
             Assert.AreEqual(expected, json);
 
-            _collection.RemoveAll();
-            _collection.Insert(d);
-            var r = _collection.FindOne(Query.EQ("_id", d.Id));
+            collection.RemoveAll();
+            collection.Insert(d);
+            var r = collection.FindOne(Query.EQ("_id", d.Id));
             Assert.AreEqual(d.Id, r.Id);
             Assert.AreEqual(1, r.Data.Count);
             Assert.AreEqual(1, r.Data["a.b"]);
@@ -119,36 +119,39 @@ namespace MongoDB.DriverUnitTests.Jira.CSharp265
         [Test]
         public void TestGenericDictionaryDocumentRepresentationWithDollar()
         {
+            var collection = Configuration.GetTestCollection<GDD>();
             var d = new GDD { Id = 1, Data = new Dictionary<string, int> { { "$a", 1 } } };
             var expected = "{ '_id' : 1, 'Data' : { '$a' : 1 } }".Replace("'", "\"");
             var json = d.ToJson();
             Assert.AreEqual(expected, json);
 
-            Assert.Throws<BsonSerializationException>(() => { _collection.Insert(d); });
+            Assert.Throws<BsonSerializationException>(() => { collection.Insert(d); });
         }
 
         [Test]
         public void TestGenericDictionaryDocumentRepresentationWithDot()
         {
+            var collection = Configuration.GetTestCollection<GDD>();
             var d = new GDD { Id = 1, Data = new Dictionary<string, int> { { "a.b", 1 } } };
             var expected = "{ '_id' : 1, 'Data' : { 'a.b' : 1 } }".Replace("'", "\"");
             var json = d.ToJson();
             Assert.AreEqual(expected, json);
 
-            Assert.Throws<BsonSerializationException>(() => { _collection.Insert(d); });
+            Assert.Throws<BsonSerializationException>(() => { collection.Insert(d); });
         }
 
         [Test]
         public void TestGenericDictionaryDynamicRepresentationNormal()
         {
+            var collection = Configuration.GetTestCollection<GDX>();
             var d = new GDX { Id = 1, Data = new Dictionary<string, int> { { "abc", 1 } } };
             var expected = "{ '_id' : 1, 'Data' : { 'abc' : 1 } }".Replace("'", "\"");
             var json = d.ToJson();
             Assert.AreEqual(expected, json);
 
-            _collection.RemoveAll();
-            _collection.Insert(d);
-            var r = _collection.FindOne(Query.EQ("_id", d.Id));
+            collection.RemoveAll();
+            collection.Insert(d);
+            var r = collection.FindOne(Query.EQ("_id", d.Id));
             Assert.AreEqual(d.Id, r.Id);
             Assert.AreEqual(1, r.Data.Count);
             Assert.AreEqual(1, r.Data["abc"]);
@@ -157,14 +160,15 @@ namespace MongoDB.DriverUnitTests.Jira.CSharp265
         [Test]
         public void TestGenericDictionaryDynamicRepresentationWithDollar()
         {
+            var collection = Configuration.GetTestCollection<GDX>();
             var d = new GDX { Id = 1, Data = new Dictionary<string, int> { { "$a", 1 } } };
             var expected = "{ '_id' : 1, 'Data' : [['$a', 1]] }".Replace("'", "\"");
             var json = d.ToJson();
             Assert.AreEqual(expected, json);
 
-            _collection.RemoveAll();
-            _collection.Insert(d);
-            var r = _collection.FindOne(Query.EQ("_id", d.Id));
+            collection.RemoveAll();
+            collection.Insert(d);
+            var r = collection.FindOne(Query.EQ("_id", d.Id));
             Assert.AreEqual(d.Id, r.Id);
             Assert.AreEqual(1, r.Data.Count);
             Assert.AreEqual(1, r.Data["$a"]);
@@ -173,14 +177,15 @@ namespace MongoDB.DriverUnitTests.Jira.CSharp265
         [Test]
         public void TestGenericDictionaryDynamicRepresentationWithDot()
         {
+            var collection = Configuration.GetTestCollection<GDX>();
             var d = new GDX { Id = 1, Data = new Dictionary<string, int> { { "a.b", 1 } } };
             var expected = "{ '_id' : 1, 'Data' : [['a.b', 1]] }".Replace("'", "\"");
             var json = d.ToJson();
             Assert.AreEqual(expected, json);
 
-            _collection.RemoveAll();
-            _collection.Insert(d);
-            var r = _collection.FindOne(Query.EQ("_id", d.Id));
+            collection.RemoveAll();
+            collection.Insert(d);
+            var r = collection.FindOne(Query.EQ("_id", d.Id));
             Assert.AreEqual(d.Id, r.Id);
             Assert.AreEqual(1, r.Data.Count);
             Assert.AreEqual(1, r.Data["a.b"]);
@@ -189,14 +194,15 @@ namespace MongoDB.DriverUnitTests.Jira.CSharp265
         [Test]
         public void TestHashtableArrayRepresentationWithDollar()
         {
+            var collection = Configuration.GetTestCollection<HA>();
             var d = new HA { Id = 1, Data = new Hashtable { { "$a", 1 } } };
             var expected = "{ '_id' : 1, 'Data' : [['$a', 1]] }".Replace("'", "\"");
             var json = d.ToJson();
             Assert.AreEqual(expected, json);
 
-            _collection.RemoveAll();
-            _collection.Insert(d);
-            var r = _collection.FindOne(Query.EQ("_id", d.Id));
+            collection.RemoveAll();
+            collection.Insert(d);
+            var r = collection.FindOne(Query.EQ("_id", d.Id));
             Assert.AreEqual(d.Id, r.Id);
             Assert.AreEqual(1, r.Data.Count);
             Assert.AreEqual(1, r.Data["$a"]);
@@ -205,14 +211,15 @@ namespace MongoDB.DriverUnitTests.Jira.CSharp265
         [Test]
         public void TestHashtableArrayRepresentationWithDot()
         {
+            var collection = Configuration.GetTestCollection<HA>();
             var d = new HA { Id = 1, Data = new Hashtable { { "a.b", 1 } } };
             var expected = "{ '_id' : 1, 'Data' : [['a.b', 1]] }".Replace("'", "\"");
             var json = d.ToJson();
             Assert.AreEqual(expected, json);
 
-            _collection.RemoveAll();
-            _collection.Insert(d);
-            var r = _collection.FindOne(Query.EQ("_id", d.Id));
+            collection.RemoveAll();
+            collection.Insert(d);
+            var r = collection.FindOne(Query.EQ("_id", d.Id));
             Assert.AreEqual(d.Id, r.Id);
             Assert.AreEqual(1, r.Data.Count);
             Assert.AreEqual(1, r.Data["a.b"]);
@@ -221,36 +228,39 @@ namespace MongoDB.DriverUnitTests.Jira.CSharp265
         [Test]
         public void TestHashtableDocumentRepresentationWithDollar()
         {
+            var collection = Configuration.GetTestCollection<HD>();
             var d = new HD { Id = 1, Data = new Hashtable { { "$a", 1 } } };
             var expected = "{ '_id' : 1, 'Data' : { '$a' : 1 } }".Replace("'", "\"");
             var json = d.ToJson();
             Assert.AreEqual(expected, json);
 
-            Assert.Throws<BsonSerializationException>(() => { _collection.Insert(d); });
+            Assert.Throws<BsonSerializationException>(() => { collection.Insert(d); });
         }
 
         [Test]
         public void TestHashtableDocumentRepresentationWithDot()
         {
+            var collection = Configuration.GetTestCollection<HD>();
             var d = new HD { Id = 1, Data = new Hashtable { { "a.b", 1 } } };
             var expected = "{ '_id' : 1, 'Data' : { 'a.b' : 1 } }".Replace("'", "\"");
             var json = d.ToJson();
             Assert.AreEqual(expected, json);
 
-            Assert.Throws<BsonSerializationException>(() => { _collection.Insert(d); });
+            Assert.Throws<BsonSerializationException>(() => { collection.Insert(d); });
         }
 
         [Test]
         public void TestHashtableDynamicRepresentationNormal()
         {
+            var collection = Configuration.GetTestCollection<HX>();
             var d = new HX { Id = 1, Data = new Hashtable { { "abc", 1 } } };
             var expected = "{ '_id' : 1, 'Data' : { 'abc' : 1 } }".Replace("'", "\"");
             var json = d.ToJson();
             Assert.AreEqual(expected, json);
 
-            _collection.RemoveAll();
-            _collection.Insert(d);
-            var r = _collection.FindOne(Query.EQ("_id", d.Id));
+            collection.RemoveAll();
+            collection.Insert(d);
+            var r = collection.FindOne(Query.EQ("_id", d.Id));
             Assert.AreEqual(d.Id, r.Id);
             Assert.AreEqual(1, r.Data.Count);
             Assert.AreEqual(1, r.Data["abc"]);
@@ -259,14 +269,15 @@ namespace MongoDB.DriverUnitTests.Jira.CSharp265
         [Test]
         public void TestHashtableDynamicRepresentationWithDollar()
         {
+            var collection = Configuration.GetTestCollection<HX>();
             var d = new HX { Id = 1, Data = new Hashtable { { "$a", 1 } } };
             var expected = "{ '_id' : 1, 'Data' : [['$a', 1]] }".Replace("'", "\"");
             var json = d.ToJson();
             Assert.AreEqual(expected, json);
 
-            _collection.RemoveAll();
-            _collection.Insert(d);
-            var r = _collection.FindOne(Query.EQ("_id", d.Id));
+            collection.RemoveAll();
+            collection.Insert(d);
+            var r = collection.FindOne(Query.EQ("_id", d.Id));
             Assert.AreEqual(d.Id, r.Id);
             Assert.AreEqual(1, r.Data.Count);
             Assert.AreEqual(1, r.Data["$a"]);
@@ -275,14 +286,15 @@ namespace MongoDB.DriverUnitTests.Jira.CSharp265
         [Test]
         public void TestHashtableDynamicRepresentationWithDot()
         {
+            var collection = Configuration.GetTestCollection<HX>();
             var d = new HX { Id = 1, Data = new Hashtable { { "a.b", 1 } } };
             var expected = "{ '_id' : 1, 'Data' : [['a.b', 1]] }".Replace("'", "\"");
             var json = d.ToJson();
             Assert.AreEqual(expected, json);
 
-            _collection.RemoveAll();
-            _collection.Insert(d);
-            var r = _collection.FindOne(Query.EQ("_id", d.Id));
+            collection.RemoveAll();
+            collection.Insert(d);
+            var r = collection.FindOne(Query.EQ("_id", d.Id));
             Assert.AreEqual(d.Id, r.Id);
             Assert.AreEqual(1, r.Data.Count);
             Assert.AreEqual(1, r.Data["a.b"]);

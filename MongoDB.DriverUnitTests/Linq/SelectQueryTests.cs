@@ -4744,7 +4744,7 @@ namespace MongoDB.DriverUnitTests.Linq
         [Test]
         public void TestWhereSIndexOfAnyBC()
         {
-            var tempCollection = _database.GetCollection("temp");
+            var tempCollection = _database.GetCollection<C>("temp");
             tempCollection.Drop();
             tempCollection.Insert(new C { S = "bxxx" });
             tempCollection.Insert(new C { S = "xbxx" });
@@ -4851,7 +4851,7 @@ namespace MongoDB.DriverUnitTests.Linq
         [Test]
         public void TestWhereSIndexOfB()
         {
-            var tempCollection = _database.GetCollection("temp");
+            var tempCollection = _database.GetCollection<C>("temp");
             tempCollection.Drop();
             tempCollection.Insert(new C { S = "bxxx" });
             tempCollection.Insert(new C { S = "xbxx" });
@@ -4958,7 +4958,7 @@ namespace MongoDB.DriverUnitTests.Linq
         [Test]
         public void TestWhereSIndexOfXyz()
         {
-            var tempCollection = _database.GetCollection("temp");
+            var tempCollection = _database.GetCollection<C>("temp");
             tempCollection.Drop();
             tempCollection.Insert(new C { S = "xyzaaa" });
             tempCollection.Insert(new C { S = "axyzaa" });
@@ -5181,10 +5181,11 @@ namespace MongoDB.DriverUnitTests.Linq
         [Test]
         public void TestWhereSIsNullOrEmpty()
         {
-            var tempCollection = _database.GetCollection("temp");
+            var bsonCollection = _database.GetCollection("temp");
+            var tempCollection = _database.GetCollection<C>("temp");
             tempCollection.Drop();
             tempCollection.Insert(new C()); // serialized document will have no "s" field
-            tempCollection.Insert(new BsonDocument("s", BsonNull.Value)); // work around [BsonIgnoreIfNull] on S
+            bsonCollection.Insert(new BsonDocument("s", BsonNull.Value)); // work around [BsonIgnoreIfNull] on S
             tempCollection.Insert(new C { S = "" });
             tempCollection.Insert(new C { S = "x" });
 

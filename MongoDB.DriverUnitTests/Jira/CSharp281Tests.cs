@@ -29,7 +29,7 @@ namespace MongoDB.DriverUnitTests.Jira
     {
         private MongoServer _server;
         private MongoDatabase _database;
-        private MongoCollection<BsonDocument> _collection;
+        private MongoCollectionBsonDocument _collection;
 
         [TestFixtureSetUp]
         public void TestFixtureSetup()

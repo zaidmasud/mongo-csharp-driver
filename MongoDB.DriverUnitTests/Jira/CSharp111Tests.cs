@@ -67,7 +67,7 @@ namespace MongoDB.DriverUnitTests.Jira.CSharp111
             update = Update.AddToSetEachWrapped("InnerObjects", d1, d2, d3);
             collection.Update(query, update);
 
-            var document = collection.FindOneAs<BsonDocument>();
+            var document = Configuration.TestCollection.FindOne();
             var json = document.ToJson();
             var expected = "{ 'InnerObjects' : [1, { 'X' : 1 }, { 'X' : 2 }, { 'X' : 3 }], '_id' : ObjectId('#ID') }"; // server put _id at end?
             expected = expected.Replace("#ID", id.ToString());

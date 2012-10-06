@@ -34,7 +34,6 @@ namespace MongoDB.Driver
         private MongoServer _server;
         private MongoDatabaseSettings _settings;
         private string _name;
-        private MongoCollection<BsonDocument> _commandCollection;
 
         // constructors
         /// <summary>
@@ -71,9 +70,6 @@ namespace MongoDB.Driver
             _server = server;
             _settings = settings;
             _name = name;
-
-            var commandCollectionSettings = new MongoCollectionSettings { AssignIdOnInsert = false };
-            _commandCollection = GetCollection("$cmd", commandCollectionSettings);
         }
 
         // factory methods
@@ -146,9 +142,12 @@ namespace MongoDB.Driver
         /// <summary>
         /// Gets the command collection for this database.
         /// </summary>
-        public virtual MongoCollection<BsonDocument> CommandCollection
+        public virtual MongoCollectionBsonDocument CommandCollection
         {
-            get { return _commandCollection; }
+            get {
+                var commandCollectionSettings = new MongoCollectionSettings { AssignIdOnInsert = false };
+                return GetCollection("$cmd", commandCollectionSettings);
+            }
         }
 
         /// <summary>
@@ -198,8 +197,8 @@ namespace MongoDB.Driver
         /// with a default document type of BsonDocument.
         /// </summary>
         /// <param name="collectionName">The name of the collection.</param>
-        /// <returns>An instance of MongoCollection.</returns>
-        public virtual MongoCollection<BsonDocument> this[string collectionName]
+        /// <returns>An instance of MongoCollectionBsonDocument.</returns>
+        public virtual MongoCollectionBsonDocument this[string collectionName]
         {
             get { return GetCollection(collectionName); }
         }
@@ -210,8 +209,8 @@ namespace MongoDB.Driver
         /// </summary>
         /// <param name="collectionName">The name of the collection.</param>
         /// <param name="safeMode">The safe mode to use when accessing this collection.</param>
-        /// <returns>An instance of MongoCollection.</returns>
-        public virtual MongoCollection<BsonDocument> this[string collectionName, SafeMode safeMode]
+        /// <returns>An instance of MongoCollectionBsonDocument.</returns>
+        public virtual MongoCollectionBsonDocument this[string collectionName, SafeMode safeMode]
         {
             get { return GetCollection(collectionName, safeMode); }
         }
@@ -362,7 +361,7 @@ namespace MongoDB.Driver
         /// <returns>A BsonDocument (or null if the document was not found).</returns>
         public virtual BsonDocument FetchDBRef(MongoDBRef dbRef)
         {
-            return FetchDBRefAs<BsonDocument>(dbRef);
+            return FetchDBRef<BsonDocument>(dbRef);
         }
 
         /// <summary>
@@ -371,9 +370,9 @@ namespace MongoDB.Driver
         /// <typeparam name="TDocument">The nominal type of the document to fetch.</typeparam>
         /// <param name="dbRef">The <see cref="MongoDBRef"/> to fetch.</param>
         /// <returns>A <typeparamref name="TDocument"/> (or null if the document was not found).</returns>
-        public virtual TDocument FetchDBRefAs<TDocument>(MongoDBRef dbRef)
+        public virtual TDocument FetchDBRef<TDocument>(MongoDBRef dbRef)
         {
-            return (TDocument)FetchDBRefAs(typeof(TDocument), dbRef);
+            return (TDocument)FetchDBRef(typeof(TDocument), dbRef);
         }
 
         /// <summary>
@@ -382,16 +381,16 @@ namespace MongoDB.Driver
         /// <param name="documentType">The nominal type of the document to fetch.</param>
         /// <param name="dbRef">The <see cref="MongoDBRef"/> to fetch.</param>
         /// <returns>An instance of nominalType (or null if the document was not found).</returns>
-        public virtual object FetchDBRefAs(Type documentType, MongoDBRef dbRef)
+        public virtual object FetchDBRef(Type documentType, MongoDBRef dbRef)
         {
             if (dbRef.DatabaseName != null && dbRef.DatabaseName != _name)
             {
-                return _server.FetchDBRefAs(documentType, dbRef);
+                return _server.FetchDBRef(documentType, dbRef);
             }
 
-            var collection = GetCollection(dbRef.CollectionName);
+            var collection = GetCollection(documentType, dbRef.CollectionName);
             var query = Query.EQ("_id", dbRef.Id);
-            return collection.FindOneAs(documentType, query);
+            return collection.FindOne(query);
         }
 
         /// <summary>
@@ -436,126 +435,165 @@ namespace MongoDB.Driver
         }
 
         /// <summary>
-        /// Gets a MongoCollection instance representing a collection on this database
-        /// with a default document type of TDefaultDocument.
+        /// Gets a MongoCollection instance representing a collection in this database
+        /// with a nominal document type of TDocument.
         /// </summary>
-        /// <typeparam name="TDefaultDocument">The default document type for this collection.</typeparam>
+        /// <typeparam name="TDocument">The nominal document type for this collection.</typeparam>
         /// <param name="collectionName">The name of the collection.</param>
         /// <returns>An instance of MongoCollection.</returns>
-        public virtual MongoCollection<TDefaultDocument> GetCollection<TDefaultDocument>(string collectionName)
+        public virtual MongoCollection<TDocument> GetCollection<TDocument>(string collectionName)
         {
             var collectionSettings = new MongoCollectionSettings();
-            return GetCollection<TDefaultDocument>(collectionName, collectionSettings);
+            return GetCollection<TDocument>(collectionName, collectionSettings);
         }
 
         /// <summary>
-        /// Gets a MongoCollection instance representing a collection on this database
-        /// with a default document type of TDefaultDocument.
+        /// Gets a MongoCollection instance representing a collection in this database
+        /// with a nominal document type of TDocument.
         /// </summary>
-        /// <typeparam name="TDefaultDocument">The default document type for this collection.</typeparam>
+        /// <typeparam name="TDocument">The nominal document type for this collection.</typeparam>
         /// <param name="collectionName">The name of the collection.</param>
         /// <param name="collectionSettings">The settings to use when accessing this collection.</param>
         /// <returns>An instance of MongoCollection.</returns>
-        public virtual MongoCollection<TDefaultDocument> GetCollection<TDefaultDocument>(
+        public virtual MongoCollection<TDocument> GetCollection<TDocument>(
             string collectionName, MongoCollectionSettings collectionSettings)
         {
-            return new MongoCollection<TDefaultDocument>(this, collectionName, collectionSettings);
+            if (collectionName == null)
+            {
+                throw new ArgumentNullException("collectionName");
+            }
+            if (collectionSettings == null)
+            {
+                throw new ArgumentNullException("collectionSettings");
+            }
+            return new MongoCollection<TDocument>(this, collectionName, collectionSettings);
         }
 
         /// <summary>
-        /// Gets a MongoCollection instance representing a collection on this database
-        /// with a default document type of TDefaultDocument.
+        /// Gets a MongoCollection instance representing a collection in this database
+        /// with a nominal document type of TDocument.
         /// </summary>
-        /// <typeparam name="TDefaultDocument">The default document type for this collection.</typeparam>
+        /// <typeparam name="TDocument">The nominal document type for this collection.</typeparam>
         /// <param name="collectionName">The name of the collection.</param>
         /// <param name="safeMode">The safe mode to use when accessing this collection.</param>
         /// <returns>An instance of MongoCollection.</returns>
-        public virtual MongoCollection<TDefaultDocument> GetCollection<TDefaultDocument>(
+        public virtual MongoCollection<TDocument> GetCollection<TDocument>(
             string collectionName, SafeMode safeMode)
         {
+            if (safeMode == null)
+            {
+                throw new ArgumentNullException("safeMode");
+            }
             var collectionSettings = new MongoCollectionSettings { SafeMode = safeMode };
-            return GetCollection<TDefaultDocument>(collectionName, collectionSettings);
+            return GetCollection<TDocument>(collectionName, collectionSettings);
         }
 
         /// <summary>
-        /// Gets a MongoCollection instance representing a collection on this database
-        /// with a default document type of BsonDocument.
+        /// Gets a MongoCollection instance representing a collection in this database
+        /// accessed using the BsonDocument object model.
         /// </summary>
         /// <param name="collectionName">The name of the collection.</param>
-        /// <returns>An instance of MongoCollection.</returns>
-        public virtual MongoCollection<BsonDocument> GetCollection(string collectionName)
-        {
-            return GetCollection<BsonDocument>(collectionName);
-        }
-
-        /// <summary>
-        /// Gets a MongoCollection instance representing a collection on this database
-        /// with a default document type of TDefaultDocument.
-        /// </summary>
-        /// <param name="collectionName">The name of the collection.</param>
-        /// <param name="collectionSettings">The settings to use when accessing this collection.</param>
-        /// <returns>An instance of MongoCollection.</returns>
-        public virtual MongoCollection<BsonDocument> GetCollection(string collectionName, MongoCollectionSettings collectionSettings)
-        {
-            return GetCollection<BsonDocument>(collectionName, collectionSettings);
-        }
-
-        /// <summary>
-        /// Gets a MongoCollection instance representing a collection on this database
-        /// with a default document type of BsonDocument.
-        /// </summary>
-        /// <param name="collectionName">The name of the collection.</param>
-        /// <param name="safeMode">The safe mode to use when accessing this collection.</param>
-        /// <returns>An instance of MongoCollection.</returns>
-        public virtual MongoCollection<BsonDocument> GetCollection(string collectionName, SafeMode safeMode)
-        {
-            return GetCollection<BsonDocument>(collectionName, safeMode);
-        }
-
-        /// <summary>
-        /// Gets a MongoCollection instance representing a collection on this database
-        /// with a default document type of BsonDocument.
-        /// </summary>
-        /// <param name="defaultDocumentType">The default document type.</param>
-        /// <param name="collectionName">The name of the collection.</param>
-        /// <returns>An instance of MongoCollection.</returns>
-        public virtual MongoCollection GetCollection(Type defaultDocumentType, string collectionName)
+        /// <returns>An instance of MongoCollectionBsonDocument.</returns>
+        public virtual MongoCollectionBsonDocument GetCollection(string collectionName)
         {
             var collectionSettings = new MongoCollectionSettings();
-            return GetCollection(defaultDocumentType, collectionName, collectionSettings);
+            return GetCollection(collectionName, collectionSettings);
         }
 
         /// <summary>
-        /// Gets a MongoCollection instance representing a collection on this database
-        /// with a default document type of BsonDocument.
+        /// Gets a MongoCollection instance representing a collection in this database
+        /// accessed using the BsonDocument object model.
         /// </summary>
-        /// <param name="defaultDocumentType">The default document type.</param>
         /// <param name="collectionName">The name of the collection.</param>
         /// <param name="collectionSettings">The settings to use when accessing this collection.</param>
-        /// <returns>An instance of MongoCollection.</returns>
-        public virtual MongoCollection GetCollection(Type defaultDocumentType, string collectionName, MongoCollectionSettings collectionSettings)
+        /// <returns>An instance of MongoCollectionBsonDocument.</returns>
+        public virtual MongoCollectionBsonDocument GetCollection(string collectionName, MongoCollectionSettings collectionSettings)
         {
-            var collectionDefinition = typeof(MongoCollection<>);
-            var collectionType = collectionDefinition.MakeGenericType(defaultDocumentType);
-            var constructorInfo = collectionType.GetConstructor(new Type[] { typeof(MongoDatabase), typeof(string), typeof(MongoCollectionSettings) });
-            return (MongoCollection)constructorInfo.Invoke(new object[] { this, collectionName, collectionSettings });
+            if (collectionName == null)
+            {
+                throw new ArgumentNullException("collectionName");
+            }
+            if (collectionSettings == null)
+            {
+                throw new ArgumentNullException("collectionSettings");
+            }
+            return new MongoCollectionBsonDocument(this, collectionName, collectionSettings);
         }
 
         /// <summary>
-        /// Gets a MongoCollection instance representing a collection on this database
-        /// with a default document type of BsonDocument.
+        /// Gets a MongoCollection instance representing a collection in this database
+        /// accessed using the BsonDocument object model.
         /// </summary>
-        /// <param name="defaultDocumentType">The default document type.</param>
         /// <param name="collectionName">The name of the collection.</param>
         /// <param name="safeMode">The safe mode to use when accessing this collection.</param>
-        /// <returns>An instance of MongoCollection.</returns>
-        public virtual MongoCollection GetCollection(
-            Type defaultDocumentType,
+        /// <returns>An instance of MongoCollectionBsonDocument.</returns>
+        public virtual MongoCollectionBsonDocument GetCollection(string collectionName, SafeMode safeMode)
+        {
+            if (safeMode == null)
+            {
+                throw new ArgumentNullException("safeMode");
+            }
+            var collectionSettings = new MongoCollectionSettings { SafeMode = safeMode };
+            return GetCollection(collectionName, collectionSettings);
+        }
+
+        /// <summary>
+        /// Gets a MongoCollection instance representing a collection in this database
+        /// with a nominal document type determined at runtime.
+        /// </summary>
+        /// <param name="documentType">The document type.</param>
+        /// <param name="collectionName">The name of the collection.</param>
+        /// <returns>An instance of MongoCollectionTyped.</returns>
+        public virtual MongoCollectionTyped GetCollection(Type documentType, string collectionName)
+        {
+            var collectionSettings = new MongoCollectionSettings();
+            return GetCollection(documentType, collectionName, collectionSettings);
+        }
+
+        /// <summary>
+        /// Gets a MongoCollection instance representing a collection in this database
+        /// with a nominal document type determined at runtime.
+        /// </summary>
+        /// <param name="documentType">The document type.</param>
+        /// <param name="collectionName">The name of the collection.</param>
+        /// <param name="collectionSettings">The settings to use when accessing this collection.</param>
+        /// <returns>An instance of MongoCollectionTyped.</returns>
+        public virtual MongoCollectionTyped GetCollection(Type documentType, string collectionName, MongoCollectionSettings collectionSettings)
+        {
+            if (documentType == null)
+            {
+                throw new ArgumentNullException("documentType");
+            }
+            if (collectionName == null)
+            {
+                throw new ArgumentNullException("collectionName");
+            }
+            if (collectionSettings == null)
+            {
+                throw new ArgumentNullException("collectionSettings");
+            }
+            return new MongoCollectionTyped(documentType, this, collectionName, collectionSettings);
+        }
+
+        /// <summary>
+        /// Gets a MongoCollection instance representing a collection in this database
+        /// with a nominal document type determined at runtime.
+        /// </summary>
+        /// <param name="documentType">The document type.</param>
+        /// <param name="collectionName">The name of the collection.</param>
+        /// <param name="safeMode">The safe mode to use when accessing this collection.</param>
+        /// <returns>An instance of MongoCollectionTyped.</returns>
+        public virtual MongoCollectionTyped GetCollection(
+            Type documentType,
             string collectionName,
             SafeMode safeMode)
         {
+            if (safeMode == null)
+            {
+                throw new ArgumentNullException("safeMode");
+            }
             var collectionSettings = new MongoCollectionSettings { SafeMode = safeMode };
-            return GetCollection(defaultDocumentType, collectionName, collectionSettings);
+            return GetCollection(documentType, collectionName, collectionSettings);
         }
 
         /// <summary>
@@ -608,7 +646,7 @@ namespace MongoDB.Driver
             {
                 throw new InvalidOperationException("GetLastError can only be called if RequestStart has been called first.");
             }
-            return RunCommandAs<GetLastErrorResult>("getlasterror"); // use all lowercase for backward compatibility
+            return RunCommand<GetLastErrorResult>("getlasterror"); // use all lowercase for backward compatibility
         }
 
         // TODO: mongo shell has GetPrevError at the database level?
@@ -634,7 +672,7 @@ namespace MongoDB.Driver
         public GetProfilingLevelResult GetProfilingLevel()
         {
             var command = new CommandDocument("profile", -1);
-            return RunCommandAs<GetProfilingLevelResult>(command);
+            return RunCommand<GetProfilingLevelResult>(command);
         }
 
         /// <summary>
@@ -653,7 +691,7 @@ namespace MongoDB.Driver
         /// <returns>An instance of DatabaseStatsResult.</returns>
         public virtual DatabaseStatsResult GetStats()
         {
-            return RunCommandAs<DatabaseStatsResult>("dbstats");
+            return RunCommand<DatabaseStatsResult>("dbstats");
         }
 
         /// <summary>
@@ -837,7 +875,7 @@ namespace MongoDB.Driver
         /// <returns>A CommandResult</returns>
         public virtual CommandResult RunCommand(IMongoCommand command)
         {
-            return RunCommandAs<CommandResult>(command);
+            return RunCommand<CommandResult>(command);
         }
 
         /// <summary>
@@ -847,7 +885,7 @@ namespace MongoDB.Driver
         /// <returns>A CommandResult</returns>
         public virtual CommandResult RunCommand(string commandName)
         {
-            return RunCommandAs<CommandResult>(commandName);
+            return RunCommand<CommandResult>(commandName);
         }
 
         /// <summary>
@@ -856,10 +894,10 @@ namespace MongoDB.Driver
         /// <typeparam name="TCommandResult">The type of the returned command result.</typeparam>
         /// <param name="command">The command object.</param>
         /// <returns>A TCommandResult</returns>
-        public virtual TCommandResult RunCommandAs<TCommandResult>(IMongoCommand command)
+        public virtual TCommandResult RunCommand<TCommandResult>(IMongoCommand command)
             where TCommandResult : CommandResult, new()
         {
-            return (TCommandResult)RunCommandAs(typeof(TCommandResult), command);
+            return (TCommandResult)RunCommand(typeof(TCommandResult), command);
         }
 
         /// <summary>
@@ -868,33 +906,34 @@ namespace MongoDB.Driver
         /// <typeparam name="TCommandResult">The type of the returned command result.</typeparam>
         /// <param name="commandName">The name of the command.</param>
         /// <returns>A TCommandResult</returns>
-        public virtual TCommandResult RunCommandAs<TCommandResult>(string commandName)
+        public virtual TCommandResult RunCommand<TCommandResult>(string commandName)
             where TCommandResult : CommandResult, new()
-        {
-            return (TCommandResult)RunCommandAs(typeof(TCommandResult), commandName);
-        }
-
-        /// <summary>
-        /// Runs a command on this database and returns the result as a TCommandResult.
-        /// </summary>
-        /// <param name="commandResultType">The command result type.</param>
-        /// <param name="command">The command object.</param>
-        /// <returns>A TCommandResult</returns>
-        public virtual CommandResult RunCommandAs(Type commandResultType, IMongoCommand command)
-        {
-            return CommandCollection.RunCommandAs(commandResultType, command);
-        }
-
-        /// <summary>
-        /// Runs a command on this database and returns the result as a TCommandResult.
-        /// </summary>
-        /// <param name="commandResultType">The command result type.</param>
-        /// <param name="commandName">The name of the command.</param>
-        /// <returns>A TCommandResult</returns>
-        public virtual CommandResult RunCommandAs(Type commandResultType, string commandName)
         {
             var command = new CommandDocument(commandName, 1);
-            return RunCommandAs(commandResultType, command);
+            return RunCommand<TCommandResult>(command);
+        }
+
+        /// <summary>
+        /// Runs a command on this database and returns the result as a TCommandResult.
+        /// </summary>
+        /// <param name="commandResultType">The command result type.</param>
+        /// <param name="command">The command object.</param>
+        /// <returns>A TCommandResult</returns>
+        public virtual CommandResult RunCommand(Type commandResultType, IMongoCommand command)
+        {
+            return RunCommandHelper(commandResultType, CommandCollection, command);
+        }
+
+        /// <summary>
+        /// Runs a command on this database and returns the result as a TCommandResult.
+        /// </summary>
+        /// <param name="commandResultType">The command result type.</param>
+        /// <param name="commandName">The name of the command.</param>
+        /// <returns>A TCommandResult</returns>
+        public virtual CommandResult RunCommand(Type commandResultType, string commandName)
+        {
+            var command = new CommandDocument(commandName, 1);
+            return RunCommand(commandResultType, command);
         }
 
         /// <summary>
@@ -930,6 +969,32 @@ namespace MongoDB.Driver
         public override string ToString()
         {
             return _name;
+        }
+
+        // internal methods
+        internal CommandResult RunCommandHelper(Type commandResultType, MongoCollectionBsonDocument commandCollection, IMongoCommand command)
+        {
+            var response = commandCollection.FindOne(command);
+            if (response == null)
+            {
+                var commandName = command.ToBsonDocument().GetElement(0).Name;
+                var message = string.Format("Command '{0}' failed. No response returned.", commandName);
+                throw new MongoCommandException(message);
+            }
+
+            var commandResult = (CommandResult)Activator.CreateInstance(commandResultType); // constructor can't have arguments
+            commandResult.Initialize(command, response); // so two phase construction required
+            if (!commandResult.Ok)
+            {
+                if (commandResult.ErrorMessage == "not master")
+                {
+                    // TODO: figure out which instance gave the error and set its state to Unknown
+                    _server.Disconnect();
+                }
+                throw new MongoCommandException(commandResult);
+            }
+
+            return commandResult;
         }
     }
 }

@@ -55,7 +55,7 @@ namespace MongoDB.DriverUnitTests.Jira.CSharp100
         {
             var server = Configuration.TestServer;
             var database = Configuration.TestDatabase;
-            var collection = Configuration.TestCollection;
+            var collection = Configuration.GetTestCollection<ChildClass>();
 
             collection.RemoveAll();
             var obj = new ChildClass { SomeProperty = null };

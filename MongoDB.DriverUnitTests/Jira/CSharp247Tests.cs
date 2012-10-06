@@ -41,14 +41,14 @@ namespace MongoDB.DriverUnitTests.Jira.CSharp247
 
         private MongoServer _server;
         private MongoDatabase _database;
-        private MongoCollection<BsonDocument> _collection;
+        private MongoCollection<I> _collection;
 
         [TestFixtureSetUp]
         public void TestFixtureSetup()
         {
             _server = Configuration.TestServer;
             _database = Configuration.TestDatabase;
-            _collection = Configuration.TestCollection;
+            _collection = Configuration.GetTestCollection<I>();
         }
 
         [Test]
@@ -57,10 +57,10 @@ namespace MongoDB.DriverUnitTests.Jira.CSharp247
             _collection.RemoveAll();
 
             var c = new C { X = 1 };
-            _collection.Insert<I>(c);
+            _collection.Insert(c);
             var id = c.Id;
 
-            var i = _collection.FindOneAs<I>();
+            var i = _collection.FindOne();
             Assert.IsInstanceOf<C>(i);
             var r = (C)i;
             Assert.AreEqual(id, r.Id);

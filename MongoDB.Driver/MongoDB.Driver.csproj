@@ -119,7 +119,10 @@
     <Compile Include="Interfaces\IMongoScope.cs" />
     <Compile Include="Interfaces\IMongoSortBy.cs" />
     <Compile Include="Interfaces\IMongoUpdate.cs" />
+    <Compile Include="MongoCollectionBsonDocument.cs" />
+    <Compile Include="MongoCollectionGeneric.cs" />
     <Compile Include="MongoCollectionSettings.cs" />
+    <Compile Include="MongoCollectionTyped.cs" />
     <Compile Include="MongoCredentialsStore.cs" />
     <Compile Include="MongoDatabaseSettings.cs" />
     <Compile Include="MongoDBRef.cs" />

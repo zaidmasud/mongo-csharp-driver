@@ -31,7 +31,7 @@ namespace MongoDB.DriverUnitTests.Jira.CSharp230
     {
         private MongoServer _server;
         private MongoDatabase _database;
-        private MongoCollection<BsonDocument> _collection;
+        private MongoCollection _collection;
 
         [TestFixtureSetUp]
         public void TestFixtureSetup()

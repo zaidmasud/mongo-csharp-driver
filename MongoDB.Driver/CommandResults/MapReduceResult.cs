@@ -14,6 +14,7 @@
 */
 
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -207,7 +208,7 @@ namespace MongoDB.Driver
                 {
                     outputDatabase = _inputDatabase.Server[outputDatabaseName];
                 }
-                return outputDatabase[CollectionName].FindAllAs(documentType).Cast<object>();
+                return outputDatabase.GetCollection(documentType, CollectionName).FindAll().Cast<object>();
             }
         }
 

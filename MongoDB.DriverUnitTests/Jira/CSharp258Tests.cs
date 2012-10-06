@@ -37,58 +37,59 @@ namespace MongoDB.DriverUnitTests.Jira.CSharp258
 
         private MongoServer _server;
         private MongoDatabase _database;
-        private MongoCollection<C> _collection;
 
         [TestFixtureSetUp]
         public void TestFixtureSetup()
         {
             _server = Configuration.TestServer;
             _database = Configuration.TestDatabase;
-            _collection = Configuration.GetTestCollection<C>();
         }
 
         [Test]
         public void TestDateTimePropertyWithNewMaxDateTimeRepresentation()
         {
-            _collection.RemoveAll();
-            _collection.Insert(
+            var collection = Configuration.GetTestCollection<C>();
+            collection.RemoveAll();
+            Configuration.TestCollection.Insert(
                 new BsonDocument
                 {
                     { "_id", ObjectId.GenerateNewId() },
                     { "DateTime", new BsonDateTime(253402300799999) }
                 });
 
-            var c = _collection.FindOne();
+            var c = collection.FindOne();
             Assert.AreEqual(DateTime.MaxValue, c.DateTime);
         }
 
         [Test]
         public void TestDateTimePropertyWithOldMaxDateTimeRepresentation()
         {
-            _collection.RemoveAll();
-            _collection.Insert(
+            var collection = Configuration.GetTestCollection<C>();
+            collection.RemoveAll();
+            Configuration.TestCollection.Insert(
                 new BsonDocument
                 {
                     { "_id", ObjectId.GenerateNewId() },
                     { "DateTime", new BsonDateTime(253402300800000) }
                 });
 
-            var c = _collection.FindOne();
+            var c = collection.FindOne();
             Assert.AreEqual(DateTime.MaxValue, c.DateTime);
         }
 
         [Test]
         public void TestDocumentWithNewMaxDateTimeRepresentation()
         {
-            _collection.RemoveAll();
-            _collection.Insert(
+            var collection = Configuration.TestCollection;
+            collection.RemoveAll();
+            collection.Insert(
                 new BsonDocument
                 {
                     { "_id", ObjectId.GenerateNewId() },
                     { "DateTime", new BsonDateTime(253402300799999) }
                 });
 
-            var document = _collection.FindOneAs<BsonDocument>();
+            var document = collection.FindOne();
             Assert.AreEqual(DateTime.MaxValue, document["DateTime"].AsDateTime);
             Assert.AreEqual(253402300799999, document["DateTime"].AsBsonDateTime.MillisecondsSinceEpoch);
         }
@@ -96,15 +97,16 @@ namespace MongoDB.DriverUnitTests.Jira.CSharp258
         [Test]
         public void TestDocumentWithOldMaxDateTimeRepresentation()
         {
-            _collection.RemoveAll();
-            _collection.Insert(
+            var collection = Configuration.TestCollection;
+            collection.RemoveAll();
+            collection.Insert(
                 new BsonDocument
                 {
                     { "_id", ObjectId.GenerateNewId() },
                     { "DateTime", new BsonDateTime(253402300800000) }
                 });
 
-            var document = _collection.FindOneAs<BsonDocument>();
+            var document = collection.FindOne();
             Assert.AreEqual(DateTime.MaxValue, document["DateTime"].AsDateTime);
             Assert.AreEqual(253402300799999, document["DateTime"].AsBsonDateTime.MillisecondsSinceEpoch);
         }

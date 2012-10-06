@@ -49,25 +49,24 @@ namespace MongoDB.DriverUnitTests.Jira.CSharp218
 
         private MongoServer _server;
         private MongoDatabase _database;
-        private MongoCollection<BsonDocument> _collection;
 
         [TestFixtureSetUp]
         public void TestFixtureSetup()
         {
             _server = Configuration.TestServer;
             _database = Configuration.TestDatabase;
-            _collection = Configuration.TestCollection;
         }
 
         [Test]
         public void TestDeserializeClassWithStructPropertyFails()
         {
-            _collection.RemoveAll();
+            var collection = Configuration.GetTestCollection<C>();
+            collection.RemoveAll();
             var c = new C { Id = ObjectId.GenerateNewId(), P = new P { X = 1, Y = 2 } };
-            _collection.Insert(c);
+            collection.Insert(c);
             try
             {
-                _collection.FindOneAs<C>();
+                collection.FindOne();
                 Assert.Fail("Expected an exception to be thrown.");
             }
             catch (Exception ex)
@@ -82,20 +81,22 @@ namespace MongoDB.DriverUnitTests.Jira.CSharp218
         [Test]
         public void TestDeserializeStructFails()
         {
-            _collection.RemoveAll();
+            var collection = Configuration.GetTestCollection<S>();
+            collection.RemoveAll();
             var s = new S { Id = ObjectId.GenerateNewId(), P = new P { X = 1, Y = 2 } };
-            _collection.Insert(s);
-            Assert.Throws<BsonSerializationException>(() => _collection.FindOneAs<S>());
+            collection.Insert(s);
+            Assert.Throws<BsonSerializationException>(() => collection.FindOne());
         }
 
         [Test]
         public void TestInsertForClassWithIdSucceeds()
         {
-            _collection.RemoveAll();
+            var collection = Configuration.GetTestCollection<C>();
+            collection.RemoveAll();
             var c = new C { Id = ObjectId.GenerateNewId(), P = new P { X = 1, Y = 2 } };
-            _collection.Insert(c);
-            Assert.AreEqual(1, _collection.Count());
-            var r = _collection.FindOne();
+            collection.Insert(c);
+            Assert.AreEqual(1, collection.Count());
+            var r = Configuration.TestCollection.FindOne();
             Assert.AreEqual(2, r.ElementCount);
             Assert.AreEqual(2, r["P"].AsBsonDocument.ElementCount);
             Assert.AreEqual(c.Id, r["_id"].AsObjectId);
@@ -106,11 +107,12 @@ namespace MongoDB.DriverUnitTests.Jira.CSharp218
         [Test]
         public void TestInsertForClassWithoutIdSucceeds()
         {
-            _collection.RemoveAll();
+            var collection = Configuration.GetTestCollection<C>();
+            collection.RemoveAll();
             var c = new C { P = new P { X = 1, Y = 2 } };
-            _collection.Insert(c);
-            Assert.AreEqual(1, _collection.Count());
-            var r = _collection.FindOne();
+            collection.Insert(c);
+            Assert.AreEqual(1, collection.Count());
+            var r = Configuration.TestCollection.FindOne();
             Assert.AreEqual(2, r.ElementCount);
             Assert.AreEqual(2, r["P"].AsBsonDocument.ElementCount);
             Assert.AreEqual(c.Id, r["_id"].AsObjectId);
@@ -121,11 +123,12 @@ namespace MongoDB.DriverUnitTests.Jira.CSharp218
         [Test]
         public void TestInsertForStructWithIdSucceeds()
         {
-            _collection.RemoveAll();
+            var collection = Configuration.GetTestCollection<S>();
+            collection.RemoveAll();
             var s = new S { Id = ObjectId.GenerateNewId(), P = new P { X = 1, Y = 2 } };
-            _collection.Insert(s);
-            Assert.AreEqual(1, _collection.Count());
-            var r = _collection.FindOne();
+            collection.Insert(s);
+            Assert.AreEqual(1, collection.Count());
+            var r = Configuration.TestCollection.FindOne();
             Assert.AreEqual(2, r.ElementCount);
             Assert.AreEqual(2, r["P"].AsBsonDocument.ElementCount);
             Assert.AreEqual(s.Id, r["_id"].AsObjectId);
@@ -136,19 +139,21 @@ namespace MongoDB.DriverUnitTests.Jira.CSharp218
         [Test]
         public void TestInsertForStructWithoutIdFails()
         {
-            _collection.RemoveAll();
+            var collection = Configuration.GetTestCollection<S>();
+            collection.RemoveAll();
             var s = new S { P = new P { X = 1, Y = 2 } };
-            Assert.Throws<BsonSerializationException>(() => _collection.Insert(s));
+            Assert.Throws<BsonSerializationException>(() => collection.Insert(s));
         }
 
         [Test]
         public void TestSaveForClassWithIdSucceeds()
         {
-            _collection.RemoveAll();
+            var collection = Configuration.GetTestCollection<C>();
+            collection.RemoveAll();
             var c = new C { Id = ObjectId.GenerateNewId(), P = new P { X = 1, Y = 2 } };
-            _collection.Save(c);
-            Assert.AreEqual(1, _collection.Count());
-            var r = _collection.FindOne();
+            collection.Save(c);
+            Assert.AreEqual(1, collection.Count());
+            var r = Configuration.TestCollection.FindOne();
             Assert.AreEqual(2, r.ElementCount);
             Assert.AreEqual(2, r["P"].AsBsonDocument.ElementCount);
             Assert.AreEqual(c.Id, r["_id"].AsObjectId);
@@ -159,11 +164,12 @@ namespace MongoDB.DriverUnitTests.Jira.CSharp218
         [Test]
         public void TestSaveForClassWithoutIdSucceeds()
         {
-            _collection.RemoveAll();
+            var collection = Configuration.GetTestCollection<C>();
+            collection.RemoveAll();
             var c = new C { P = new P { X = 1, Y = 2 } };
-            _collection.Save(c);
-            Assert.AreEqual(1, _collection.Count());
-            var r = _collection.FindOne();
+            collection.Save(c);
+            Assert.AreEqual(1, collection.Count());
+            var r = Configuration.TestCollection.FindOne();
             Assert.AreEqual(2, r.ElementCount);
             Assert.AreEqual(2, r["P"].AsBsonDocument.ElementCount);
             Assert.AreEqual(c.Id, r["_id"].AsObjectId);
@@ -174,11 +180,12 @@ namespace MongoDB.DriverUnitTests.Jira.CSharp218
         [Test]
         public void TestSaveForStructWithIdSucceeds()
         {
-            _collection.RemoveAll();
+            var collection = Configuration.GetTestCollection<S>();
+            collection.RemoveAll();
             var s = new S { Id = ObjectId.GenerateNewId(), P = new P { X = 1, Y = 2 } };
-            _collection.Save(s);
-            Assert.AreEqual(1, _collection.Count());
-            var r = _collection.FindOne();
+            collection.Save(s);
+            Assert.AreEqual(1, collection.Count());
+            var r = Configuration.TestCollection.FindOne();
             Assert.AreEqual(2, r.ElementCount);
             Assert.AreEqual(2, r["P"].AsBsonDocument.ElementCount);
             Assert.AreEqual(s.Id, r["_id"].AsObjectId);
@@ -189,9 +196,10 @@ namespace MongoDB.DriverUnitTests.Jira.CSharp218
         [Test]
         public void TestSaveForStructWithoutIdFails()
         {
-            _collection.RemoveAll();
+            var collection = Configuration.GetTestCollection<S>();
+            collection.RemoveAll();
             var s = new S { P = new P { X = 1, Y = 2 } };
-            Assert.Throws<BsonSerializationException>(() => _collection.Save(s));
+            Assert.Throws<BsonSerializationException>(() => collection.Save(s));
         }
     }
 }

@@ -32,7 +32,7 @@ namespace MongoDB.DriverUnitTests
         // private static fields
         private static MongoServer __testServer;
         private static MongoDatabase __testDatabase;
-        private static MongoCollection<BsonDocument> __testCollection;
+        private static MongoCollectionBsonDocument __testCollection;
 
         // static constructor
         static Configuration()
@@ -56,7 +56,7 @@ namespace MongoDB.DriverUnitTests
         /// <summary>
         /// Gets the test collection.
         /// </summary>
-        public static MongoCollection<BsonDocument> TestCollection
+        public static MongoCollectionBsonDocument TestCollection
         {
             get { return __testCollection; }
         }
@@ -79,13 +79,23 @@ namespace MongoDB.DriverUnitTests
 
         // public static methods
         /// <summary>
-        /// Gets the test collection with a default document type of T.
+        /// Gets the test collection with a document type of T.
         /// </summary>
-        /// <typeparam name="T">The default document type.</typeparam>
+        /// <typeparam name="TDocument">The document type.</typeparam>
         /// <returns>The collection.</returns>
-        public static MongoCollection<T> GetTestCollection<T>()
+        public static MongoCollection<TDocument> GetTestCollection<TDocument>()
         {
-            return __testDatabase.GetCollection<T>(__testCollection.Name);
+            return __testDatabase.GetCollection<TDocument>(__testCollection.Name);
+        }
+
+        /// <summary>
+        /// Gets the test collection with a document type of documentType.
+        /// </summary>
+        /// <param name="documentType">The document type..</param>
+        /// <returns>The collection.</returns>
+        public static MongoCollectionTyped GetTestCollection(Type documentType)
+        {
+            return __testDatabase.GetCollection(documentType, __testCollection.Name);
         }
     }
 }

@@ -51,8 +51,8 @@ namespace MongoDB.DriverUnitTests.Jira.CSharp98
             collection.RemoveAll();
             var b1 = new B { PA = 1, PB = 2 };
             var b2 = new B { PA = 3, PB = 4 };
-            collection.Insert<A>(b1);
-            collection.Insert<A>(b2);
+            collection.Insert(b1);
+            collection.Insert(b2);
 
             var docs = collection.FindAll().ToList();
         }

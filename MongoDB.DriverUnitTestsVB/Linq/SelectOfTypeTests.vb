@@ -57,13 +57,13 @@ Namespace MongoDB.DriverUnitTests.Linq
                  .Id = ObjectId.GenerateNewId(),
                  .b = 1
             })
-            _collection.Insert(Of B)(New C() With
+            _collection.Insert(New C() With
             {
                 .Id = ObjectId.GenerateNewId(),
                 .b = 2,
                 .c = 2
             })
-            _collection.Insert(Of B)(New D() With
+            _collection.Insert(New D() With
             {
                  .Id = ObjectId.GenerateNewId(),
                  .b = 3,
