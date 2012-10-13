@@ -50,37 +50,40 @@ namespace MongoDB.DriverUnitTests.Jira
         public void CastTest()
         {
             var server = Configuration.TestServer;
-            var db = server.GetDatabase("test");
-            var collection = db.GetCollection<Base>("castTest");
-            collection.Drop();
+            using (var session = server.GetSession())
+            {
+                var db = session.GetDatabase("test");
+                var collection = db.GetCollection<Base>("castTest");
+                collection.Drop();
 
-            var t1 = new T1 { Id = Guid.NewGuid(), A = "T1.A", B = "T1.B" };
-            var t2 = new T2 { Id = Guid.NewGuid(), A = "T2.A" };
-            collection.Insert(t1);
-            collection.Insert(t2);
+                var t1 = new T1 { Id = Guid.NewGuid(), A = "T1.A", B = "T1.B" };
+                var t2 = new T2 { Id = Guid.NewGuid(), A = "T2.A" };
+                collection.Insert(t1);
+                collection.Insert(t2);
 
-            var query = from t in collection.AsQueryable()
-                        where t is T1 && ((T1)t).B == "T1.B" 
-                        select t;
+                var query = from t in collection.AsQueryable()
+                            where t is T1 && ((T1)t).B == "T1.B"
+                            select t;
 
-            var translatedQuery = MongoQueryTranslator.Translate(query);
-            Assert.IsInstanceOf<SelectQuery>(translatedQuery);
-            Assert.AreSame(collection, translatedQuery.Collection);
-            Assert.AreSame(typeof(Base), translatedQuery.DocumentType);
+                var translatedQuery = MongoQueryTranslator.Translate(query);
+                Assert.IsInstanceOf<SelectQuery>(translatedQuery);
+                Assert.AreSame(collection, translatedQuery.Collection);
+                Assert.AreSame(typeof(Base), translatedQuery.DocumentType);
 
-            var selectQuery = (SelectQuery)translatedQuery;
-            Assert.AreEqual("(Base t) => ((t is T1) && ((T1)t.B == \"T1.B\"))", ExpressionFormatter.ToString(selectQuery.Where));
-            Assert.IsNull(selectQuery.OrderBy);
-            Assert.IsNull(selectQuery.Projection);
-            Assert.IsNull(selectQuery.Skip);
-            Assert.IsNull(selectQuery.Take);
+                var selectQuery = (SelectQuery)translatedQuery;
+                Assert.AreEqual("(Base t) => ((t is T1) && ((T1)t.B == \"T1.B\"))", ExpressionFormatter.ToString(selectQuery.Where));
+                Assert.IsNull(selectQuery.OrderBy);
+                Assert.IsNull(selectQuery.Projection);
+                Assert.IsNull(selectQuery.Skip);
+                Assert.IsNull(selectQuery.Take);
 
-            Assert.AreEqual("{ \"_t\" : \"T1\", \"B\" : \"T1.B\" }", selectQuery.BuildQuery().ToString());
+                Assert.AreEqual("{ \"_t\" : \"T1\", \"B\" : \"T1.B\" }", selectQuery.BuildQuery().ToString());
 
-            var results = query.ToList();
-            Assert.That(results.Count, Is.EqualTo(1));
-            Assert.That(results[0], Is.InstanceOf(typeof(T1)));
-            Assert.That(results[0].A, Is.EqualTo("T1.A"));
+                var results = query.ToList();
+                Assert.That(results.Count, Is.EqualTo(1));
+                Assert.That(results[0], Is.InstanceOf(typeof(T1)));
+                Assert.That(results[0].A, Is.EqualTo("T1.A"));
+            }
         }
     }
 }

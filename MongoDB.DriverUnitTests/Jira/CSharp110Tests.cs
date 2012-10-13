@@ -41,20 +41,23 @@ namespace MongoDB.DriverUnitTests.Jira.CSharp110
         public void TestFind()
         {
             var server = Configuration.TestServer;
-            var database = Configuration.TestDatabase;
-            var collection = Configuration.GetTestCollection<C>();
-
-            collection.RemoveAll();
-            var c = new C { X = 1 };
-            collection.Insert(c);
-            c = new C { X = 2 };
-            collection.Insert(c);
-
-            var query = Query.EQ("X", 2);
-            foreach (var document in collection.Find(query))
+            using (var session = server.GetSession())
             {
-                Assert.AreNotEqual(ObjectId.Empty, document.Id);
-                Assert.AreEqual(2, document.X);
+                var database = session.GetDatabase(Configuration.TestDatabaseName);
+                var collection = database.GetCollection<C>(Configuration.TestCollectionName);
+
+                collection.RemoveAll();
+                var c = new C { X = 1 };
+                collection.Insert(c);
+                c = new C { X = 2 };
+                collection.Insert(c);
+
+                var query = Query.EQ("X", 2);
+                foreach (var document in collection.Find(query))
+                {
+                    Assert.AreNotEqual(ObjectId.Empty, document.Id);
+                    Assert.AreEqual(2, document.X);
+                }
             }
         }
     }

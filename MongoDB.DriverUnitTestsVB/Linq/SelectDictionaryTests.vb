@@ -129,15 +129,15 @@ Namespace MongoDB.DriverUnitTests.Linq
             ' serialized form depends on actual key values
         End Class
 
-        Private _server As MongoServer
+        Private _session As MongoSession
         Private _database As MongoDatabase
         Private _collection As MongoCollection
 
         <TestFixtureSetUp()> _
         Public Sub Setup()
-            _server = Configuration.TestServer
-            _database = Configuration.TestDatabase
-            _collection = Configuration.GetTestCollection(Of C)()
+            _session = Configuration.TestServer.GetSession()
+            _database = _session.GetDatabase(Configuration.TestDatabaseName)
+            _collection = _database.GetCollection(Of C)(Configuration.TestCollectionName)
 
             Dim de = New Dictionary(Of String, Integer)()
             Dim dx = New Dictionary(Of String, Integer)() From { _
@@ -196,6 +196,11 @@ Namespace MongoDB.DriverUnitTests.Linq
                  .J = hy, _
                  .K = hy _
             })
+        End Sub
+
+        <TestFixtureTearDown()>
+        Public Sub TearDown()
+            _session.Dispose()
         End Sub
 
         <Test()> _

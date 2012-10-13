@@ -35,78 +35,86 @@ namespace MongoDB.DriverUnitTests.Jira.CSharp258
             public DateTime DateTime { get; set; }
         }
 
-        private MongoServer _server;
-        private MongoDatabase _database;
-        private MongoCollection<C> _collection;
-
-        [TestFixtureSetUp]
-        public void TestFixtureSetup()
-        {
-            _server = Configuration.TestServer;
-            _database = Configuration.TestDatabase;
-            _collection = Configuration.GetTestCollection<C>();
-        }
-
         [Test]
         public void TestDateTimePropertyWithNewMaxDateTimeRepresentation()
         {
-            _collection.RemoveAll();
-            _collection.Insert(
-                new BsonDocument
+            using (var session = Configuration.TestServer.GetSession())
+            {
+                var database = session.GetDatabase(Configuration.TestDatabaseName);
+                var collection = database.GetCollection<C>(Configuration.TestCollectionName);
+                collection.RemoveAll();
+                collection.Insert(
+                    new BsonDocument
                 {
                     { "_id", ObjectId.GenerateNewId() },
                     { "DateTime", new BsonDateTime(253402300799999) }
                 });
 
-            var c = _collection.FindOne();
-            Assert.AreEqual(DateTime.MaxValue, c.DateTime);
+                var c = collection.FindOne();
+                Assert.AreEqual(DateTime.MaxValue, c.DateTime);
+            }
         }
 
         [Test]
         public void TestDateTimePropertyWithOldMaxDateTimeRepresentation()
         {
-            _collection.RemoveAll();
-            _collection.Insert(
-                new BsonDocument
+            using (var session = Configuration.TestServer.GetSession())
+            {
+                var database = session.GetDatabase(Configuration.TestDatabaseName);
+                var collection = database.GetCollection<C>(Configuration.TestCollectionName);
+                collection.RemoveAll();
+                collection.Insert(
+                    new BsonDocument
                 {
                     { "_id", ObjectId.GenerateNewId() },
                     { "DateTime", new BsonDateTime(253402300800000) }
                 });
 
-            var c = _collection.FindOne();
-            Assert.AreEqual(DateTime.MaxValue, c.DateTime);
+                var c = collection.FindOne();
+                Assert.AreEqual(DateTime.MaxValue, c.DateTime);
+            }
         }
 
         [Test]
         public void TestDocumentWithNewMaxDateTimeRepresentation()
         {
-            _collection.RemoveAll();
-            _collection.Insert(
-                new BsonDocument
+            using (var session = Configuration.TestServer.GetSession())
+            {
+                var database = session.GetDatabase(Configuration.TestDatabaseName);
+                var collection = database.GetCollection<C>(Configuration.TestCollectionName);
+                collection.RemoveAll();
+                collection.Insert(
+                    new BsonDocument
                 {
                     { "_id", ObjectId.GenerateNewId() },
                     { "DateTime", new BsonDateTime(253402300799999) }
                 });
 
-            var document = _collection.FindOneAs<BsonDocument>();
-            Assert.AreEqual(DateTime.MaxValue, document["DateTime"].AsDateTime);
-            Assert.AreEqual(253402300799999, document["DateTime"].AsBsonDateTime.MillisecondsSinceEpoch);
+                var document = collection.FindOneAs<BsonDocument>();
+                Assert.AreEqual(DateTime.MaxValue, document["DateTime"].AsDateTime);
+                Assert.AreEqual(253402300799999, document["DateTime"].AsBsonDateTime.MillisecondsSinceEpoch);
+            }
         }
 
         [Test]
         public void TestDocumentWithOldMaxDateTimeRepresentation()
         {
-            _collection.RemoveAll();
-            _collection.Insert(
-                new BsonDocument
+            using (var session = Configuration.TestServer.GetSession())
+            {
+                var database = session.GetDatabase(Configuration.TestDatabaseName);
+                var collection = database.GetCollection<C>(Configuration.TestCollectionName);
+                collection.RemoveAll();
+                collection.Insert(
+                    new BsonDocument
                 {
                     { "_id", ObjectId.GenerateNewId() },
                     { "DateTime", new BsonDateTime(253402300800000) }
                 });
 
-            var document = _collection.FindOneAs<BsonDocument>();
-            Assert.AreEqual(DateTime.MaxValue, document["DateTime"].AsDateTime);
-            Assert.AreEqual(253402300799999, document["DateTime"].AsBsonDateTime.MillisecondsSinceEpoch);
+                var document = collection.FindOneAs<BsonDocument>();
+                Assert.AreEqual(DateTime.MaxValue, document["DateTime"].AsDateTime);
+                Assert.AreEqual(253402300799999, document["DateTime"].AsBsonDateTime.MillisecondsSinceEpoch);
+            }
         }
     }
 }

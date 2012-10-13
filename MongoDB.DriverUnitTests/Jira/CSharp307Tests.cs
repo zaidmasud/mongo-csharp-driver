@@ -28,48 +28,70 @@ namespace MongoDB.DriverUnitTests.Jira
     [TestFixture]
     public class CSharp307Tests
     {
-        private MongoServer _server;
-        private MongoDatabase _database;
-        private MongoCollection<BsonDocument> _collection;
-
         [TestFixtureSetUp]
         public void TestFixtureSetup()
         {
-            _server = Configuration.TestServer;
-            _database = Configuration.TestDatabase;
-            _collection = Configuration.TestCollection;
-            _collection.Drop();
+            using (var session = Configuration.TestServer.GetSession())
+            {
+                var database = session.GetDatabase(Configuration.TestDatabaseName);
+                var collection = database.GetCollection(Configuration.TestCollectionName);
+                collection.Drop();
+            }
         }
 
         [Test]
         public void TestInsertNullDocument()
         {
-            BsonDocument document = null;
-            var ex = Assert.Catch<ArgumentNullException>(() => _collection.Insert(document));
-            Assert.AreEqual("document", ex.ParamName);
+            using (var session = Configuration.TestServer.GetSession())
+            {
+                var database = session.GetDatabase(Configuration.TestDatabaseName);
+                var collection = database.GetCollection(Configuration.TestCollectionName);
+
+                BsonDocument document = null;
+                var ex = Assert.Catch<ArgumentNullException>(() => collection.Insert(document));
+                Assert.AreEqual("document", ex.ParamName);
+            }
         }
 
         [Test]
         public void TestInsertNullBatch()
         {
-            BsonDocument[] batch = null;
-            var ex = Assert.Catch<ArgumentNullException>(() => _collection.InsertBatch(batch));
-            Assert.AreEqual("documents", ex.ParamName);
+            using (var session = Configuration.TestServer.GetSession())
+            {
+                var database = session.GetDatabase(Configuration.TestDatabaseName);
+                var collection = database.GetCollection(Configuration.TestCollectionName);
+
+                BsonDocument[] batch = null;
+                var ex = Assert.Catch<ArgumentNullException>(() => collection.InsertBatch(batch));
+                Assert.AreEqual("documents", ex.ParamName);
+            }
         }
 
         [Test]
         public void TestInsertBatchWithNullDocument()
         {
-            BsonDocument[] batch = new BsonDocument[] { null };
-            Assert.Throws<ArgumentException>(() => _collection.InsertBatch(batch), "Batch contains one or more null documents.");
+            using (var session = Configuration.TestServer.GetSession())
+            {
+                var database = session.GetDatabase(Configuration.TestDatabaseName);
+                var collection = database.GetCollection(Configuration.TestCollectionName);
+
+                BsonDocument[] batch = new BsonDocument[] { null };
+                Assert.Throws<ArgumentException>(() => collection.InsertBatch(batch), "Batch contains one or more null documents.");
+            }
         }
 
         [Test]
         public void TestSaveNullDocument()
         {
-            BsonDocument document = null;
-            var ex = Assert.Catch<ArgumentNullException>(() => _collection.Save(document));
-            Assert.AreEqual("document", ex.ParamName);
+            using (var session = Configuration.TestServer.GetSession())
+            {
+                var database = session.GetDatabase(Configuration.TestDatabaseName);
+                var collection = database.GetCollection(Configuration.TestCollectionName);
+
+                BsonDocument document = null;
+                var ex = Assert.Catch<ArgumentNullException>(() => collection.Save(document));
+                Assert.AreEqual("document", ex.ParamName);
+            }
         }
     }
 }

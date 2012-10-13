@@ -37,13 +37,14 @@ Namespace MongoDB.DriverUnitTests.Jira
         <Test()>
         Public Sub TestNullableComparison()
 
-            Dim server = MongoServer.Create()
-            Dim db = server.GetDatabase("test")
-            Dim col = db.GetCollection(Of Test)("foos")
+            Using session As MongoSession = Configuration.TestServer.GetSession()
+                Dim db = session.GetDatabase("test")
+                Dim col = db.GetCollection(Of Test)("foos")
 
-            Dim query = col.AsQueryable.Where(Function(p) p.MyNullableInt = 3)
+                Dim query = col.AsQueryable.Where(Function(p) p.MyNullableInt = 3)
 
-            Dim list = query.ToList()
+                Dim list = query.ToList()
+            End Using
 
         End Sub
     End Class

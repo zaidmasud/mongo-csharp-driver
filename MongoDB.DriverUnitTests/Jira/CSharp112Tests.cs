@@ -50,87 +50,95 @@ namespace MongoDB.DriverUnitTests.Jira.CSharp112
         }
 #pragma warning restore
 
-        private MongoServer _server;
-        private MongoDatabase _database;
-        private MongoCollection _collection;
-
-        [TestFixtureSetUp]
-        public void TestFixtureSetup()
-        {
-            _server = Configuration.TestServer;
-            _database = Configuration.TestDatabase;
-            _collection = Configuration.TestCollection;
-        }
-
         [Test]
         public void TestDeserializeDouble()
         {
             // test with valid values
-            _collection.RemoveAll();
-            var values = new object[]
+            using (var session = Configuration.TestServer.GetSession())
             {
-                0,
-                0L,
-                0.0,
-                -1,
-                -1L,
-                -1.0,
-                1,
-                1L,
-                1.0,
-                Int32.MinValue,
-                Int32.MaxValue
-            };
-            for (int i = 0; i < values.Length; i++)
-            {
-                var document = new BsonDocument
-                {
-                    { "_id", i + 1 },
-                    { "N", BsonValue.Create(values[i]) }
-                };
-                _collection.Insert(document);
-            }
+                var database = session.GetDatabase(Configuration.TestDatabaseName);
+                var collection = database.GetCollection(Configuration.TestCollectionName);
 
-            for (int i = 0; i < values.Length; i++)
-            {
-                var query = Query.EQ("_id", i + 1);
-                var document = _collection.FindOneAs<D>(query);
-                Assert.AreEqual(BsonValue.Create(values[i]).ToDouble(), document.N);
+                collection.RemoveAll();
+                var values = new object[]
+                {
+                    0,
+                    0L,
+                    0.0,
+                    -1,
+                    -1L,
+                    -1.0,
+                    1,
+                    1L,
+                    1.0,
+                    Int32.MinValue,
+                    Int32.MaxValue
+                };
+                for (int i = 0; i < values.Length; i++)
+                {
+                    var document = new BsonDocument
+                    {
+                        { "_id", i + 1 },
+                        { "N", BsonValue.Create(values[i]) }
+                    };
+                    collection.Insert(document);
+                }
+
+                for (int i = 0; i < values.Length; i++)
+                {
+                    var query = Query.EQ("_id", i + 1);
+                    var document = collection.FindOneAs<D>(query);
+                    Assert.AreEqual(BsonValue.Create(values[i]).ToDouble(), document.N);
+                }
             }
 
             // test with values that cause data loss
-            _collection.RemoveAll();
-            values = new object[]
+            var dataLossValues = new object[]
             {
                 0x7eeeeeeeeeeeeeee,
                 0xfeeeeeeeeeeeeeee,
                 Int64.MinValue + 1, // need some low order bits to see data loss
                 Int64.MaxValue
             };
-            for (int i = 0; i < values.Length; i++)
+
+            using (var session = Configuration.TestServer.GetSession())
             {
-                var document = new BsonDocument
+                var database = session.GetDatabase(Configuration.TestDatabaseName);
+                var collection = database.GetCollection(Configuration.TestCollectionName);
+
+                collection.RemoveAll();
+                for (int i = 0; i < dataLossValues.Length; i++)
                 {
-                    { "_id", i + 1 },
-                    { "N", BsonValue.Create(values[i]) }
-                };
-                _collection.Insert(document);
+                    var document = new BsonDocument
+                    {
+                        { "_id", i + 1 },
+                        { "N", BsonValue.Create(dataLossValues[i]) }
+                    };
+                    collection.Insert(document);
+                }
             }
 
-            for (int i = 0; i < values.Length; i++)
+            for (int i = 0; i < dataLossValues.Length; i++)
             {
-                var query = Query.EQ("_id", i + 1);
-                try
+                // use a new session for each iteration because the exception thrown dooms the session
+                using (var session = Configuration.TestServer.GetSession())
                 {
-                    _collection.FindOneAs<D>(query);
-                    Assert.Fail("Expected an exception to be thrown.");
-                }
-                catch (Exception ex)
-                {
-                    var expectedMessage = "An error occurred while deserializing the N field of class MongoDB.DriverUnitTests.Jira.CSharp112.CSharp112Tests+D: Truncation resulted in data loss.";
-                    Assert.IsInstanceOf<FileFormatException>(ex);
-                    Assert.IsInstanceOf<TruncationException>(ex.InnerException);
-                    Assert.AreEqual(expectedMessage, ex.Message);
+                    var database = session.GetDatabase(Configuration.TestDatabaseName);
+                    var collection = database.GetCollection(Configuration.TestCollectionName);
+
+                    var query = Query.EQ("_id", i + 1);
+                    try
+                    {
+                        collection.FindOneAs<D>(query);
+                        Assert.Fail("Expected an exception to be thrown.");
+                    }
+                    catch (Exception ex)
+                    {
+                        var expectedMessage = "An error occurred while deserializing the N field of class MongoDB.DriverUnitTests.Jira.CSharp112.CSharp112Tests+D: Truncation resulted in data loss.";
+                        Assert.IsInstanceOf<FileFormatException>(ex);
+                        Assert.IsInstanceOf<TruncationException>(ex.InnerException);
+                        Assert.AreEqual(expectedMessage, ex.Message);
+                    }
                 }
             }
         }
@@ -139,40 +147,45 @@ namespace MongoDB.DriverUnitTests.Jira.CSharp112
         public void TestDeserializeInt32()
         {
             // test with valid values
-            _collection.RemoveAll();
-            var values = new object[]
+            using (var session = Configuration.TestServer.GetSession())
             {
-                0L,
-                0.0,
-                -1L,
-                -1.0,
-                1L,
-                1.0,
-                (double)Int32.MinValue,
-                (double)Int32.MaxValue,
-                (long)Int32.MinValue,
-                (long)Int32.MaxValue
-            };
-            for (int i = 0; i < values.Length; i++)
-            {
-                var document = new BsonDocument
-                {
-                    { "_id", i + 1 },
-                    { "N", BsonValue.Create(values[i]) }
-                };
-                _collection.Insert(document);
-            }
+                var database = session.GetDatabase(Configuration.TestDatabaseName);
+                var collection = database.GetCollection(Configuration.TestCollectionName);
 
-            for (int i = 0; i < values.Length; i++)
-            {
-                var query = Query.EQ("_id", i + 1);
-                var document = _collection.FindOneAs<I>(query);
-                Assert.AreEqual(BsonValue.Create(values[i]).ToInt32(), document.N);
+                collection.RemoveAll();
+                var values = new object[]
+                {
+                    0L,
+                    0.0,
+                    -1L,
+                    -1.0,
+                    1L,
+                    1.0,
+                    (double)Int32.MinValue,
+                    (double)Int32.MaxValue,
+                    (long)Int32.MinValue,
+                    (long)Int32.MaxValue
+                };
+                for (int i = 0; i < values.Length; i++)
+                {
+                    var document = new BsonDocument
+                    {
+                        { "_id", i + 1 },
+                        { "N", BsonValue.Create(values[i]) }
+                    };
+                    collection.Insert(document);
+                }
+
+                for (int i = 0; i < values.Length; i++)
+                {
+                    var query = Query.EQ("_id", i + 1);
+                    var document = collection.FindOneAs<I>(query);
+                    Assert.AreEqual(BsonValue.Create(values[i]).ToInt32(), document.N);
+                }
             }
 
             // test with values that cause overflow
-            _collection.RemoveAll();
-            values = new object[]
+            var overflowValues = new object[]
             {
                 ((long)Int32.MinValue - 1),
                 ((long)Int32.MaxValue + 1),
@@ -181,64 +194,93 @@ namespace MongoDB.DriverUnitTests.Jira.CSharp112
                 double.MaxValue,
                 double.MinValue
             };
-            for (int i = 0; i < values.Length; i++)
+
+            using (var session = Configuration.TestServer.GetSession())
             {
-                var document = new BsonDocument
+                var database = session.GetDatabase(Configuration.TestDatabaseName);
+                var collection = database.GetCollection(Configuration.TestCollectionName);
+
+                collection.RemoveAll();
+                for (int i = 0; i < overflowValues.Length; i++)
                 {
-                    { "_id", i + 1 },
-                    { "N", BsonValue.Create(values[i]) }
-                };
-                _collection.Insert(document);
+                    var document = new BsonDocument
+                    {
+                        { "_id", i + 1 },
+                        { "N", BsonValue.Create(overflowValues[i]) }
+                    };
+                    collection.Insert(document);
+                }
             }
 
-            for (int i = 0; i < values.Length; i++)
+            for (int i = 0; i < overflowValues.Length; i++)
             {
-                var query = Query.EQ("_id", i + 1);
-                try
+                // use a new session for each iteration because the exception thrown dooms the session
+                using (var session = Configuration.TestServer.GetSession())
                 {
-                    _collection.FindOneAs<I>(query);
-                    Assert.Fail("Expected an exception to be thrown.");
-                }
-                catch (Exception ex)
-                {
-                    var expectedMessage = "An error occurred while deserializing the N field of class MongoDB.DriverUnitTests.Jira.CSharp112.CSharp112Tests+I";
-                    Assert.IsInstanceOf<FileFormatException>(ex);
-                    Assert.IsInstanceOf<OverflowException>(ex.InnerException);
-                    Assert.AreEqual(expectedMessage, ex.Message.Substring(0, ex.Message.IndexOf(':')));
+                    var database = session.GetDatabase(Configuration.TestDatabaseName);
+                    var collection = database.GetCollection(Configuration.TestCollectionName);
+
+                    var query = Query.EQ("_id", i + 1);
+                    try
+                    {
+                        collection.FindOneAs<I>(query);
+                        Assert.Fail("Expected an exception to be thrown.");
+                    }
+                    catch (Exception ex)
+                    {
+                        var expectedMessage = "An error occurred while deserializing the N field of class MongoDB.DriverUnitTests.Jira.CSharp112.CSharp112Tests+I";
+                        Assert.IsInstanceOf<FileFormatException>(ex);
+                        Assert.IsInstanceOf<OverflowException>(ex.InnerException);
+                        Assert.AreEqual(expectedMessage, ex.Message.Substring(0, ex.Message.IndexOf(':')));
+                    }
                 }
             }
 
             // test with values that cause truncation
-            _collection.RemoveAll();
-            values = new object[]
+            var truncationValues = new object[]
             {
                 -1.5,
                 1.5
             };
-            for (int i = 0; i < values.Length; i++)
+            
+            using (var session = Configuration.TestServer.GetSession())
             {
-                var document = new BsonDocument
+                var database = session.GetDatabase(Configuration.TestDatabaseName);
+                var collection = database.GetCollection(Configuration.TestCollectionName);
+
+                collection.RemoveAll();
+                for (int i = 0; i < truncationValues.Length; i++)
                 {
-                    { "_id", i + 1 },
-                    { "N", BsonValue.Create(values[i]) }
-                };
-                _collection.Insert(document);
+                    var document = new BsonDocument
+                    {
+                        { "_id", i + 1 },
+                        { "N", BsonValue.Create(truncationValues[i]) }
+                    };
+                    collection.Insert(document);
+                }
             }
 
-            for (int i = 0; i < values.Length; i++)
+            for (int i = 0; i < truncationValues.Length; i++)
             {
-                var query = Query.EQ("_id", i + 1);
-                try
+                // use a new session for each iteration because the exception thrown dooms the session
+                using (var session = Configuration.TestServer.GetSession())
                 {
-                    _collection.FindOneAs<I>(query);
-                    Assert.Fail("Expected an exception to be thrown.");
-                }
-                catch (Exception ex)
-                {
-                    var expectedMessage = "An error occurred while deserializing the N field of class MongoDB.DriverUnitTests.Jira.CSharp112.CSharp112Tests+I: Truncation resulted in data loss.";
-                    Assert.IsInstanceOf<FileFormatException>(ex);
-                    Assert.IsInstanceOf<TruncationException>(ex.InnerException);
-                    Assert.AreEqual(expectedMessage, ex.Message);
+                    var database = session.GetDatabase(Configuration.TestDatabaseName);
+                    var collection = database.GetCollection(Configuration.TestCollectionName);
+
+                    var query = Query.EQ("_id", i + 1);
+                    try
+                    {
+                        collection.FindOneAs<I>(query);
+                        Assert.Fail("Expected an exception to be thrown.");
+                    }
+                    catch (Exception ex)
+                    {
+                        var expectedMessage = "An error occurred while deserializing the N field of class MongoDB.DriverUnitTests.Jira.CSharp112.CSharp112Tests+I: Truncation resulted in data loss.";
+                        Assert.IsInstanceOf<FileFormatException>(ex);
+                        Assert.IsInstanceOf<TruncationException>(ex.InnerException);
+                        Assert.AreEqual(expectedMessage, ex.Message);
+                    }
                 }
             }
         }
@@ -247,107 +289,141 @@ namespace MongoDB.DriverUnitTests.Jira.CSharp112
         public void TestDeserializeInt64()
         {
             // test with valid values
-            _collection.RemoveAll();
-            var values = new object[]
+            using (var session = Configuration.TestServer.GetSession())
             {
-                0,
-                0L,
-                0.0,
-                -1,
-                -1L,
-                -1.0,
-                1,
-                1L,
-                1.0,
-                (double)Int32.MinValue,
-                (double)Int32.MaxValue,
-                (long)Int32.MinValue,
-                (long)Int32.MaxValue,
-                Int64.MinValue,
-                Int64.MaxValue
-            };
-            for (int i = 0; i < values.Length; i++)
-            {
-                var document = new BsonDocument
-                {
-                    { "_id", i + 1 },
-                    { "N", BsonValue.Create(values[i]) }
-                };
-                _collection.Insert(document);
-            }
+                var database = session.GetDatabase(Configuration.TestDatabaseName);
+                var collection = database.GetCollection(Configuration.TestCollectionName);
 
-            for (int i = 0; i < values.Length; i++)
-            {
-                var query = Query.EQ("_id", i + 1);
-                var document = _collection.FindOneAs<L>(query);
-                Assert.AreEqual(BsonValue.Create(values[i]).ToInt64(), document.N);
+                collection.RemoveAll();
+                var values = new object[]
+                {
+                    0,
+                    0L,
+                    0.0,
+                    -1,
+                    -1L,
+                    -1.0,
+                    1,
+                    1L,
+                    1.0,
+                    (double)Int32.MinValue,
+                    (double)Int32.MaxValue,
+                    (long)Int32.MinValue,
+                    (long)Int32.MaxValue,
+                    Int64.MinValue,
+                    Int64.MaxValue
+                };
+                for (int i = 0; i < values.Length; i++)
+                {
+                    var document = new BsonDocument
+                    {
+                        { "_id", i + 1 },
+                        { "N", BsonValue.Create(values[i]) }
+                    };
+                    collection.Insert(document);
+                }
+
+                for (int i = 0; i < values.Length; i++)
+                {
+                    var query = Query.EQ("_id", i + 1);
+                    var document = collection.FindOneAs<L>(query);
+                    Assert.AreEqual(BsonValue.Create(values[i]).ToInt64(), document.N);
+                }
             }
 
             // test with values that cause overflow
-            _collection.RemoveAll();
-            values = new object[]
+            var overflowValues = new object[]
             {
                 double.MaxValue,
                 double.MinValue
             };
-            for (int i = 0; i < values.Length; i++)
+
+            using (var session = Configuration.TestServer.GetSession())
             {
-                var document = new BsonDocument
+                var database = session.GetDatabase(Configuration.TestDatabaseName);
+                var collection = database.GetCollection(Configuration.TestCollectionName);
+
+                collection.RemoveAll();
+                for (int i = 0; i < overflowValues.Length; i++)
                 {
-                    { "_id", i + 1 },
-                    { "N", BsonValue.Create(values[i]) }
-                };
-                _collection.Insert(document);
+                    var document = new BsonDocument
+                    {
+                        { "_id", i + 1 },
+                        { "N", BsonValue.Create(overflowValues[i]) }
+                    };
+                    collection.Insert(document);
+                }
             }
 
-            for (int i = 0; i < values.Length; i++)
+            for (int i = 0; i < overflowValues.Length; i++)
             {
-                var query = Query.EQ("_id", i + 1);
-                try
+                // use a new session for each iteration because the exception thrown dooms the session
+                using (var session = Configuration.TestServer.GetSession())
                 {
-                    _collection.FindOneAs<L>(query);
-                    Assert.Fail("Expected an exception to be thrown.");
-                }
-                catch (Exception ex)
-                {
-                    var expectedMessage = "An error occurred while deserializing the N field of class MongoDB.DriverUnitTests.Jira.CSharp112.CSharp112Tests+L";
-                    Assert.IsInstanceOf<FileFormatException>(ex);
-                    Assert.IsInstanceOf<OverflowException>(ex.InnerException);
-                    Assert.AreEqual(expectedMessage, ex.Message.Substring(0, ex.Message.IndexOf(':')));
+                    var database = session.GetDatabase(Configuration.TestDatabaseName);
+                    var collection = database.GetCollection(Configuration.TestCollectionName);
+
+                    var query = Query.EQ("_id", i + 1);
+                    try
+                    {
+                        collection.FindOneAs<L>(query);
+                        Assert.Fail("Expected an exception to be thrown.");
+                    }
+                    catch (Exception ex)
+                    {
+                        var expectedMessage = "An error occurred while deserializing the N field of class MongoDB.DriverUnitTests.Jira.CSharp112.CSharp112Tests+L";
+                        Assert.IsInstanceOf<FileFormatException>(ex);
+                        Assert.IsInstanceOf<OverflowException>(ex.InnerException);
+                        Assert.AreEqual(expectedMessage, ex.Message.Substring(0, ex.Message.IndexOf(':')));
+                    }
                 }
             }
 
             // test with values that cause data truncation
-            _collection.RemoveAll();
-            values = new object[]
+            var truncationValues = new object[]
             {
                 -1.5,
                 1.5
             };
-            for (int i = 0; i < values.Length; i++)
+
+            using (var session = Configuration.TestServer.GetSession())
             {
-                var document = new BsonDocument
+                var database = session.GetDatabase(Configuration.TestDatabaseName);
+                var collection = database.GetCollection(Configuration.TestCollectionName);
+                collection.RemoveAll();
+
+                for (int i = 0; i < truncationValues.Length; i++)
                 {
-                    { "_id", i + 1 },
-                    { "N", BsonValue.Create(values[i]) }
-                };
-                _collection.Insert(document);
+                    var document = new BsonDocument
+                    {
+                        { "_id", i + 1 },
+                        { "N", BsonValue.Create(truncationValues[i]) }
+                    };
+                    collection.Insert(document);
+                }
             }
 
-            for (int i = 0; i < values.Length; i++)
+            for (int i = 0; i < truncationValues.Length; i++)
             {
-                var query = Query.EQ("_id", i + 1);
-                try
+                // use a new session for each iteration because the exception thrown dooms the session
+                using (var session = Configuration.TestServer.GetSession())
                 {
-                    _collection.FindOneAs<L>(query);
-                    Assert.Fail("Expected an exception to be thrown.");
-                }
-                catch (Exception ex)
-                {
-                    var expectedMessage = "An error occurred while deserializing the N field of class MongoDB.DriverUnitTests.Jira.CSharp112.CSharp112Tests+L: Truncation resulted in data loss.";
-                    Assert.IsInstanceOf<FileFormatException>(ex);
-                    Assert.IsInstanceOf<TruncationException>(ex.InnerException);
-                    Assert.AreEqual(expectedMessage, ex.Message);
+                    var database = session.GetDatabase(Configuration.TestDatabaseName);
+                    var collection = database.GetCollection(Configuration.TestCollectionName);
+
+                    var query = Query.EQ("_id", i + 1);
+                    try
+                    {
+                        collection.FindOneAs<L>(query);
+                        Assert.Fail("Expected an exception to be thrown.");
+                    }
+                    catch (Exception ex)
+                    {
+                        var expectedMessage = "An error occurred while deserializing the N field of class MongoDB.DriverUnitTests.Jira.CSharp112.CSharp112Tests+L: Truncation resulted in data loss.";
+                        Assert.IsInstanceOf<FileFormatException>(ex);
+                        Assert.IsInstanceOf<TruncationException>(ex.InnerException);
+                        Assert.AreEqual(expectedMessage, ex.Message);
+                    }
                 }
             }
         }

@@ -36,45 +36,47 @@ namespace MongoDB.DriverUnitTests.Linq
             public int Y { get; set; }
         }
 
-        private MongoServer _server;
-        private MongoDatabase _database;
-        private MongoCollection _collection;
-
-        [TestFixtureSetUp]
-        public void Setup()
-        {
-            _server = Configuration.TestServer;
-            _server.Connect();
-            _database = Configuration.TestDatabase;
-            _collection = Configuration.TestCollection;
-        }
-
         [Test]
         public void TestConstructor()
         {
-            var provider = new MongoQueryProvider(_collection);
+            using (var session = Configuration.TestServer.GetSession())
+            {
+                var database = session.GetDatabase(Configuration.TestDatabaseName);
+                var collection = database.GetCollection(Configuration.TestCollectionName);
+                var provider = new MongoQueryProvider(collection);
+            }
         }
 
         [Test]
         public void TestCreateQuery()
         {
-            var expression = _collection.AsQueryable<C>().Expression;
-            var provider = new MongoQueryProvider(_collection);
-            var query = provider.CreateQuery<C>(expression);
-            Assert.AreSame(typeof(C), query.ElementType);
-            Assert.AreSame(provider, query.Provider);
-            Assert.AreSame(expression, query.Expression);
+            using (var session = Configuration.TestServer.GetSession())
+            {
+                var database = session.GetDatabase(Configuration.TestDatabaseName);
+                var collection = database.GetCollection(Configuration.TestCollectionName);
+                var expression = collection.AsQueryable<C>().Expression;
+                var provider = new MongoQueryProvider(collection);
+                var query = provider.CreateQuery<C>(expression);
+                Assert.AreSame(typeof(C), query.ElementType);
+                Assert.AreSame(provider, query.Provider);
+                Assert.AreSame(expression, query.Expression);
+            }
         }
 
         [Test]
         public void TestCreateQueryNonGeneric()
         {
-            var expression = _collection.AsQueryable<C>().Expression;
-            var provider = new MongoQueryProvider(_collection);
-            var query = provider.CreateQuery(expression);
-            Assert.AreSame(typeof(C), query.ElementType);
-            Assert.AreSame(provider, query.Provider);
-            Assert.AreSame(expression, query.Expression);
+            using (var session = Configuration.TestServer.GetSession())
+            {
+                var database = session.GetDatabase(Configuration.TestDatabaseName);
+                var collection = database.GetCollection(Configuration.TestCollectionName);
+                var expression = collection.AsQueryable<C>().Expression;
+                var provider = new MongoQueryProvider(collection);
+                var query = provider.CreateQuery(expression);
+                Assert.AreSame(typeof(C), query.ElementType);
+                Assert.AreSame(provider, query.Provider);
+                Assert.AreSame(expression, query.Expression);
+            }
         }
     }
 }

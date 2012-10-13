@@ -88,50 +88,50 @@ namespace MongoDB.DriverUnitTests.Samples
             }
         }
 
-        private MongoServer _server;
-        private MongoDatabase _database;
-        private MongoCollection<A> _collection;
-
-        [TestFixtureSetUp]
-        public void TestFixtureSetup()
-        {
-            _server = Configuration.TestServer;
-            _database = Configuration.TestDatabase;
-            _collection = Configuration.GetTestCollection<A>();
-        }
-
         [Test]
         public void TestBAsA()
         {
-            var b = new B { InA = "a", OnlyInB = "b" };
+            using (var session = Configuration.TestServer.GetSession())
+            {
+                var database = session.GetDatabase(Configuration.TestDatabaseName);
+                var collection = database.GetCollection<A>(Configuration.TestCollectionName);
 
-            var json = b.ToJson();
-            var expected = "{ 'InA' : 'a', 'OnlyInB' : 'b' }".Replace("'", "\""); // note: no _t discriminator!
-            Assert.AreEqual(expected, json);
+                var b = new B { InA = "a", OnlyInB = "b" };
 
-            _collection.RemoveAll();
-            _collection.Insert(b);
-            var copy = (B)_collection.FindOne();
-            Assert.IsInstanceOf<B>(copy);
-            Assert.AreEqual("a", copy.InA);
-            Assert.AreEqual("b", copy.OnlyInB);
+                var json = b.ToJson();
+                var expected = "{ 'InA' : 'a', 'OnlyInB' : 'b' }".Replace("'", "\""); // note: no _t discriminator!
+                Assert.AreEqual(expected, json);
+
+                collection.RemoveAll();
+                collection.Insert(b);
+                var copy = (B)collection.FindOne();
+                Assert.IsInstanceOf<B>(copy);
+                Assert.AreEqual("a", copy.InA);
+                Assert.AreEqual("b", copy.OnlyInB);
+            }
         }
 
         [Test]
         public void TestCAsA()
         {
-            var c = new C { InA = "a", OnlyInC = "c" };
+            using (var session = Configuration.TestServer.GetSession())
+            {
+                var database = session.GetDatabase(Configuration.TestDatabaseName);
+                var collection = database.GetCollection<A>(Configuration.TestCollectionName);
 
-            var json = c.ToJson();
-            var expected = "{ 'InA' : 'a', 'OnlyInC' : 'c' }".Replace("'", "\""); // note: no _t discriminator!
-            Assert.AreEqual(expected, json);
+                var c = new C { InA = "a", OnlyInC = "c" };
 
-            _collection.RemoveAll();
-            _collection.Insert(c);
-            var copy = (C)_collection.FindOne();
-            Assert.IsInstanceOf<C>(copy);
-            Assert.AreEqual("a", copy.InA);
-            Assert.AreEqual("c", copy.OnlyInC);
+                var json = c.ToJson();
+                var expected = "{ 'InA' : 'a', 'OnlyInC' : 'c' }".Replace("'", "\""); // note: no _t discriminator!
+                Assert.AreEqual(expected, json);
+
+                collection.RemoveAll();
+                collection.Insert(c);
+                var copy = (C)collection.FindOne();
+                Assert.IsInstanceOf<C>(copy);
+                Assert.AreEqual("a", copy.InA);
+                Assert.AreEqual("c", copy.OnlyInC);
+            }
         }
     }
 }

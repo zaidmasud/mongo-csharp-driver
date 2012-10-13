@@ -43,11 +43,14 @@ namespace MongoDB.DriverUnitTests.Jira.CSharp538
         [Test]
         public void Test()
         {
-            var db = Configuration.TestDatabase;
-            var collection = db.GetCollection<A>("csharp_538");
+            using (var session = Configuration.TestServer.GetSession())
+            {
+                var db = session.GetDatabase(Configuration.TestDatabaseName);
+                var collection = db.GetCollection<A>("csharp_538");
 
-            var count = collection.AsQueryable().OfType<B>().Count();
-            Assert.AreEqual(0, count);
+                var count = collection.AsQueryable().OfType<B>().Count();
+                Assert.AreEqual(0, count);
+            }
         }
     }
 }

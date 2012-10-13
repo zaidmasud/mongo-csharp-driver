@@ -31,43 +31,49 @@ namespace MongoDB.DriverUnitTests
         public void TestAll()
         {
             var server = MongoServer.Create();
-            var database = server["test"];
-            var settings = new MongoCollectionSettings
+            using (var session = server.GetSession())
             {
-                AssignIdOnInsert = true,
-                GuidRepresentation = GuidRepresentation.CSharpLegacy,
-                SafeMode = SafeMode.Create(5, TimeSpan.FromSeconds(5)),
-                ReadPreference = ReadPreference.Primary
-            };
+                var database = session.GetDatabase("test");
+                var settings = new MongoCollectionSettings
+                {
+                    AssignIdOnInsert = true,
+                    GuidRepresentation = GuidRepresentation.CSharpLegacy,
+                    SafeMode = SafeMode.Create(5, TimeSpan.FromSeconds(5)),
+                    ReadPreference = ReadPreference.Primary
+                };
 
-            Assert.AreEqual(true, settings.AssignIdOnInsert);
-            Assert.AreEqual(GuidRepresentation.CSharpLegacy, settings.GuidRepresentation.Value);
-            Assert.AreEqual(SafeMode.Create(5, TimeSpan.FromSeconds(5)), settings.SafeMode);
-            Assert.AreEqual(ReadPreference.Primary, settings.ReadPreference);
+                Assert.AreEqual(true, settings.AssignIdOnInsert);
+                Assert.AreEqual(GuidRepresentation.CSharpLegacy, settings.GuidRepresentation.Value);
+                Assert.AreEqual(SafeMode.Create(5, TimeSpan.FromSeconds(5)), settings.SafeMode);
+                Assert.AreEqual(ReadPreference.Primary, settings.ReadPreference);
 
-            Assert.IsFalse(settings.IsFrozen);
-            var hashCode = settings.GetHashCode();
-            var stringRepresentation = settings.ToString();
-            Assert.AreEqual(settings, settings);
+                Assert.IsFalse(settings.IsFrozen);
+                var hashCode = settings.GetHashCode();
+                var stringRepresentation = settings.ToString();
+                Assert.AreEqual(settings, settings);
 
-            settings.Freeze();
-            Assert.IsTrue(settings.IsFrozen);
-            Assert.AreEqual(hashCode, settings.GetHashCode());
-            Assert.AreEqual(stringRepresentation, settings.ToString());
+                settings.Freeze();
+                Assert.IsTrue(settings.IsFrozen);
+                Assert.AreEqual(hashCode, settings.GetHashCode());
+                Assert.AreEqual(stringRepresentation, settings.ToString());
+            }
         }
 
         [Test]
         public void TestFrozenCopy()
         {
             var server = MongoServer.Create();
-            var database = server["test"];
-            var settings = new MongoCollectionSettings();
-            var frozenCopy = settings.FrozenCopy();
-            var secondFrozenCopy = frozenCopy.FrozenCopy();
-            Assert.AreNotSame(settings, frozenCopy);
-            Assert.AreSame(frozenCopy, secondFrozenCopy);
-            Assert.AreEqual(false, settings.IsFrozen);
-            Assert.AreEqual(true, frozenCopy.IsFrozen);
+            using (var session = server.GetSession())
+            {
+                var database = session.GetDatabase("test");
+                var settings = new MongoCollectionSettings();
+                var frozenCopy = settings.FrozenCopy();
+                var secondFrozenCopy = frozenCopy.FrozenCopy();
+                Assert.AreNotSame(settings, frozenCopy);
+                Assert.AreSame(frozenCopy, secondFrozenCopy);
+                Assert.AreEqual(false, settings.IsFrozen);
+                Assert.AreEqual(true, frozenCopy.IsFrozen);
+            }
         }
     }
 }

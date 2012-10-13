@@ -41,27 +41,30 @@ namespace MongoDB.DriverUnitTests.Jira.CSharp77
         public void TestSave()
         {
             var server = Configuration.TestServer;
-            var database = Configuration.TestDatabase;
-            var collection = Configuration.GetTestCollection<Foo>();
-
-            var conventions = new ConventionPack();
-            conventions.Add(new NamedIdMemberConvention(new [] { "FooId" }));
-            ConventionRegistry.Register("test", conventions, t => t == typeof(Foo));
-
-            var classMap = new BsonClassMap<Foo>(cm => cm.AutoMap());
-
-            collection.RemoveAll();
-            for (int i = 0; i < 10; i++)
+            using (var session = server.GetSession())
             {
-                var foo = new Foo
+                var database = session.GetDatabase(Configuration.TestDatabaseName);
+                var collection = database.GetCollection<Foo>(Configuration.TestCollectionName);
+
+                var conventions = new ConventionPack();
+                conventions.Add(new NamedIdMemberConvention(new[] { "FooId" }));
+                ConventionRegistry.Register("test", conventions, t => t == typeof(Foo));
+
+                var classMap = new BsonClassMap<Foo>(cm => cm.AutoMap());
+
+                collection.RemoveAll();
+                for (int i = 0; i < 10; i++)
                 {
-                    FooId = ObjectId.Empty,
-                    Name = string.Format("Foo-{0}", i),
-                    Summary = string.Format("Summary for Foo-{0}", i)
-                };
-                collection.Save(foo, SafeMode.True);
-                var count = collection.Count();
-                Assert.AreEqual(i + 1, count);
+                    var foo = new Foo
+                    {
+                        FooId = ObjectId.Empty,
+                        Name = string.Format("Foo-{0}", i),
+                        Summary = string.Format("Summary for Foo-{0}", i)
+                    };
+                    collection.Save(foo, SafeMode.True);
+                    var count = collection.Count();
+                    Assert.AreEqual(i + 1, count);
+                }
             }
         }
     }

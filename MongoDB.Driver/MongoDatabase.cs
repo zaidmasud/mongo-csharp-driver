@@ -31,24 +31,24 @@ namespace MongoDB.Driver
     public class MongoDatabase
     {
         // private fields
-        private MongoServer _server;
-        private MongoDatabaseSettings _settings;
-        private string _name;
-        private MongoCollection<BsonDocument> _commandCollection;
+        private readonly MongoSession _session;
+        private readonly string _name;
+        private readonly MongoDatabaseSettings _settings;
+        private readonly MongoCollection<BsonDocument> _commandCollection;
 
         // constructors
         /// <summary>
         /// Creates a new instance of MongoDatabase. Normally you would call one of the indexers or GetDatabase methods
         /// of MongoServer instead.
         /// </summary>
-        /// <param name="server">The server that contains this database.</param>
+        /// <param name="session">The session used to access this database.</param>
         /// <param name="name">The name of the database.</param>
         /// <param name="settings">The settings to use to access this database.</param>
-        public MongoDatabase(MongoServer server, string name, MongoDatabaseSettings settings)
+        public MongoDatabase(MongoSession session, string name, MongoDatabaseSettings settings)
         {
-            if (server == null)
+            if (session == null)
             {
-                throw new ArgumentNullException("server");
+                throw new ArgumentNullException("session");
             }
             if (name == null)
             {
@@ -58,6 +58,8 @@ namespace MongoDB.Driver
             {
                 throw new ArgumentNullException("settings");
             }
+
+            var server = session.Server;
             string message;
             if (!server.IsDatabaseNameValid(name, out message))
             {
@@ -68,78 +70,12 @@ namespace MongoDB.Driver
             settings.ApplyInheritedSettings(server.Settings);
             settings.Freeze();
 
-            _server = server;
+            _session = session;
             _settings = settings;
             _name = name;
 
             var commandCollectionSettings = new MongoCollectionSettings { AssignIdOnInsert = false };
             _commandCollection = GetCollection("$cmd", commandCollectionSettings);
-        }
-
-        // factory methods
-        /// <summary>
-        /// Creates a new instance or returns an existing instance of MongoDatabase. Only one instance
-        /// is created for each combination of database settings. Automatically creates an instance
-        /// of MongoServer if needed.
-        /// </summary>
-        /// <param name="serverSettings">The server settings for the server that contains this database.</param>
-        /// <param name="databaseName">The name of this database (will be accessed using default settings).</param>
-        /// <returns>
-        /// A new or existing instance of MongoDatabase.
-        /// </returns>
-        public static MongoDatabase Create(MongoServerSettings serverSettings, string databaseName)
-        {
-            if (databaseName == null)
-            {
-                throw new ArgumentException("Database name is missing.");
-            }
-            var server = MongoServer.Create(serverSettings);
-            return server.GetDatabase(databaseName);
-        }
-
-        /// <summary>
-        /// Creates a new instance or returns an existing instance of MongoDatabase. Only one instance
-        /// is created for each combination of database settings. Automatically creates an instance
-        /// of MongoServer if needed.
-        /// </summary>
-        /// <param name="url">Server and database settings in the form of a MongoUrl.</param>
-        /// <returns>
-        /// A new or existing instance of MongoDatabase.
-        /// </returns>
-        public static MongoDatabase Create(MongoUrl url)
-        {
-            var serverSettings = url.ToServerSettings();
-            var databaseName = url.DatabaseName;
-            return Create(serverSettings, databaseName);
-        }
-
-        /// <summary>
-        /// Creates a new instance or returns an existing instance of MongoDatabase. Only one instance
-        /// is created for each combination of database settings. Automatically creates an instance
-        /// of MongoServer if needed.
-        /// </summary>
-        /// <param name="connectionString">Server and database settings in the form of a connection string.</param>
-        /// <returns>
-        /// A new or existing instance of MongoDatabase.
-        /// </returns>
-        public static MongoDatabase Create(string connectionString)
-        {
-            MongoUrl url = MongoUrl.Create(connectionString);
-            return Create(url);
-        }
-
-        /// <summary>
-        /// Creates a new instance or returns an existing instance of MongoDatabase. Only one instance
-        /// is created for each combination of database settings. Automatically creates an instance
-        /// of MongoServer if needed.
-        /// </summary>
-        /// <param name="uri">Server and database settings in the form of a Uri.</param>
-        /// <returns>
-        /// A new or existing instance of MongoDatabase.
-        /// </returns>
-        public static MongoDatabase Create(Uri uri)
-        {
-            return Create(MongoUrl.Create(uri.ToString()));
         }
 
         // public properties
@@ -177,11 +113,11 @@ namespace MongoDB.Driver
         }
 
         /// <summary>
-        /// Gets the server that contains this database.
+        /// Gets the session used to access this database.
         /// </summary>
-        public virtual MongoServer Server
+        public virtual MongoSession Session
         {
-            get { return _server; }
+            get { return _session; }
         }
 
         /// <summary>
@@ -190,30 +126,6 @@ namespace MongoDB.Driver
         public virtual MongoDatabaseSettings Settings
         {
             get { return _settings; }
-        }
-
-        // public indexers
-        /// <summary>
-        /// Gets a MongoCollection instance representing a collection on this database
-        /// with a default document type of BsonDocument.
-        /// </summary>
-        /// <param name="collectionName">The name of the collection.</param>
-        /// <returns>An instance of MongoCollection.</returns>
-        public virtual MongoCollection<BsonDocument> this[string collectionName]
-        {
-            get { return GetCollection(collectionName); }
-        }
-
-        /// <summary>
-        /// Gets a MongoCollection instance representing a collection on this database
-        /// with a default document type of BsonDocument.
-        /// </summary>
-        /// <param name="collectionName">The name of the collection.</param>
-        /// <param name="safeMode">The safe mode to use when accessing this collection.</param>
-        /// <returns>An instance of MongoCollection.</returns>
-        public virtual MongoCollection<BsonDocument> this[string collectionName, SafeMode safeMode]
-        {
-            get { return GetCollection(collectionName, safeMode); }
         }
 
         // public methods
@@ -297,7 +209,7 @@ namespace MongoDB.Driver
         /// </summary>
         public virtual void Drop()
         {
-            _server.DropDatabase(_name, _settings.Credentials);
+            _session.DropDatabase(_name);
         }
 
         /// <summary>
@@ -311,7 +223,7 @@ namespace MongoDB.Driver
             {
                 var command = new CommandDocument("drop", collectionName);
                 var result = RunCommand(command);
-                _server.IndexCache.Reset(_name, collectionName);
+                _session.Server.IndexCache.Reset(_name, collectionName);
                 return result;
             }
             catch (MongoCommandException ex)
@@ -386,7 +298,7 @@ namespace MongoDB.Driver
         {
             if (dbRef.DatabaseName != null && dbRef.DatabaseName != _name)
             {
-                return _server.FetchDBRefAs(documentType, dbRef);
+                return _session.FetchDBRefAs(documentType, dbRef);
             }
 
             var collection = GetCollection(dbRef.CollectionName);
@@ -599,15 +511,11 @@ namespace MongoDB.Driver
         }
 
         /// <summary>
-        /// Gets the last error (if any) that occurred on this connection. You MUST be within a RequestStart to call this method.
+        /// Gets the last error (if any) that occurred on this connection.
         /// </summary>
         /// <returns>The last error (<see cref=" GetLastErrorResult"/>)</returns>
         public virtual GetLastErrorResult GetLastError()
         {
-            if (Server.RequestNestingLevel == 0)
-            {
-                throw new InvalidOperationException("GetLastError can only be called if RequestStart has been called first.");
-            }
             return RunCommandAs<GetLastErrorResult>("getlasterror"); // use all lowercase for backward compatibility
         }
 
@@ -635,16 +543,6 @@ namespace MongoDB.Driver
         {
             var command = new CommandDocument("profile", -1);
             return RunCommandAs<GetProfilingLevelResult>(command);
-        }
-
-        /// <summary>
-        /// Gets a sister database on the same server.
-        /// </summary>
-        /// <param name="databaseName">The name of the sister database.</param>
-        /// <returns>An instance of MongoDatabase.</returns>
-        public virtual MongoDatabase GetSisterDatabase(string databaseName)
-        {
-            return _server.GetDatabase(databaseName);
         }
 
         /// <summary>
@@ -732,7 +630,7 @@ namespace MongoDB.Driver
         /// <returns>A CommandResult.</returns>
         public virtual CommandResult RenameCollection(string oldCollectionName, string newCollectionName, bool dropTarget)
         {
-            var adminCredentials = _server.Settings.GetCredentials("admin");
+            var adminCredentials = _session.Server.Settings.GetCredentials("admin");
             return RenameCollection(oldCollectionName, newCollectionName, dropTarget, adminCredentials);
         }
 
@@ -770,7 +668,7 @@ namespace MongoDB.Driver
                 { "to", string.Format("{0}.{1}", _name, newCollectionName) },
                 { "dropTarget", dropTarget, dropTarget } // only added if dropTarget is true
             };
-            var adminDatabase = _server.GetDatabase("admin", adminCredentials);
+            var adminDatabase = _session.GetDatabase("admin", _settings);
             return adminDatabase.RunCommand(command);
         }
 
@@ -786,38 +684,6 @@ namespace MongoDB.Driver
             return RenameCollection(oldCollectionName, newCollectionName, false, adminCredentials); // dropTarget = false
         }
 
-        /// <summary>
-        /// Lets the server know that this thread is done with a series of related operations. Instead of calling this method it is better
-        /// to put the return value of RequestStart in a using statement.
-        /// </summary>
-        public virtual void RequestDone()
-        {
-            _server.RequestDone();
-        }
-
-        /// <summary>
-        /// Lets the server know that this thread is about to begin a series of related operations that must all occur
-        /// on the same connection. The return value of this method implements IDisposable and can be placed in a
-        /// using statement (in which case RequestDone will be called automatically when leaving the using statement).
-        /// </summary>
-        /// <returns>A helper object that implements IDisposable and calls <see cref="RequestDone"/> from the Dispose method.</returns>
-        public virtual IDisposable RequestStart()
-        {
-            return RequestStart(ReadPreference.Primary);
-        }
-
-        /// <summary>
-        /// Lets the server know that this thread is about to begin a series of related operations that must all occur
-        /// on the same connection. The return value of this method implements IDisposable and can be placed in a
-        /// using statement (in which case RequestDone will be called automatically when leaving the using statement).
-        /// </summary>
-        /// <param name="readPreference">The read preference.</param>
-        /// <returns>A helper object that implements IDisposable and calls <see cref="RequestDone"/> from the Dispose method.</returns>
-        public virtual IDisposable RequestStart(ReadPreference readPreference)
-        {
-            return _server.RequestStart(this, readPreference);
-        }
-
         // TODO: mongo shell has ResetError at the database level
 
         /// <summary>
@@ -827,7 +693,7 @@ namespace MongoDB.Driver
         /// </summary>
         public virtual void ResetIndexCache()
         {
-            _server.IndexCache.Reset(this);
+            _session.Server.IndexCache.Reset(this);
         }
 
         /// <summary>

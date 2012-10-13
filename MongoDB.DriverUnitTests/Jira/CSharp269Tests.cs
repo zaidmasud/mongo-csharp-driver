@@ -31,7 +31,6 @@ namespace MongoDB.DriverUnitTests.Jira.CSharp269
     public class CSharp269Tests
     {
         private MongoServer _server;
-        private MongoDatabase _database;
 
         [TestFixtureSetUp]
         public void TestFixtureSetup()
@@ -39,27 +38,36 @@ namespace MongoDB.DriverUnitTests.Jira.CSharp269
             var serverSettings = Configuration.TestServer.Settings.Clone();
             serverSettings.ReadPreference = ReadPreference.SecondaryPreferred;
             _server = MongoServer.Create(serverSettings); // ReadPreference=SecondaryPreferred
-            _database = Configuration.TestDatabase;
-            _database.GridFS.Files.Drop();
-            _database.GridFS.Chunks.Drop();
+
+            using (var session = _server.GetSession())
+            {
+                var database = session.GetDatabase(Configuration.TestDatabaseName);
+                database.GridFS.Files.Drop();
+                database.GridFS.Chunks.Drop();
+            }
         }
 
         [Test]
         public void TestUploadAndDownload()
         {
-            var text = "HelloWorld";
-            var bytes = Encoding.UTF8.GetBytes(text);
-            using (var stream = new MemoryStream(bytes))
+            using (var session = _server.GetSession())
             {
-                _database.GridFS.Upload(stream, "HelloWorld.txt");
-            }
+                var database = session.GetDatabase(Configuration.TestDatabaseName);
 
-            using (var stream = new MemoryStream())
-            {
-                _database.GridFS.Download(stream, "HelloWorld.txt");
-                var downloadedBytes = stream.ToArray();
-                var downloadedText = Encoding.UTF8.GetString(downloadedBytes);
-                Assert.AreEqual("HelloWorld", downloadedText);
+                var text = "HelloWorld";
+                var bytes = Encoding.UTF8.GetBytes(text);
+                using (var stream = new MemoryStream(bytes))
+                {
+                    database.GridFS.Upload(stream, "HelloWorld.txt");
+                }
+
+                using (var stream = new MemoryStream())
+                {
+                    database.GridFS.Download(stream, "HelloWorld.txt");
+                    var downloadedBytes = stream.ToArray();
+                    var downloadedText = Encoding.UTF8.GetString(downloadedBytes);
+                    Assert.AreEqual("HelloWorld", downloadedText);
+                }
             }
         }
     }

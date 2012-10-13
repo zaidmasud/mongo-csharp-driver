@@ -37,39 +37,33 @@ namespace MongoDB.DriverUnitTests.Jira.CSharp215
             public int X;
         }
 
-        private MongoServer _server;
-        private MongoDatabase _database;
-        private MongoCollection<C> _collection;
-
-        [TestFixtureSetUp]
-        public void TestFixtureSetup()
-        {
-            _server = Configuration.TestServer;
-            _database = Configuration.TestDatabase;
-            _collection = Configuration.GetTestCollection<C>();
-        }
-
         [Test]
         public void TestSave()
         {
-            _collection.RemoveAll();
+            using (var session = Configuration.TestServer.GetSession())
+            {
+                var database = session.GetDatabase(Configuration.TestDatabaseName);
+                var collection = database.GetCollection<C>(Configuration.TestCollectionName);
 
-            var doc = new C { X = 1 };
-            _collection.Save(doc);
-            var id = doc.Id;
+                collection.RemoveAll();
 
-            Assert.AreEqual(1, _collection.Count());
-            var fetched = _collection.FindOne();
-            Assert.AreEqual(id, fetched.Id);
-            Assert.AreEqual(1, fetched.X);
+                var doc = new C { X = 1 };
+                collection.Save(doc);
+                var id = doc.Id;
 
-            doc.X = 2;
-            _collection.Save(doc);
+                Assert.AreEqual(1, collection.Count());
+                var fetched = collection.FindOne();
+                Assert.AreEqual(id, fetched.Id);
+                Assert.AreEqual(1, fetched.X);
 
-            Assert.AreEqual(1, _collection.Count());
-            fetched = _collection.FindOne();
-            Assert.AreEqual(id, fetched.Id);
-            Assert.AreEqual(2, fetched.X);
+                doc.X = 2;
+                collection.Save(doc);
+
+                Assert.AreEqual(1, collection.Count());
+                fetched = collection.FindOne();
+                Assert.AreEqual(id, fetched.Id);
+                Assert.AreEqual(2, fetched.X);
+            }
         }
     }
 }

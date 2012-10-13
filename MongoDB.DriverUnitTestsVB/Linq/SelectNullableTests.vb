@@ -66,15 +66,15 @@ Namespace MongoDB.DriverUnitTests.Linq
             Private m_X As System.Nullable(Of Integer)
         End Class
 
-        Private _server As MongoServer
+        Private _session As MongoSession
         Private _database As MongoDatabase
         Private _collection As MongoCollection(Of C)
 
         <TestFixtureSetUp()> _
         Public Sub Setup()
-            _server = Configuration.TestServer
-            _database = Configuration.TestDatabase
-            _collection = Configuration.GetTestCollection(Of C)()
+            _session = Configuration.TestServer.GetSession()
+            _database = _session.GetDatabase(Configuration.TestDatabaseName)
+            _collection = _database.GetCollection(Of C)(Configuration.TestCollectionName)
 
             _collection.Drop()
             _collection.Insert(New C() With { _
@@ -95,6 +95,11 @@ Namespace MongoDB.DriverUnitTests.Linq
             _collection.Insert(New C() With { _
                 .X = 2 _
             })
+        End Sub
+
+        <TestFixtureTearDown()>
+        Public Sub TearDown()
+            _session.Dispose()
         End Sub
 
         <Test()> _

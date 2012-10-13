@@ -259,49 +259,46 @@ namespace MongoDB.Driver.GridFS
                 throw new MongoGridFSException("VerifyMD5 is true and file being downloaded has no MD5 hash.");
             }
 
-            using (_database.RequestStart(_database.Settings.ReadPreference))
+            string md5Client = null;
+            using (var md5Algorithm = _settings.VerifyMD5 ? MD5.Create() : null)
             {
-                string md5Client = null;
-                using (var md5Algorithm = _settings.VerifyMD5 ? MD5.Create() : null)
+                var numberOfChunks = (fileInfo.Length + fileInfo.ChunkSize - 1) / fileInfo.ChunkSize;
+                for (var n = 0L; n < numberOfChunks; n++)
                 {
-                    var numberOfChunks = (fileInfo.Length + fileInfo.ChunkSize - 1) / fileInfo.ChunkSize;
-                    for (var n = 0L; n < numberOfChunks; n++)
+                    var query = Query.And(Query.EQ("files_id", fileInfo.Id), Query.EQ("n", n));
+                    var chunk = _chunks.FindOne(query);
+                    if (chunk == null)
                     {
-                        var query = Query.And(Query.EQ("files_id", fileInfo.Id), Query.EQ("n", n));
-                        var chunk = _chunks.FindOne(query);
-                        if (chunk == null)
+                        string errorMessage = string.Format("Chunk {0} missing for GridFS file '{1}'.", n, fileInfo.Name);
+                        throw new MongoGridFSException(errorMessage);
+                    }
+                    var data = chunk["data"].AsBsonBinaryData;
+                    if (data.Bytes.Length != fileInfo.ChunkSize)
+                    {
+                        // the last chunk only has as many bytes as needed to complete the file
+                        if (n < numberOfChunks - 1 || data.Bytes.Length != fileInfo.Length % fileInfo.ChunkSize)
                         {
-                            string errorMessage = string.Format("Chunk {0} missing for GridFS file '{1}'.", n, fileInfo.Name);
+                            string errorMessage = string.Format("Chunk {0} for GridFS file '{1}' is the wrong size.", n, fileInfo.Name);
                             throw new MongoGridFSException(errorMessage);
                         }
-                        var data = chunk["data"].AsBsonBinaryData;
-                        if (data.Bytes.Length != fileInfo.ChunkSize)
-                        {
-                            // the last chunk only has as many bytes as needed to complete the file
-                            if (n < numberOfChunks - 1 || data.Bytes.Length != fileInfo.Length % fileInfo.ChunkSize)
-                            {
-                                string errorMessage = string.Format("Chunk {0} for GridFS file '{1}' is the wrong size.", n, fileInfo.Name);
-                                throw new MongoGridFSException(errorMessage);
-                            }
-                        }
-                        stream.Write(data.Bytes, 0, data.Bytes.Length);
-                        if (_settings.VerifyMD5)
-                        {
-                            md5Algorithm.TransformBlock(data.Bytes, 0, data.Bytes.Length, null, 0);
-                        }
                     }
-
+                    stream.Write(data.Bytes, 0, data.Bytes.Length);
                     if (_settings.VerifyMD5)
                     {
-                        md5Algorithm.TransformFinalBlock(new byte[0], 0, 0);
-                        md5Client = BsonUtils.ToHexString(md5Algorithm.Hash);
+                        md5Algorithm.TransformBlock(data.Bytes, 0, data.Bytes.Length, null, 0);
                     }
                 }
 
-                if (_settings.VerifyMD5 && !md5Client.Equals(fileInfo.MD5, StringComparison.OrdinalIgnoreCase))
+                if (_settings.VerifyMD5)
                 {
-                    throw new MongoGridFSException("Download client and server MD5 hashes are not equal.");
+                    md5Algorithm.TransformFinalBlock(new byte[0], 0, 0);
+                    md5Client = BsonUtils.ToHexString(md5Algorithm.Hash);
                 }
+            }
+
+            if (_settings.VerifyMD5 && !md5Client.Equals(fileInfo.MD5, StringComparison.OrdinalIgnoreCase))
+            {
+                throw new MongoGridFSException("Download client and server MD5 hashes are not equal.");
             }
         }
 
@@ -426,7 +423,7 @@ namespace MongoDB.Driver.GridFS
             // 2. we might be authenticating as a read-only uaser
 
             // avoid round trip to count files if possible
-            var indexCache = _database.Server.IndexCache;
+            var indexCache = _database.Session.Server.IndexCache;
             if (indexCache.Contains(_files, "filename_1_uploadDate_1") &&
                 indexCache.Contains(_chunks, "files_id_1_n_1"))
             {
@@ -756,93 +753,91 @@ namespace MongoDB.Driver.GridFS
             string remoteFileName,
             MongoGridFSCreateOptions createOptions)
         {
-            using (_database.RequestStart(ReadPreference.Primary))
+            EnsureIndexes();
+
+            var files_id = createOptions.Id ?? ObjectId.GenerateNewId();
+            var chunkSize = createOptions.ChunkSize == 0 ? _settings.ChunkSize : createOptions.ChunkSize;
+            var buffer = new byte[chunkSize];
+
+            var length = 0L;
+            string md5Client = null;
+            using (var md5Algorithm = _settings.VerifyMD5 ? MD5.Create() : null)
             {
-                EnsureIndexes();
-
-                var files_id = createOptions.Id ?? ObjectId.GenerateNewId();
-                var chunkSize = createOptions.ChunkSize == 0 ? _settings.ChunkSize : createOptions.ChunkSize;
-                var buffer = new byte[chunkSize];
-
-                var length = 0L;
-                string md5Client = null;
-                using (var md5Algorithm = _settings.VerifyMD5 ? MD5.Create() : null)
+                for (var n = 0L; true; n++)
                 {
-                    for (var n = 0L; true; n++)
+                    // might have to call Stream.Read several times to get a whole chunk
+                    var bytesNeeded = chunkSize;
+                    var bytesRead = 0;
+                    while (bytesNeeded > 0)
                     {
-                        // might have to call Stream.Read several times to get a whole chunk
-                        var bytesNeeded = chunkSize;
-                        var bytesRead = 0;
-                        while (bytesNeeded > 0)
+                        var partialRead = stream.Read(buffer, bytesRead, bytesNeeded);
+                        if (partialRead == 0)
                         {
-                            var partialRead = stream.Read(buffer, bytesRead, bytesNeeded);
-                            if (partialRead == 0)
-                            {
-                                break; // EOF may or may not have a partial chunk
-                            }
-                            bytesNeeded -= partialRead;
-                            bytesRead += partialRead;
+                            break; // EOF may or may not have a partial chunk
                         }
-                        if (bytesRead == 0)
-                        {
-                            break; // EOF no partial chunk
-                        }
-                        length += bytesRead;
+                        bytesNeeded -= partialRead;
+                        bytesRead += partialRead;
+                    }
+                    if (bytesRead == 0)
+                    {
+                        break; // EOF no partial chunk
+                    }
+                    length += bytesRead;
 
-                        byte[] data = buffer;
-                        if (bytesRead < chunkSize)
-                        {
-                            data = new byte[bytesRead];
-                            Buffer.BlockCopy(buffer, 0, data, 0, bytesRead);
-                        }
+                    byte[] data = buffer;
+                    if (bytesRead < chunkSize)
+                    {
+                        data = new byte[bytesRead];
+                        Buffer.BlockCopy(buffer, 0, data, 0, bytesRead);
+                    }
 
-                        var chunk = new BsonDocument
+                    var chunk = new BsonDocument
                         {
                             { "_id", ObjectId.GenerateNewId() },
                             { "files_id", files_id },
                             { "n", (n < int.MaxValue) ? (BsonValue)new BsonInt32((int)n) : new BsonInt64(n) },
                             { "data", new BsonBinaryData(data) }
                         };
-                        _chunks.Insert(chunk, _settings.SafeMode);
-
-                        if (_settings.VerifyMD5)
-                        {
-                            md5Algorithm.TransformBlock(data, 0, data.Length, null, 0);
-                        }
-
-                        if (bytesRead < chunkSize)
-                        {
-                            break; // EOF after partial chunk
-                        }
-                    }
+                    _chunks.Insert(chunk, _settings.SafeMode);
 
                     if (_settings.VerifyMD5)
                     {
-                        md5Algorithm.TransformFinalBlock(new byte[0], 0, 0);
-                        md5Client = BsonUtils.ToHexString(md5Algorithm.Hash);
+                        md5Algorithm.TransformBlock(data, 0, data.Length, null, 0);
+                    }
+
+                    if (bytesRead < chunkSize)
+                    {
+                        break; // EOF after partial chunk
                     }
                 }
 
-                string md5Server = null;
-                if (_settings.UpdateMD5 || _settings.VerifyMD5)
+                if (_settings.VerifyMD5)
                 {
-                    var md5Command = new CommandDocument
+                    md5Algorithm.TransformFinalBlock(new byte[0], 0, 0);
+                    md5Client = BsonUtils.ToHexString(md5Algorithm.Hash);
+                }
+            }
+
+            string md5Server = null;
+            if (_settings.UpdateMD5 || _settings.VerifyMD5)
+            {
+                var md5Command = new CommandDocument
                     {
                         { "filemd5", files_id },
                         { "root", _settings.Root }
                     };
-                    var md5Result = _database.RunCommand(md5Command);
-                    md5Server = md5Result.Response["md5"].AsString;
-                }
+                var md5Result = _database.RunCommand(md5Command);
+                md5Server = md5Result.Response["md5"].AsString;
+            }
 
-                if ( _settings.VerifyMD5 && !md5Client.Equals(md5Server, StringComparison.OrdinalIgnoreCase))
-                {
-                    throw new MongoGridFSException("Upload client and server MD5 hashes are not equal.");
-                }
+            if (_settings.VerifyMD5 && !md5Client.Equals(md5Server, StringComparison.OrdinalIgnoreCase))
+            {
+                throw new MongoGridFSException("Upload client and server MD5 hashes are not equal.");
+            }
 
-                var uploadDate = (createOptions.UploadDate == DateTime.MinValue) ? DateTime.UtcNow : createOptions.UploadDate;
-                var aliases = (createOptions.Aliases != null) ? new BsonArray(createOptions.Aliases) : null;
-                BsonDocument fileInfo = new BsonDocument
+            var uploadDate = (createOptions.UploadDate == DateTime.MinValue) ? DateTime.UtcNow : createOptions.UploadDate;
+            var aliases = (createOptions.Aliases != null) ? new BsonArray(createOptions.Aliases) : null;
+            BsonDocument fileInfo = new BsonDocument
                 {
                     { "_id", files_id },
                     { "filename", remoteFileName, !string.IsNullOrEmpty(remoteFileName) }, // optional
@@ -854,10 +849,9 @@ namespace MongoDB.Driver.GridFS
                     { "aliases", aliases, aliases != null }, // optional
                     { "metadata", createOptions.Metadata, createOptions.Metadata != null } // optional
                 };
-                _files.Insert(fileInfo, _settings.SafeMode);
+            _files.Insert(fileInfo, _settings.SafeMode);
 
-                return FindOneById(files_id);
-            }
+            return FindOneById(files_id);
         }
 
         /// <summary>

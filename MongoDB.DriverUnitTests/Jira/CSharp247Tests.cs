@@ -39,32 +39,26 @@ namespace MongoDB.DriverUnitTests.Jira.CSharp247
             public int X { get; set; }
         }
 
-        private MongoServer _server;
-        private MongoDatabase _database;
-        private MongoCollection<BsonDocument> _collection;
-
-        [TestFixtureSetUp]
-        public void TestFixtureSetup()
-        {
-            _server = Configuration.TestServer;
-            _database = Configuration.TestDatabase;
-            _collection = Configuration.TestCollection;
-        }
-
         [Test]
         public void TestDeserializeInterface()
         {
-            _collection.RemoveAll();
+            using (var session = Configuration.TestServer.GetSession())
+            {
+                var database = session.GetDatabase(Configuration.TestDatabaseName);
+                var collection = database.GetCollection(Configuration.TestCollectionName);
 
-            var c = new C { X = 1 };
-            _collection.Insert<I>(c);
-            var id = c.Id;
+                collection.RemoveAll();
 
-            var i = _collection.FindOneAs<I>();
-            Assert.IsInstanceOf<C>(i);
-            var r = (C)i;
-            Assert.AreEqual(id, r.Id);
-            Assert.AreEqual(1, r.X);
+                var c = new C { X = 1 };
+                collection.Insert<I>(c);
+                var id = c.Id;
+
+                var i = collection.FindOneAs<I>();
+                Assert.IsInstanceOf<C>(i);
+                var r = (C)i;
+                Assert.AreEqual(id, r.Id);
+                Assert.AreEqual(1, r.X);
+            }
         }
     }
 }

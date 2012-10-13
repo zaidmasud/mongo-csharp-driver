@@ -58,64 +58,61 @@ namespace MongoDB.DriverUnitTests.Jira.CSharp378
             }
         }
 
-        private MongoServer _server;
-        private MongoDatabase _database;
-        private MongoCollection<C> _collection;
-
-        [TestFixtureSetUp]
-        public void TestFixtureSetup()
-        {
-            _server = Configuration.TestServer;
-            _database = Configuration.TestDatabase;
-            _collection = Configuration.GetTestCollection<C>();
-        }
-
         [Test]
         public void TestSaveC()
         {
-            _collection.Drop();
+            using (var session = Configuration.TestServer.GetSession())
+            {
+                var database = session.GetDatabase(Configuration.TestDatabaseName);
+                var collection = database.GetCollection<C>(Configuration.TestCollectionName);
+                collection.Drop();
 
-            var doc = new C { Id = ObjectId.GenerateNewId().ToString(), X = 1 };
-            _collection.Insert(doc);
-            var id = doc.Id;
+                var doc = new C { Id = ObjectId.GenerateNewId().ToString(), X = 1 };
+                collection.Insert(doc);
+                var id = doc.Id;
 
-            Assert.AreEqual(1, _collection.Count());
-            var fetched = _collection.FindOne();
-            Assert.AreEqual(id, fetched.Id);
-            Assert.AreEqual(1, fetched.X);
+                Assert.AreEqual(1, collection.Count());
+                var fetched = collection.FindOne();
+                Assert.AreEqual(id, fetched.Id);
+                Assert.AreEqual(1, fetched.X);
 
-            doc.X = 2;
-            _collection.Save(doc);
+                doc.X = 2;
+                collection.Save(doc);
 
-            Assert.AreEqual(1, _collection.Count());
-            fetched = _collection.FindOne();
-            Assert.AreEqual(id, fetched.Id);
-            Assert.AreEqual(2, fetched.X);
+                Assert.AreEqual(1, collection.Count());
+                fetched = collection.FindOne();
+                Assert.AreEqual(id, fetched.Id);
+                Assert.AreEqual(2, fetched.X);
+            }
         }
 
         [Test]
         public void TestSaveD()
         {
-            var collectionSettings = new MongoCollectionSettings { GuidRepresentation = GuidRepresentation.Standard };
-            var collection = _database.GetCollection<D>("test", collectionSettings);
-            collection.Drop();
+            using (var session = Configuration.TestServer.GetSession())
+            {
+                var database = session.GetDatabase(Configuration.TestDatabaseName);
+                var collectionSettings = new MongoCollectionSettings { GuidRepresentation = GuidRepresentation.Standard };
+                var collection = database.GetCollection<D>("test", collectionSettings);
+                collection.Drop();
 
-            var id = new Guid("00112233-4455-6677-8899-aabbccddeeff");
-            var doc = new D { Id = id, X = 1 };
-            collection.Insert(doc);
+                var id = new Guid("00112233-4455-6677-8899-aabbccddeeff");
+                var doc = new D { Id = id, X = 1 };
+                collection.Insert(doc);
 
-            Assert.AreEqual(1, collection.Count());
-            var fetched = collection.FindOne();
-            Assert.AreEqual(id, fetched.Id);
-            Assert.AreEqual(1, fetched.X);
+                Assert.AreEqual(1, collection.Count());
+                var fetched = collection.FindOne();
+                Assert.AreEqual(id, fetched.Id);
+                Assert.AreEqual(1, fetched.X);
 
-            doc.X = 2;
-            collection.Save(doc);
+                doc.X = 2;
+                collection.Save(doc);
 
-            Assert.AreEqual(1, collection.Count());
-            fetched = collection.FindOne();
-            Assert.AreEqual(id, fetched.Id);
-            Assert.AreEqual(2, fetched.X);
+                Assert.AreEqual(1, collection.Count());
+                fetched = collection.FindOne();
+                Assert.AreEqual(id, fetched.Id);
+                Assert.AreEqual(2, fetched.X);
+            }
         }
     }
 }

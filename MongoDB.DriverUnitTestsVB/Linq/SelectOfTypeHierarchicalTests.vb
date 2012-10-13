@@ -43,15 +43,15 @@ Namespace MongoDB.DriverUnitTests.Linq
             Public d As Integer
         End Class
 
-        Private _server As MongoServer
+        Private _session As MongoSession
         Private _database As MongoDatabase
         Private _collection As MongoCollection(Of B)
 
         <TestFixtureSetUp()> _
         Public Sub Setup()
-            _server = Configuration.TestServer
-            _database = Configuration.TestDatabase
-            _collection = Configuration.GetTestCollection(Of B)()
+            _session = Configuration.TestServer.GetSession()
+            _database = _session.GetDatabase(Configuration.TestDatabaseName)
+            _collection = _database.GetCollection(Of B)(Configuration.TestCollectionName)
 
             _collection.Drop()
             _collection.Insert(New B() With
@@ -72,6 +72,11 @@ Namespace MongoDB.DriverUnitTests.Linq
                  .c = 3,
                  .d = 3
             })
+        End Sub
+
+        <TestFixtureTearDown()>
+        Public Sub TearDown()
+            _session.Dispose()
         End Sub
 
         <Test()> _
@@ -251,7 +256,7 @@ Namespace MongoDB.DriverUnitTests.Linq
 
         <Test()> _
         Public Sub TestWhereBTypeEqualsB()
-            If _server.BuildInfo.Version >= New Version(2, 0) Then
+            If _session.ServerInstance.BuildInfo.Version >= New Version(2, 0) Then
                 Dim query = From b In _collection.AsQueryable(Of B)()
                             Where b.GetType().Equals(GetType(B))
                             Select b

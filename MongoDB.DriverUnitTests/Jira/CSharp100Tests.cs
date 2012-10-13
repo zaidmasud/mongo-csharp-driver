@@ -54,20 +54,23 @@ namespace MongoDB.DriverUnitTests.Jira.CSharp100
         public void TestDeserializationOfTwoBs()
         {
             var server = Configuration.TestServer;
-            var database = Configuration.TestDatabase;
-            var collection = Configuration.TestCollection;
+            using (var session = server.GetSession())
+            {
+                var database = session.GetDatabase(Configuration.TestDatabaseName);
+                var collection = database.GetCollection(Configuration.TestCollectionName);
 
-            collection.RemoveAll();
-            var obj = new ChildClass { SomeProperty = null };
-            collection.Save(obj, SafeMode.True);
-            obj = new ChildClass { SomeProperty = new List<SomeClass>() };
-            collection.Save(obj, SafeMode.True);
-            obj = new ChildClass { SomeProperty = new List<SomeClass> { new SomeClass() } };
-            collection.Save(obj, SafeMode.True);
-            obj = new ChildClass { SomeProperty = new List<SomeClass> { new SomeClass(), new SomeClass() } };
-            collection.Save(obj, SafeMode.True);
-            obj = new ChildClass { SomeProperty = new[] { new SomeClass(), new SomeClass() } };
-            collection.Save(obj, SafeMode.True);
+                collection.RemoveAll();
+                var obj = new ChildClass { SomeProperty = null };
+                collection.Save(obj, SafeMode.True);
+                obj = new ChildClass { SomeProperty = new List<SomeClass>() };
+                collection.Save(obj, SafeMode.True);
+                obj = new ChildClass { SomeProperty = new List<SomeClass> { new SomeClass() } };
+                collection.Save(obj, SafeMode.True);
+                obj = new ChildClass { SomeProperty = new List<SomeClass> { new SomeClass(), new SomeClass() } };
+                collection.Save(obj, SafeMode.True);
+                obj = new ChildClass { SomeProperty = new[] { new SomeClass(), new SomeClass() } };
+                collection.Save(obj, SafeMode.True);
+            }
         }
     }
 }

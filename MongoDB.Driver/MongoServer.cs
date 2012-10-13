@@ -42,8 +42,8 @@ namespace MongoDB.Driver
         private readonly object _serverLock = new object();
         private readonly IMongoServerProxy _serverProxy;
         private readonly MongoServerSettings _settings;
-        private readonly Dictionary<int, Request> _requests = new Dictionary<int, Request>(); // tracks threads that have called RequestStart
         private readonly IndexCache _indexCache = new IndexCache();
+
         private int _sequentialId;
 
         // static constructor
@@ -189,14 +189,6 @@ namespace MongoDB.Driver
         }
 
         /// <summary>
-        /// Gets the build info of the server.
-        /// </summary>
-        public virtual MongoServerBuildInfo BuildInfo
-        {
-            get { return _serverProxy.BuildInfo; }
-        }
-
-        /// <summary>
         /// Gets the most recent connection attempt number.
         /// </summary>
         public virtual int ConnectionAttempt
@@ -281,52 +273,6 @@ namespace MongoDB.Driver
         }
 
         /// <summary>
-        /// Gets the connection reserved by the current RequestStart scope (null if not in the scope of a RequestStart).
-        /// </summary>
-        public virtual MongoConnection RequestConnection
-        {
-            get
-            {
-                lock (_serverLock)
-                {
-                    int threadId = Thread.CurrentThread.ManagedThreadId;
-                    Request request;
-                    if (_requests.TryGetValue(threadId, out request))
-                    {
-                        return request.Connection;
-                    }
-                    else
-                    {
-                        return null;
-                    }
-                }
-            }
-        }
-
-        /// <summary>
-        /// Gets the RequestStart nesting level for the current thread.
-        /// </summary>
-        public virtual int RequestNestingLevel
-        {
-            get
-            {
-                lock (_serverLock)
-                {
-                    int threadId = Thread.CurrentThread.ManagedThreadId;
-                    Request request;
-                    if (_requests.TryGetValue(threadId, out request))
-                    {
-                        return request.NestingLevel;
-                    }
-                    else
-                    {
-                        return 0;
-                    }
-                }
-            }
-        }
-
-        /// <summary>
         /// Gets the secondary instances.
         /// </summary>
         public virtual MongoServerInstance[] Secondaries
@@ -359,67 +305,6 @@ namespace MongoDB.Driver
         public virtual MongoServerState State
         {
             get { return _serverProxy.State; }
-        }
-
-        // public indexers
-        /// <summary>
-        /// Gets a MongoDatabase instance representing a database on this server. Only one instance
-        /// is created for each combination of database settings.
-        /// </summary>
-        /// <param name="databaseName">The name of the database.</param>
-        /// <returns>A new or existing instance of MongoDatabase.</returns>
-        public virtual MongoDatabase this[string databaseName]
-        {
-            get { return GetDatabase(databaseName); }
-        }
-
-        /// <summary>
-        /// Gets a MongoDatabase instance representing a database on this server. Only one instance
-        /// is created for each combination of database settings.
-        /// </summary>
-        /// <param name="databaseName">The name of the database.</param>
-        /// <param name="credentials">The credentials to use with this database (null if none).</param>
-        /// <returns>A new or existing instance of MongoDatabase.</returns>
-        public virtual MongoDatabase this[string databaseName, MongoCredentials credentials]
-        {
-            get { return GetDatabase(databaseName, credentials); }
-        }
-
-        /// <summary>
-        /// Gets a MongoDatabase instance representing a database on this server. Only one instance
-        /// is created for each combination of database settings.
-        /// </summary>
-        /// <param name="databaseName">The name of the database.</param>
-        /// <param name="databaseSettings">The settings to use with this database.</param>
-        /// <returns>A new or existing instance of MongoDatabase.</returns>
-        public virtual MongoDatabase this[string databaseName, MongoDatabaseSettings databaseSettings]
-        {
-            get { return GetDatabase(databaseName, databaseSettings); }
-        }
-
-        /// <summary>
-        /// Gets a MongoDatabase instance representing a database on this server. Only one instance
-        /// is created for each combination of database settings.
-        /// </summary>
-        /// <param name="databaseName">The name of the database.</param>
-        /// <param name="credentials">The credentials to use with this database (null if none).</param>
-        /// <param name="safeMode">The safe mode to use with this database.</param>
-        /// <returns>A new or existing instance of MongoDatabase.</returns>
-        public virtual MongoDatabase this[string databaseName, MongoCredentials credentials, SafeMode safeMode]
-        {
-            get { return GetDatabase(databaseName, credentials, safeMode); }
-        }
-
-        /// <summary>
-        /// Gets a MongoDatabase instance representing a database on this server. Only one instance
-        /// is created for each combination of database settings.
-        /// </summary>
-        /// <param name="databaseName">The name of the database.</param>
-        /// <param name="safeMode">The safe mode to use with this database.</param>
-        /// <returns>A new or existing instance of MongoDatabase.</returns>
-        public virtual MongoDatabase this[string databaseName, SafeMode safeMode]
-        {
-            get { return GetDatabase(databaseName, safeMode); }
         }
 
         // public static methods
@@ -496,29 +381,6 @@ namespace MongoDB.Driver
         }
 
         /// <summary>
-        /// Tests whether a database exists.
-        /// </summary>
-        /// <param name="databaseName">The name of the database.</param>
-        /// <returns>True if the database exists.</returns>
-        public virtual bool DatabaseExists(string databaseName)
-        {
-            var adminCredentials = _settings.GetCredentials("admin");
-            return DatabaseExists(databaseName, adminCredentials);
-        }
-
-        /// <summary>
-        /// Tests whether a database exists.
-        /// </summary>
-        /// <param name="databaseName">The name of the database.</param>
-        /// <param name="adminCredentials">Credentials for the admin database.</param>
-        /// <returns>True if the database exists.</returns>
-        public virtual bool DatabaseExists(string databaseName, MongoCredentials adminCredentials)
-        {
-            var databaseNames = GetDatabaseNames(adminCredentials);
-            return databaseNames.Contains(databaseName);
-        }
-
-        /// <summary>
         /// Disconnects from the server. Normally there is no need to call this method so
         /// you should be sure to have a good reason to call it.
         /// </summary>
@@ -528,204 +390,83 @@ namespace MongoDB.Driver
         }
 
         /// <summary>
-        /// Drops a database.
+        /// Gets a session to access a server instance.
         /// </summary>
-        /// <param name="databaseName">The name of the database to be dropped.</param>
-        /// <returns>A <see cref="CommandResult"/>.</returns>
-        public virtual CommandResult DropDatabase(string databaseName)
+        /// <returns>A MongoSession.</returns>
+        public MongoSession GetSession()
+        {
+            return GetSession(ReadPreference.Primary, null, null);
+        }
+
+        /// <summary>
+        /// Gets a session to access a server instance.
+        /// </summary>
+        /// <param name="serverInstance">The server instance.</param>
+        /// <returns>A MongoSession.</returns>
+        public MongoSession GetSession(MongoServerInstance serverInstance)
+        {
+            return GetSession(serverInstance, null, null);
+        }
+
+        /// <summary>
+        /// Gets a session to access a server instance.
+        /// </summary>
+        /// <param name="serverInstance">The server instance.</param>
+        /// <param name="databaseName">The name of the initial database.</param>
+        /// <returns>A MongoSession.</returns>
+        public MongoSession GetSession(MongoServerInstance serverInstance, string databaseName)
         {
             var credentials = _settings.GetCredentials(databaseName);
-            return DropDatabase(databaseName, credentials);
+            return GetSession(serverInstance, databaseName, credentials);
         }
 
         /// <summary>
-        /// Drops a database.
+        /// Gets a session to access a server instance.
         /// </summary>
-        /// <param name="databaseName">The name of the database to be dropped.</param>
-        /// <param name="credentials">Credentials for the database to be dropped or admin credentials (null if none).</param>
-        /// <returns>A <see cref="CommandResult"/>.</returns>
-        public virtual CommandResult DropDatabase(string databaseName, MongoCredentials credentials)
+        /// <param name="serverInstance">The server instance.</param>
+        /// <param name="databaseName">The name of the initial database.</param>
+        /// <param name="credentials">The credentials for the initial database.</param>
+        /// <returns>A MongoSession.</returns>
+        public MongoSession GetSession(MongoServerInstance serverInstance, string databaseName, MongoCredentials credentials)
         {
-            MongoDatabase database = GetDatabase(databaseName, credentials);
-            var command = new CommandDocument("dropDatabase", 1);
-            var result = database.RunCommand(command);
-            _indexCache.Reset(databaseName);
-            return result;
+            var connection = serverInstance.AcquireConnection(databaseName, credentials);
+            return new MongoSession(this, serverInstance, connection, ReadPreference.Primary);
         }
 
         /// <summary>
-        /// Fetches the document referred to by the DBRef.
+        /// Gets a session to access a server instance chosen according to the read preference.
         /// </summary>
-        /// <param name="dbRef">The <see cref="MongoDBRef"/> to fetch.</param>
-        /// <returns>A BsonDocument (or null if the document was not found).</returns>
-        public virtual BsonDocument FetchDBRef(MongoDBRef dbRef)
+        /// <param name="readPreference">The read preference.</param>
+        /// <returns>A MongoSession.</returns>
+        public MongoSession GetSession(ReadPreference readPreference)
         {
-            return FetchDBRefAs<BsonDocument>(dbRef);
+            return GetSession(readPreference, null, null);
         }
 
         /// <summary>
-        /// Fetches the document referred to by the DBRef, deserialized as a <typeparamref name="TDocument"/>.
+        /// Gets a session to access a server instance chosen according to the read preference.
         /// </summary>
-        /// <typeparam name="TDocument">The nominal type of the document to fetch.</typeparam>
-        /// <param name="dbRef">The <see cref="MongoDBRef"/> to fetch.</param>
-        /// <returns>A <typeparamref name="TDocument"/> (or null if the document was not found).</returns>
-        public virtual TDocument FetchDBRefAs<TDocument>(MongoDBRef dbRef)
+        /// <param name="readPreference">The read preference.</param>
+        /// <param name="databaseName">The name of the initial database.</param>
+        /// <returns>A MongoSession.</returns>
+        public MongoSession GetSession(ReadPreference readPreference, string databaseName)
         {
-            return (TDocument)FetchDBRefAs(typeof(TDocument), dbRef);
+            var credentials = _settings.GetCredentials(databaseName);
+            return GetSession(readPreference, databaseName, credentials);
         }
 
         /// <summary>
-        /// Fetches the document referred to by the DBRef.
+        /// Gets a session to access a server instance chosen according to the read preference.
         /// </summary>
-        /// <param name="documentType">The nominal type of the document to fetch.</param>
-        /// <param name="dbRef">The <see cref="MongoDBRef"/> to fetch.</param>
-        /// <returns>The document (or null if the document was not found).</returns>
-        public virtual object FetchDBRefAs(Type documentType, MongoDBRef dbRef)
+        /// <param name="readPreference">The read preference.</param>
+        /// <param name="databaseName">The name of the initial database.</param>
+        /// <param name="credentials">The credentials for the initial database.</param>
+        /// <returns>A MongoSession.</returns>
+        public MongoSession GetSession(ReadPreference readPreference, string databaseName, MongoCredentials credentials)
         {
-            if (dbRef.DatabaseName == null)
-            {
-                throw new ArgumentException("MongoDBRef DatabaseName missing.");
-            }
-
-            var database = GetDatabase(dbRef.DatabaseName);
-            return database.FetchDBRefAs(documentType, dbRef);
-        }
-
-        /// <summary>
-        /// Gets a MongoDatabase instance representing a database on this server. Only one instance
-        /// is created for each combination of database settings.
-        /// </summary>
-        /// <param name="databaseName">The name of the database.</param>
-        /// <param name="databaseSettings">The settings to use with this database.</param>
-        /// <returns>A new or existing instance of MongoDatabase.</returns>
-        public virtual MongoDatabase GetDatabase(string databaseName, MongoDatabaseSettings databaseSettings)
-        {
-            if (databaseName == null)
-            {
-                throw new ArgumentNullException("databaseName");
-            }
-            if (databaseSettings == null)
-            {
-                throw new ArgumentNullException("databaseSettings");
-            }
-            return new MongoDatabase(this, databaseName, databaseSettings);
-        }
-
-        /// <summary>
-        /// Gets a MongoDatabase instance representing a database on this server. Only one instance
-        /// is created for each combination of database settings.
-        /// </summary>
-        /// <param name="databaseName">The name of the database.</param>
-        /// <returns>A new or existing instance of MongoDatabase.</returns>
-        public virtual MongoDatabase GetDatabase(string databaseName)
-        {
-            var databaseSettings = new MongoDatabaseSettings();
-            return GetDatabase(databaseName, databaseSettings);
-        }
-
-        /// <summary>
-        /// Gets a MongoDatabase instance representing a database on this server. Only one instance
-        /// is created for each combination of database settings.
-        /// </summary>
-        /// <param name="databaseName">The name of the database.</param>
-        /// <param name="credentials">The credentials to use with this database (null if none).</param>
-        /// <returns>A new or existing instance of MongoDatabase.</returns>
-        public virtual MongoDatabase GetDatabase(string databaseName, MongoCredentials credentials)
-        {
-            var databaseSettings = new MongoDatabaseSettings { Credentials = credentials };
-            return GetDatabase(databaseName, databaseSettings);
-        }
-
-        /// <summary>
-        /// Gets a MongoDatabase instance representing a database on this server. Only one instance
-        /// is created for each combination of database settings.
-        /// </summary>
-        /// <param name="databaseName">The name of the database.</param>
-        /// <param name="credentials">The credentials to use with this database (null if none).</param>
-        /// <param name="safeMode">The safe mode to use with this database.</param>
-        /// <returns>A new or existing instance of MongoDatabase.</returns>
-        public virtual MongoDatabase GetDatabase(
-            string databaseName,
-            MongoCredentials credentials,
-            SafeMode safeMode)
-        {
-            if (safeMode == null)
-            {
-                throw new ArgumentNullException("safeMode");
-            }
-            var databaseSettings = new MongoDatabaseSettings
-            {
-                Credentials = credentials,
-                SafeMode = safeMode
-            };
-            return GetDatabase(databaseName, databaseSettings);
-        }
-
-        /// <summary>
-        /// Gets a MongoDatabase instance representing a database on this server. Only one instance
-        /// is created for each combination of database settings.
-        /// </summary>
-        /// <param name="databaseName">The name of the database.</param>
-        /// <param name="safeMode">The safe mode to use with this database.</param>
-        /// <returns>A new or existing instance of MongoDatabase.</returns>
-        public virtual MongoDatabase GetDatabase(string databaseName, SafeMode safeMode)
-        {
-            if (safeMode == null)
-            {
-                throw new ArgumentNullException("safeMode");
-            }
-            var databaseSettings = new MongoDatabaseSettings { SafeMode = safeMode };
-            return GetDatabase(databaseName, databaseSettings);
-        }
-
-        /// <summary>
-        /// Gets the names of the databases on this server.
-        /// </summary>
-        /// <returns>A list of database names.</returns>
-        public virtual IEnumerable<string> GetDatabaseNames()
-        {
-            var adminCredentials = _settings.GetCredentials("admin");
-            return GetDatabaseNames(adminCredentials);
-        }
-
-        /// <summary>
-        /// Gets the names of the databases on this server.
-        /// </summary>
-        /// <param name="adminCredentials">Credentials for the admin database.</param>
-        /// <returns>A list of database names.</returns>
-        public virtual IEnumerable<string> GetDatabaseNames(MongoCredentials adminCredentials)
-        {
-            var adminDatabase = GetDatabase("admin", adminCredentials);
-            var result = adminDatabase.RunCommand("listDatabases");
-            var databaseNames = new List<string>();
-            foreach (BsonDocument database in result.Response["databases"].AsBsonArray.Values)
-            {
-                string databaseName = database["name"].AsString;
-                databaseNames.Add(databaseName);
-            }
-            databaseNames.Sort();
-            return databaseNames;
-        }
-
-        /// <summary>
-        /// Gets the last error (if any) that occurred on this connection. You MUST be within a RequestStart to call this method.
-        /// </summary>
-        /// <returns>The last error (<see cref=" GetLastErrorResult"/>)</returns>
-        public virtual GetLastErrorResult GetLastError()
-        {
-            var adminCredentials = _settings.GetCredentials("admin");
-            return GetLastError(adminCredentials);
-        }
-
-        /// <summary>
-        /// Gets the last error (if any) that occurred on this connection. You MUST be within a RequestStart to call this method.
-        /// </summary>
-        /// <param name="adminCredentials">Credentials for the admin database.</param>
-        /// <returns>The last error (<see cref=" GetLastErrorResult"/>)</returns>
-        public virtual GetLastErrorResult GetLastError(MongoCredentials adminCredentials)
-        {
-            var adminDatabase = GetDatabase("admin", adminCredentials);
-            return adminDatabase.GetLastError();
+            var serverInstance = _serverProxy.ChooseServerInstance(readPreference);
+            var connection = serverInstance.AcquireConnection(databaseName, credentials);
+            return new MongoSession(this, serverInstance, connection, readPreference);
         }
 
         /// <summary>
@@ -791,124 +532,6 @@ namespace MongoDB.Driver
         }
 
         /// <summary>
-        /// Lets the server know that this thread is done with a series of related operations. Instead of calling this method it is better
-        /// to put the return value of RequestStart in a using statement.
-        /// </summary>
-        public virtual void RequestDone()
-        {
-            int threadId = Thread.CurrentThread.ManagedThreadId;
-            MongoConnection connectionToRelease = null;
-
-            lock (_serverLock)
-            {
-                Request request;
-                if (_requests.TryGetValue(threadId, out request))
-                {
-                    if (--request.NestingLevel == 0)
-                    {
-                        _requests.Remove(threadId);
-                        connectionToRelease = request.Connection;
-                    }
-                }
-                else
-                {
-                    throw new InvalidOperationException("Thread is not in a request (did you call RequestStart?).");
-                }
-            }
-
-            if (connectionToRelease != null)
-            {
-                connectionToRelease.ServerInstance.ReleaseConnection(connectionToRelease);
-            }
-        }
-
-        /// <summary>
-        /// Lets the server know that this thread is about to begin a series of related operations that must all occur
-        /// on the same connection. The return value of this method implements IDisposable and can be placed in a
-        /// using statement (in which case RequestDone will be called automatically when leaving the using statement).
-        /// </summary>
-        /// <param name="initialDatabase">One of the databases involved in the related operations.</param>
-        /// <returns>A helper object that implements IDisposable and calls <see cref="RequestDone"/> from the Dispose method.</returns>
-        public virtual IDisposable RequestStart(MongoDatabase initialDatabase)
-        {
-            return RequestStart(initialDatabase, ReadPreference.Primary);
-        }
-
-        /// <summary>
-        /// Lets the server know that this thread is about to begin a series of related operations that must all occur
-        /// on the same connection. The return value of this method implements IDisposable and can be placed in a
-        /// using statement (in which case RequestDone will be called automatically when leaving the using statement).
-        /// </summary>
-        /// <param name="initialDatabase">One of the databases involved in the related operations.</param>
-        /// <param name="readPreference">The read preference.</param>
-        /// <returns>A helper object that implements IDisposable and calls <see cref="RequestDone"/> from the Dispose method.</returns>
-        public virtual IDisposable RequestStart(MongoDatabase initialDatabase, ReadPreference readPreference)
-        {
-            int threadId = Thread.CurrentThread.ManagedThreadId;
-
-            lock (_serverLock)
-            {
-                Request request;
-                if (_requests.TryGetValue(threadId, out request))
-                {
-                    if (!readPreference.MatchesInstance(request.Connection.ServerInstance))
-                    {
-                        throw new InvalidOperationException("A nested call to RequestStart was made and the current instance does not match the nested read preference.");
-                    }
-                    request.NestingLevel++;
-                    return new RequestStartResult(this);
-                }
-
-            }
-
-            var serverInstance = _serverProxy.ChooseServerInstance(readPreference);
-            var connection = serverInstance.AcquireConnection(initialDatabase.Name, initialDatabase.Credentials);
-
-            lock (_serverLock)
-            {
-                var request = new Request(connection);
-                _requests.Add(threadId, request);
-                return new RequestStartResult(this);
-            }
-        }
-
-        /// <summary>
-        /// Lets the server know that this thread is about to begin a series of related operations that must all occur
-        /// on the same connection. The return value of this method implements IDisposable and can be placed in a
-        /// using statement (in which case RequestDone will be called automatically when leaving the using statement).
-        /// </summary>
-        /// <param name="initialDatabase">One of the databases involved in the related operations.</param>
-        /// <param name="serverInstance">The server instance this request should be tied to.</param>
-        /// <returns>A helper object that implements IDisposable and calls <see cref="RequestDone"/> from the Dispose method.</returns>
-        public virtual IDisposable RequestStart(MongoDatabase initialDatabase, MongoServerInstance serverInstance)
-        {
-            int threadId = Thread.CurrentThread.ManagedThreadId;
-
-            lock (_serverLock)
-            {
-                Request request;
-                if (_requests.TryGetValue(threadId, out request))
-                {
-                    if (serverInstance != request.Connection.ServerInstance)
-                    {
-                        throw new InvalidOperationException("The server instance passed to a nested call to RequestStart does not match the server instance of the current Request.");
-                    }
-                    request.NestingLevel++;
-                    return new RequestStartResult(this);
-                }
-            }
-
-            var connection = serverInstance.AcquireConnection(initialDatabase.Name, initialDatabase.Credentials);
-
-            lock (_serverLock)
-            {
-                var request = new Request(connection);
-                _requests.Add(threadId, request);
-                return new RequestStartResult(this);
-            }
-        }
-
-        /// <summary>
         /// Removes all entries in the index cache used by EnsureIndex. Call this method
         /// when you know (or suspect) that a process other than this one may have dropped one or
         /// more indexes.
@@ -919,166 +542,11 @@ namespace MongoDB.Driver
         }
 
         /// <summary>
-        /// Shuts down the server.
-        /// </summary>
-        public virtual void Shutdown()
-        {
-            var adminCredentials = _settings.GetCredentials("admin");
-            Shutdown(adminCredentials);
-        }
-
-        /// <summary>
-        /// Shuts down the server.
-        /// </summary>
-        /// <param name="adminCredentials">Credentials for the admin database.</param>
-        public virtual void Shutdown(MongoCredentials adminCredentials)
-        {
-            lock (_serverLock)
-            {
-                try
-                {
-                    var adminDatabase = GetDatabase("admin", adminCredentials);
-                    adminDatabase.RunCommand("shutdown");
-                }
-                catch (EndOfStreamException)
-                {
-                    // we expect an EndOfStreamException when the server shuts down so we ignore it
-                }
-            }
-        }
-
-        /// <summary>
         /// Verifies the state of the server (in the case of a replica set all members are contacted one at a time).
         /// </summary>
         public virtual void VerifyState()
         {
             _serverProxy.VerifyState();
-        }
-
-        // internal methods
-        internal MongoConnection AcquireConnection(MongoDatabase database, ReadPreference readPreference)
-        {
-            MongoConnection requestConnection = null;
-            lock (_serverLock)
-            {
-                // if a thread has called RequestStart it wants all operations to take place on the same connection
-                int threadId = Thread.CurrentThread.ManagedThreadId;
-                Request request;
-                if (_requests.TryGetValue(threadId, out request))
-                {
-                    if (!readPreference.MatchesInstance(request.Connection.ServerInstance))
-                    {
-                        throw new InvalidOperationException("The thread is in a RequestStart and the current server instance is not a match for the supplied read preference.");
-                    }
-                    requestConnection = request.Connection;
-                }
-            }
-
-            // check authentication outside of lock
-            if (requestConnection != null)
-            {
-                requestConnection.CheckAuthentication(database.Name, database.Credentials); // will throw exception if authentication fails
-                return requestConnection;
-            }
-
-            var serverInstance = _serverProxy.ChooseServerInstance(readPreference);
-            return serverInstance.AcquireConnection(database.Name, database.Credentials);
-        }
-
-        internal MongoConnection AcquireConnection(MongoDatabase database, MongoServerInstance serverInstance)
-        {
-            MongoConnection requestConnection = null;
-            lock (_serverLock)
-            {
-                // if a thread has called RequestStart it wants all operations to take place on the same connection
-                int threadId = Thread.CurrentThread.ManagedThreadId;
-                Request request;
-                if (_requests.TryGetValue(threadId, out request))
-                {
-                    if (request.Connection.ServerInstance != serverInstance)
-                    {
-                        var message = string.Format(
-                            "AcquireConnection called for server instance '{0}' but thread is in a RequestStart for server instance '{1}'.",
-                            serverInstance.Address, request.Connection.ServerInstance.Address);
-                        throw new MongoConnectionException(message);
-                    }
-                    requestConnection = request.Connection;
-                }
-            }
-
-            // check authentication outside of lock
-            if (requestConnection != null)
-            {
-                requestConnection.CheckAuthentication(database.Name, database.Credentials); // will throw exception if authentication fails
-                return requestConnection;
-            }
-
-            return serverInstance.AcquireConnection(database.Name, database.Credentials);
-        }
-
-        internal void ReleaseConnection(MongoConnection connection)
-        {
-            lock (_serverLock)
-            {
-                // if the thread has called RequestStart just verify that the connection it is releasing is the right one
-                int threadId = Thread.CurrentThread.ManagedThreadId;
-                Request request;
-                if (_requests.TryGetValue(threadId, out request))
-                {
-                    if (connection != request.Connection)
-                    {
-                        throw new ArgumentException("Connection being released is not the one assigned to the thread by RequestStart.", "connection");
-                    }
-                    return; // hold on to the connection until RequestDone is called
-                }
-            }
-
-            connection.ServerInstance.ReleaseConnection(connection);
-        }
-
-        // private nested classes
-        private class Request
-        {
-            // private fields
-            private MongoConnection _connection;
-            private int _nestingLevel;
-
-            // constructors
-            public Request(MongoConnection connection)
-            {
-                _connection = connection;
-                _nestingLevel = 1;
-            }
-
-            // public properties
-            public MongoConnection Connection
-            {
-                get { return _connection; }
-            }
-
-            public int NestingLevel
-            {
-                get { return _nestingLevel; }
-                set { _nestingLevel = value; }
-            }
-        }
-
-        private class RequestStartResult : IDisposable
-        {
-            // private fields
-            private MongoServer _server;
-
-            // constructors
-            public RequestStartResult(MongoServer server)
-            {
-                _server = server;
-            }
-
-            // public methods
-            public void Dispose()
-            {
-                _server.RequestDone();
-            }
         }
     }
 }

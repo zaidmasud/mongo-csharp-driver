@@ -132,7 +132,7 @@ Namespace MongoDB.DriverUnitTests.Linq
             End Function
         End Class
 
-        Private _server As MongoServer
+        Private _session As MongoSession
         Private _database As MongoDatabase
         Private _collection As MongoCollection(Of C)
         Private _systemProfileCollection As MongoCollection(Of SystemProfileInfo)
@@ -145,10 +145,9 @@ Namespace MongoDB.DriverUnitTests.Linq
 
         <TestFixtureSetUp()> _
         Public Sub Setup()
-            _server = Configuration.TestServer
-            _server.Connect()
-            _database = Configuration.TestDatabase
-            _collection = Configuration.GetTestCollection(Of C)()
+            _session = Configuration.TestServer.GetSession()
+            _database = _session.GetDatabase(Configuration.TestDatabaseName)
+            _collection = _database.GetCollection(Of C)(Configuration.TestCollectionName)
             _systemProfileCollection = _database.GetCollection(Of SystemProfileInfo)("system.profile")
 
             ' documents inserted deliberately out of order to test sorting
@@ -206,8 +205,13 @@ Namespace MongoDB.DriverUnitTests.Linq
             })
         End Sub
 
+        <TestFixtureTearDown()>
+        Public Sub TearDown()
+            _session.Dispose()
+        End Sub
+
         <Test()> _
-        <ExpectedException(GetType(NotSupportedException), ExpectedMessage:="The Aggregate query operator is not supported.")> _
+               <ExpectedException(GetType(NotSupportedException), ExpectedMessage:="The Aggregate query operator is not supported.")> _
         Public Sub TestAggregate()
             Dim result = (From c In _collection.AsQueryable(Of C)()
                           Select c).Aggregate(Function(a, b) Nothing)
@@ -5741,7 +5745,7 @@ Namespace MongoDB.DriverUnitTests.Linq
 
         <Test()> _
         Public Sub TestWhereTripleAnd()
-            If _server.BuildInfo.Version >= New Version(2, 0) Then
+            If _session.ServerInstance.BuildInfo.Version >= New Version(2, 0) Then
                 ' the query is a bit odd in order to force the built query to be promoted to $and form
                 Dim query = From c In _collection.AsQueryable(Of C)()
                             Where c.X >= 0 AndAlso c.X >= 1 AndAlso c.Y = 11
@@ -6413,7 +6417,7 @@ Namespace MongoDB.DriverUnitTests.Linq
 
         <Test()> _
         Public Sub TestWhereXModOneEquals0AndXModTwoEquals0()
-            If _server.BuildInfo.Version >= New Version(2, 0) Then
+            If _session.ServerInstance.BuildInfo.Version >= New Version(2, 0) Then
                 Dim query = From c In _collection.AsQueryable(Of C)()
                             Where (c.X Mod 1 = 0) AndAlso (c.X Mod 2 = 0)
                             Select c
@@ -6437,7 +6441,7 @@ Namespace MongoDB.DriverUnitTests.Linq
 
         <Test()> _
         Public Sub TestWhereXModOneEquals0AndXModTwoEquals0Not()
-            If _server.BuildInfo.Version >= New Version(2, 0) Then
+            If _session.ServerInstance.BuildInfo.Version >= New Version(2, 0) Then
                 Dim query = From c In _collection.AsQueryable(Of C)()
                             Where Not ((c.X Mod 1 = 0) AndAlso (c.X Mod 2 = 0))
                             Select c
@@ -6463,7 +6467,7 @@ Namespace MongoDB.DriverUnitTests.Linq
 
         <Test()> _
         Public Sub TestWhereXModOneEquals0AndXModTwoEquals0NotNot()
-            If _server.BuildInfo.Version >= New Version(2, 0) Then
+            If _session.ServerInstance.BuildInfo.Version >= New Version(2, 0) Then
                 Dim query = From c In _collection.AsQueryable(Of C)()
                             Where Not Not ((c.X Mod 1 = 0) AndAlso (c.X Mod 2 = 0))
                             Select c

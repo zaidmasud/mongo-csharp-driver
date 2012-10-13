@@ -32,11 +32,11 @@ namespace MongoDB.Driver
     public abstract class MongoCollection
     {
         // private fields
-        private MongoServer _server;
-        private MongoDatabase _database;
-        private MongoCollectionSettings _settings;
-        private string _name;
-        private MongoCollection<BsonDocument> _commandCollection; // used to run commands with this collection's settings
+        private readonly MongoSession _session;
+        private readonly MongoDatabase _database;
+        private readonly string _name;
+        private readonly MongoCollectionSettings _settings;
+        private readonly MongoCollection<BsonDocument> _commandCollection; // used to run commands with this collection's settings
 
         // constructors
         /// <summary>
@@ -69,10 +69,10 @@ namespace MongoDB.Driver
             settings.ApplyInheritedSettings(database.Settings);
             settings.Freeze();
 
-            _server = database.Server;
+            _session = database.Session;
             _database = database;
-            _settings = settings;
             _name = name;
+            _settings = settings;
 
             if (_name != "$cmd")
             {
@@ -110,6 +110,14 @@ namespace MongoDB.Driver
         public virtual string Name
         {
             get { return _name; }
+        }
+
+        /// <summary>
+        /// Gets the session used to access this collection.
+        /// </summary>
+        public virtual MongoSession Session
+        {
+            get { return _session; }
         }
 
         /// <summary>
@@ -306,11 +314,11 @@ namespace MongoDB.Driver
             // remove from cache first (even if command ends up failing)
             if (indexName == "*")
             {
-                _server.IndexCache.Reset(this);
+                _session.Server.IndexCache.Reset(this);
             }
             else
             {
-                _server.IndexCache.Remove(this, indexName);
+                _session.Server.IndexCache.Remove(this, indexName);
             }
             var command = new CommandDocument
             {
@@ -341,10 +349,10 @@ namespace MongoDB.Driver
             var keysDocument = keys.ToBsonDocument();
             var optionsDocument = options.ToBsonDocument();
             var indexName = GetIndexName(keysDocument, optionsDocument);
-            if (!_server.IndexCache.Contains(this, indexName))
+            if (!_session.Server.IndexCache.Contains(this, indexName))
             {
                 CreateIndex(keys, options);
-                _server.IndexCache.Add(this, indexName);
+                _session.Server.IndexCache.Add(this, indexName);
             }
         }
 
@@ -364,10 +372,10 @@ namespace MongoDB.Driver
         public virtual void EnsureIndex(params string[] keyNames)
         {
             string indexName = GetIndexName(keyNames);
-            if (!_server.IndexCache.Contains(this, indexName))
+            if (!_session.Server.IndexCache.Contains(this, indexName))
             {
                 CreateIndex(IndexKeys.Ascending(keyNames), IndexOptions.SetName(indexName));
-                _server.IndexCache.Add(this, indexName);
+                _session.Server.IndexCache.Add(this, indexName);
             }
         }
 
@@ -543,7 +551,7 @@ namespace MongoDB.Driver
         /// <returns>A <see cref="MongoCursor{TDocument}"/>.</returns>
         public virtual MongoCursor<TDocument> FindAs<TDocument>(IMongoQuery query)
         {
-            return new MongoCursor<TDocument>(this, query, _settings.ReadPreference);
+            return new MongoCursor<TDocument>(this, query);
         }
 
         /// <summary>
@@ -554,7 +562,7 @@ namespace MongoDB.Driver
         /// <returns>A <see cref="MongoCursor{TDocument}"/>.</returns>
         public virtual MongoCursor FindAs(Type documentType, IMongoQuery query)
         {
-            return MongoCursor.Create(documentType, this, query, _settings.ReadPreference);
+            return MongoCursor.Create(documentType, this, query);
         }
 
         /// <summary>
@@ -1125,75 +1133,70 @@ namespace MongoDB.Driver
             IEnumerable documents,
             MongoInsertOptions options)
         {
+            if (nominalType == null)
+            {
+                throw new ArgumentNullException("nominalType");
+            }
             if (documents == null)
             {
                 throw new ArgumentNullException("documents");
             }
-
             if (options == null)
             {
                 throw new ArgumentNullException("options");
             }
 
-            var connection = _server.AcquireConnection(_database, ReadPreference.Primary);
-            try
+            var safeMode = options.SafeMode ?? _settings.SafeMode;
+            List<SafeModeResult> results = (safeMode.Enabled) ? new List<SafeModeResult>() : null;
+
+            var connection = _session.Connection;
+            var writerSettings = GetWriterSettings(connection);
+            using (var message = new MongoInsertMessage(writerSettings, FullName, options.CheckElementNames, options.Flags))
             {
-                var safeMode = options.SafeMode ?? _settings.SafeMode;
+                message.WriteToBuffer(); // must be called before AddDocument
 
-                List<SafeModeResult> results = (safeMode.Enabled) ? new List<SafeModeResult>() : null;
-
-                var writerSettings = GetWriterSettings(connection);
-                using (var message = new MongoInsertMessage(writerSettings, FullName, options.CheckElementNames, options.Flags))
+                foreach (var document in documents)
                 {
-                    message.WriteToBuffer(); // must be called before AddDocument
-
-                    foreach (var document in documents)
+                    if (document == null)
                     {
-                        if (document == null)
-                        {
-                            throw new ArgumentException("Batch contains one or more null documents.");
-                        }
+                        throw new ArgumentException("Batch contains one or more null documents.");
+                    }
 
-                        if (_settings.AssignIdOnInsert.Value)
+                    if (_settings.AssignIdOnInsert.Value)
+                    {
+                        var serializer = BsonSerializer.LookupSerializer(document.GetType());
+                        var idProvider = serializer as IBsonIdProvider;
+                        if (idProvider != null)
                         {
-                            var serializer = BsonSerializer.LookupSerializer(document.GetType());
-                            var idProvider = serializer as IBsonIdProvider;
-                            if (idProvider != null)
+                            object id;
+                            Type idNominalType;
+                            IIdGenerator idGenerator;
+                            if (idProvider.GetDocumentId(document, out id, out idNominalType, out idGenerator))
                             {
-                                object id;
-                                Type idNominalType;
-                                IIdGenerator idGenerator;
-                                if (idProvider.GetDocumentId(document, out id, out idNominalType, out idGenerator))
+                                if (idGenerator != null && idGenerator.IsEmpty(id))
                                 {
-                                    if (idGenerator != null && idGenerator.IsEmpty(id))
-                                    {
-                                        id = idGenerator.GenerateId(this, document);
-                                        idProvider.SetDocumentId(document, id);
-                                    }
+                                    id = idGenerator.GenerateId(this, document);
+                                    idProvider.SetDocumentId(document, id);
                                 }
                             }
                         }
-                        message.AddDocument(nominalType, document);
-
-                        if (message.MessageLength > connection.ServerInstance.MaxMessageLength)
-                        {
-                            byte[] lastDocument = message.RemoveLastDocument();
-                            var intermediateResult = connection.SendMessage(message, safeMode, _database.Name);
-                            if (safeMode.Enabled) { results.Add(intermediateResult); }
-                            message.ResetBatch(lastDocument);
-                        }
                     }
+                    message.AddDocument(nominalType, document);
 
-                    var finalResult = connection.SendMessage(message, safeMode, _database.Name);
-                    if (safeMode.Enabled) { results.Add(finalResult); }
-
-                    return results;
+                    if (message.MessageLength > connection.ServerInstance.MaxMessageLength)
+                    {
+                        byte[] lastDocument = message.RemoveLastDocument();
+                        var intermediateResult = connection.SendMessage(message, safeMode, _database.Name);
+                        if (safeMode.Enabled) { results.Add(intermediateResult); }
+                        message.ResetBatch(lastDocument);
+                    }
                 }
+
+                var finalResult = connection.SendMessage(message, safeMode, _database.Name);
+                if (safeMode.Enabled) { results.Add(finalResult); }
             }
-            finally
-            {
-                _server.ReleaseConnection(connection);
-            }
+
+            return results;
         }
 
         /// <summary>
@@ -1324,18 +1327,11 @@ namespace MongoDB.Driver
         /// <returns>A SafeModeResult (or null if SafeMode is not being used).</returns>
         public virtual SafeModeResult Remove(IMongoQuery query, RemoveFlags flags, SafeMode safeMode)
         {
-            var connection = _server.AcquireConnection(_database, ReadPreference.Primary);
-            try
+            var connection = _session.Connection;
+            var writerSettings = GetWriterSettings(connection);
+            using (var message = new MongoDeleteMessage(writerSettings, FullName, flags, query))
             {
-                var writerSettings = GetWriterSettings(connection);
-                using (var message = new MongoDeleteMessage(writerSettings, FullName, flags, query))
-                {
-                    return connection.SendMessage(message, safeMode ?? _settings.SafeMode, _database.Name);
-                }
-            }
-            finally
-            {
-                _server.ReleaseConnection(connection);
+                return connection.SendMessage(message, safeMode ?? _settings.SafeMode, _database.Name);
             }
         }
 
@@ -1365,7 +1361,7 @@ namespace MongoDB.Driver
         /// </summary>
         public virtual void ResetIndexCache()
         {
-            _server.IndexCache.Reset(this);
+            _session.Server.IndexCache.Reset(this);
         }
 
         /// <summary>
@@ -1554,19 +1550,12 @@ namespace MongoDB.Driver
                 throw new ArgumentNullException("options");
             }
 
-            var connection = _server.AcquireConnection(_database, ReadPreference.Primary);
-            try
+            var connection = _session.Connection;
+            var writerSettings = GetWriterSettings(connection);
+            using (var message = new MongoUpdateMessage(writerSettings, FullName, options.CheckElementNames, options.Flags, query, update))
             {
-                var writerSettings = GetWriterSettings(connection);
-                using (var message = new MongoUpdateMessage(writerSettings, FullName, options.CheckElementNames, options.Flags, query, update))
-                {
-                    var safeMode = options.SafeMode ?? _settings.SafeMode;
-                    return connection.SendMessage(message, safeMode, _database.Name);
-                }
-            }
-            finally
-            {
-                _server.ReleaseConnection(connection);
+                var safeMode = options.SafeMode ?? _settings.SafeMode;
+                return connection.SendMessage(message, safeMode, _database.Name);
             }
         }
 
@@ -1677,7 +1666,7 @@ namespace MongoDB.Driver
                     if (commandResult.ErrorMessage == "not master")
                     {
                         // TODO: figure out which instance gave the error and set its state to Unknown
-                        _server.Disconnect();
+                        _session.Server.Disconnect();
                     }
                     throw new MongoCommandException(commandResult);
                 }

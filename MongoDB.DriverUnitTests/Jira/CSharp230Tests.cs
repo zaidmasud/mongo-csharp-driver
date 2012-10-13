@@ -29,35 +29,29 @@ namespace MongoDB.DriverUnitTests.Jira.CSharp230
     [TestFixture]
     public class CSharp230Tests
     {
-        private MongoServer _server;
-        private MongoDatabase _database;
-        private MongoCollection<BsonDocument> _collection;
-
-        [TestFixtureSetUp]
-        public void TestFixtureSetup()
-        {
-            _server = Configuration.TestServer;
-            _database = Configuration.TestDatabase;
-            _collection = Configuration.TestCollection;
-        }
-
         [Test]
         public void TestEnsureIndexAfterDropCollection()
         {
-            if (_collection.Exists())
+            using (var session = Configuration.TestServer.GetSession())
             {
-                _collection.Drop();
+                var database = session.GetDatabase(Configuration.TestDatabaseName);
+                var collection = database.GetCollection(Configuration.TestCollectionName);
+
+                if (collection.Exists())
+                {
+                    collection.Drop();
+                }
+                session.Server.ResetIndexCache();
+
+                Assert.IsFalse(collection.IndexExists("x"));
+                collection.EnsureIndex("x");
+                Assert.IsTrue(collection.IndexExists("x"));
+
+                collection.Drop();
+                Assert.IsFalse(collection.IndexExists("x"));
+                collection.EnsureIndex("x");
+                Assert.IsTrue(collection.IndexExists("x"));
             }
-            _server.ResetIndexCache();
-
-            Assert.IsFalse(_collection.IndexExists("x"));
-            _collection.EnsureIndex("x");
-            Assert.IsTrue(_collection.IndexExists("x"));
-
-            _collection.Drop();
-            Assert.IsFalse(_collection.IndexExists("x"));
-            _collection.EnsureIndex("x");
-            Assert.IsTrue(_collection.IndexExists("x"));
         }
     }
 }

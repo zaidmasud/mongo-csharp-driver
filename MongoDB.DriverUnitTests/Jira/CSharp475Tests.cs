@@ -43,17 +43,20 @@ namespace MongoDB.DriverUnitTests.Jira.CSharp475
         public void ProjectAfterOfTypeTest()
         {
             var server = Configuration.TestServer;
-            var db = server.GetDatabase("csharp475");
-            var collection = db.GetCollection<Base>("ProjectTest");
-            collection.Drop();
-            
-            var t1 = new T1 { A = "T1.A", B = "T1.B" };
-            collection.Insert(t1);
+            using (var session = server.GetSession())
+            {
+                var db = session.GetDatabase("csharp475");
+                var collection = db.GetCollection<Base>("ProjectTest");
+                collection.Drop();
 
-            var query = from t in collection.AsQueryable().OfType<T1>() select t.B;
-            var results = query.ToList();
-            Assert.That(results.Count, Is.EqualTo(1));
-            Assert.That(results[0], Is.EqualTo("T1.B"));
+                var t1 = new T1 { A = "T1.A", B = "T1.B" };
+                collection.Insert(t1);
+
+                var query = from t in collection.AsQueryable().OfType<T1>() select t.B;
+                var results = query.ToList();
+                Assert.That(results.Count, Is.EqualTo(1));
+                Assert.That(results[0], Is.EqualTo("T1.B"));
+            }
         }
     }
 }

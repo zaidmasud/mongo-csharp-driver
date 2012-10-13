@@ -27,53 +27,63 @@ namespace MongoDB.DriverUnitTests.Jira
     [TestFixture]
     public class CSharp281Tests
     {
-        private MongoServer _server;
-        private MongoDatabase _database;
-        private MongoCollection<BsonDocument> _collection;
-
         [TestFixtureSetUp]
         public void TestFixtureSetup()
         {
-            _server = Configuration.TestServer;
-            _database = Configuration.TestDatabase;
-            _collection = Configuration.TestCollection;
-            _collection.Drop();
+            using (var session = Configuration.TestServer.GetSession())
+            {
+                var database = session.GetDatabase(Configuration.TestDatabaseName);
+                var collection = database.GetCollection(Configuration.TestCollectionName);
+                collection.Drop();
+            }
         }
 
         [Test]
         public void TestPopFirst()
         {
-            var document = new BsonDocument("x", new BsonArray { 1, 2, 3 });
-            _collection.RemoveAll();
-            _collection.Insert(document);
+            using (var session = Configuration.TestServer.GetSession())
+            {
+                var database = session.GetDatabase(Configuration.TestDatabaseName);
+                var collection = database.GetCollection(Configuration.TestCollectionName);
 
-            var query = Query.EQ("_id", document["_id"]);
-            var update = Update.PopFirst("x");
-            _collection.Update(query, update);
+                var document = new BsonDocument("x", new BsonArray { 1, 2, 3 });
+                collection.RemoveAll();
+                collection.Insert(document);
 
-            document = _collection.FindOne();
-            var array = document["x"].AsBsonArray;
-            Assert.AreEqual(2, array.Count);
-            Assert.AreEqual(2, array[0].AsInt32);
-            Assert.AreEqual(3, array[1].AsInt32);
+                var query = Query.EQ("_id", document["_id"]);
+                var update = Update.PopFirst("x");
+                collection.Update(query, update);
+
+                document = collection.FindOne();
+                var array = document["x"].AsBsonArray;
+                Assert.AreEqual(2, array.Count);
+                Assert.AreEqual(2, array[0].AsInt32);
+                Assert.AreEqual(3, array[1].AsInt32);
+            }
         }
 
         [Test]
         public void TestPopLast()
         {
-            var document = new BsonDocument("x", new BsonArray { 1, 2, 3 });
-            _collection.RemoveAll();
-            _collection.Insert(document);
+            using (var session = Configuration.TestServer.GetSession())
+            {
+                var database = session.GetDatabase(Configuration.TestDatabaseName);
+                var collection = database.GetCollection(Configuration.TestCollectionName);
 
-            var query = Query.EQ("_id", document["_id"]);
-            var update = Update.PopLast("x");
-            _collection.Update(query, update);
+                var document = new BsonDocument("x", new BsonArray { 1, 2, 3 });
+                collection.RemoveAll();
+                collection.Insert(document);
 
-            document = _collection.FindOne();
-            var array = document["x"].AsBsonArray;
-            Assert.AreEqual(2, array.Count);
-            Assert.AreEqual(1, array[0].AsInt32);
-            Assert.AreEqual(2, array[1].AsInt32);
+                var query = Query.EQ("_id", document["_id"]);
+                var update = Update.PopLast("x");
+                collection.Update(query, update);
+
+                document = collection.FindOne();
+                var array = document["x"].AsBsonArray;
+                Assert.AreEqual(2, array.Count);
+                Assert.AreEqual(1, array[0].AsInt32);
+                Assert.AreEqual(2, array[1].AsInt32);
+            }
         }
     }
 }

@@ -36,16 +36,20 @@ Namespace MongoDB.DriverUnitTests.Linq
             Public Property Y() As Integer
         End Class
 
-        Private _server As MongoServer
+        Private _session As MongoSession
         Private _database As MongoDatabase
         Private _collection As MongoCollection
 
         <TestFixtureSetUp()> _
         Public Sub Setup()
-            _server = Configuration.TestServer
-            _server.Connect()
-            _database = Configuration.TestDatabase
-            _collection = Configuration.TestCollection
+            _session = Configuration.TestServer.GetSession()
+            _database = _session.GetDatabase(Configuration.TestDatabaseName)
+            _collection = _database.GetCollection(Configuration.TestCollectionName)
+        End Sub
+
+        <TestFixtureTearDown()>
+        Public Sub TearDown()
+            _session.Dispose()
         End Sub
 
         <Test()> _

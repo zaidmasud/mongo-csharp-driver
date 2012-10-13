@@ -34,22 +34,25 @@ namespace MongoDB.DriverUnitTests.Jira.CSharp365
         public void TestExplainWithFieldsAndCoveredIndex()
         {
             var server = Configuration.TestServer;
-            if (server.BuildInfo.Version >= new Version(1, 8, 0))
+            using (var session = server.GetSession())
             {
-                var database = Configuration.TestDatabase;
-                var collection = Configuration.TestCollection;
-                collection.Drop();
+                if (session.ServerInstance.BuildInfo.Version >= new Version(1, 8, 0))
+                {
+                    var database = session.GetDatabase(Configuration.TestDatabaseName);
+                    var collection = database.GetCollection(Configuration.TestCollectionName);
+                    collection.Drop();
 
-                collection.EnsureIndex("A", "_id");
-                collection.Insert(new BsonDocument { { "_id", 1 }, { "A", 1 } });
-                collection.Insert(new BsonDocument { { "_id", 2 }, { "A", 2 } });
-                collection.Insert(new BsonDocument { { "_id", 3 }, { "A", 3 } });
+                    collection.EnsureIndex("A", "_id");
+                    collection.Insert(new BsonDocument { { "_id", 1 }, { "A", 1 } });
+                    collection.Insert(new BsonDocument { { "_id", 2 }, { "A", 2 } });
+                    collection.Insert(new BsonDocument { { "_id", 3 }, { "A", 3 } });
 
-                var query = Query.EQ("A", 1);
-                var fields = Fields.Include("_id");
-                var cursor = collection.Find(query).SetFields(fields).SetHint("A_1__id_1"); // make sure it uses the index
-                var explain = cursor.Explain();
-                Assert.IsTrue(explain["indexOnly"].ToBoolean());
+                    var query = Query.EQ("A", 1);
+                    var fields = Fields.Include("_id");
+                    var cursor = collection.Find(query).SetFields(fields).SetHint("A_1__id_1"); // make sure it uses the index
+                    var explain = cursor.Explain();
+                    Assert.IsTrue(explain["indexOnly"].ToBoolean());
+                }
             }
         }
     }

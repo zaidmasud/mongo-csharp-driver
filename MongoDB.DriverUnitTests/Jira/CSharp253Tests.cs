@@ -36,47 +36,66 @@ namespace MongoDB.DriverUnitTests.Jira.CSharp253
             public BsonNull BsonNull { get; set; }
         }
 
-        private MongoServer _server;
-        private MongoDatabase _database;
-        private MongoCollection<BsonDocument> _collection;
-
-        [TestFixtureSetUp]
-        public void TestFixtureSetup()
-        {
-            _server = Configuration.TestServer;
-            _database = Configuration.TestDatabase;
-            _collection = Configuration.TestCollection;
-        }
-
         [Test]
         public void TestInsertClass()
         {
-            var c = new C
+            using (var session = Configuration.TestServer.GetSession())
             {
-                DBRef = new MongoDBRef("database", "collection", ObjectId.GenerateNewId()),
-                BsonNull = null
-            };
-            _collection.Insert(c);
+                var database = session.GetDatabase(Configuration.TestDatabaseName);
+                var collection = database.GetCollection(Configuration.TestCollectionName);
+                var c = new C
+                {
+                    DBRef = new MongoDBRef("database", "collection", ObjectId.GenerateNewId()),
+                    BsonNull = null
+                };
+                collection.Insert(c);
+            }
         }
 
         [Test]
         public void TestInsertDollar()
         {
-            Assert.Throws<BsonSerializationException>(() => { _collection.Insert(new BsonDocument("$x", 1)); });
-            Assert.Throws<BsonSerializationException>(() => { _collection.Insert(new BsonDocument("x", new BsonDocument("$x", 1))); });
+            using (var session = Configuration.TestServer.GetSession())
+            {
+                var database = session.GetDatabase(Configuration.TestDatabaseName);
+                var collection = database.GetCollection(Configuration.TestCollectionName);
+                Assert.Throws<BsonSerializationException>(() => { collection.Insert(new BsonDocument("$x", 1)); });
+            }
+
+            using (var session = Configuration.TestServer.GetSession())
+            {
+                var database = session.GetDatabase(Configuration.TestDatabaseName);
+                var collection = database.GetCollection(Configuration.TestCollectionName);
+                Assert.Throws<BsonSerializationException>(() => { collection.Insert(new BsonDocument("x", new BsonDocument("$x", 1))); });
+            }
         }
 
         [Test]
         public void TestInsertPeriod()
         {
-            Assert.Throws<BsonSerializationException>(() => { _collection.Insert(new BsonDocument("a.b", 1)); });
-            Assert.Throws<BsonSerializationException>(() => { _collection.Insert(new BsonDocument("a", new BsonDocument("b.c", 1))); });
+            using (var session = Configuration.TestServer.GetSession())
+            {
+                var database = session.GetDatabase(Configuration.TestDatabaseName);
+                var collection = database.GetCollection(Configuration.TestCollectionName);
+                Assert.Throws<BsonSerializationException>(() => { collection.Insert(new BsonDocument("a.b", 1)); });
+            }
+
+            using (var session = Configuration.TestServer.GetSession())
+            {
+                var database = session.GetDatabase(Configuration.TestDatabaseName);
+                var collection = database.GetCollection(Configuration.TestCollectionName);
+                Assert.Throws<BsonSerializationException>(() => { collection.Insert(new BsonDocument("a", new BsonDocument("b.c", 1))); });
+            }
         }
 
         [Test]
         public void TestLegacyDollar()
         {
-            var document = new BsonDocument
+            using (var session = Configuration.TestServer.GetSession())
+            {
+                var database = session.GetDatabase(Configuration.TestDatabaseName);
+                var collection = database.GetCollection(Configuration.TestCollectionName);
+                var document = new BsonDocument
             {
                 { "_id", ObjectId.GenerateNewId() },
                 { "BsonNull", new BsonDocument("_csharpnull", true) },
@@ -94,13 +113,19 @@ namespace MongoDB.DriverUnitTests.Jira.CSharp253
                     }
                 }
             };
-            _collection.Insert(document);
+                collection.Insert(document);
+            }
         }
 
         [Test]
         public void TestCreateIndexOnNestedElement()
         {
-            _collection.CreateIndex("a.b");
+            using (var session = Configuration.TestServer.GetSession())
+            {
+                var database = session.GetDatabase(Configuration.TestDatabaseName);
+                var collection = database.GetCollection(Configuration.TestCollectionName);
+                collection.CreateIndex("a.b");
+            }
         }
     }
 }

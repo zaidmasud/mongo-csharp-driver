@@ -36,36 +36,33 @@ namespace MongoDB.DriverUnitTests.Linq
             public int Y { get; set; }
         }
 
-        private MongoServer _server;
-        private MongoDatabase _database;
-        private MongoCollection _collection;
-
-        [TestFixtureSetUp]
-        public void Setup()
-        {
-            _server = Configuration.TestServer;
-            _server.Connect();
-            _database = Configuration.TestDatabase;
-            _collection = Configuration.TestCollection;
-        }
-
         [Test]
         public void TestConstructorWithOneArgument()
         {
-            var provider = new MongoQueryProvider(_collection);
-            var iqueryable = (IQueryable)new MongoQueryable<C>(provider);
-            Assert.AreSame(typeof(C), iqueryable.ElementType);
-            Assert.AreSame(provider, iqueryable.Provider);
+            using (var session = Configuration.TestServer.GetSession())
+            {
+                var database = session.GetDatabase(Configuration.TestDatabaseName);
+                var collection = database.GetCollection(Configuration.TestCollectionName);
+                var provider = new MongoQueryProvider(collection);
+                var iqueryable = (IQueryable)new MongoQueryable<C>(provider);
+                Assert.AreSame(typeof(C), iqueryable.ElementType);
+                Assert.AreSame(provider, iqueryable.Provider);
+            }
         }
 
         [Test]
         public void TestConstructorWithTwoArguments()
         {
-            var queryable = _collection.AsQueryable<C>();
-            var iqueryable = (IQueryable)new MongoQueryable<C>((MongoQueryProvider)queryable.Provider, queryable.Expression);
-            Assert.AreSame(typeof(C), iqueryable.ElementType);
-            Assert.AreSame(queryable.Provider, iqueryable.Provider);
-            Assert.AreSame(queryable.Expression, iqueryable.Expression);
+            using (var session = Configuration.TestServer.GetSession())
+            {
+                var database = session.GetDatabase(Configuration.TestDatabaseName);
+                var collection = database.GetCollection(Configuration.TestCollectionName);
+                var queryable = collection.AsQueryable<C>();
+                var iqueryable = (IQueryable)new MongoQueryable<C>((MongoQueryProvider)queryable.Provider, queryable.Expression);
+                Assert.AreSame(typeof(C), iqueryable.ElementType);
+                Assert.AreSame(queryable.Provider, iqueryable.Provider);
+                Assert.AreSame(queryable.Expression, iqueryable.Expression);
+            }
         }
     }
 }

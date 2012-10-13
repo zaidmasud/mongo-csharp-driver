@@ -27,21 +27,15 @@ namespace MongoDB.DriverUnitTests.Jira
     [TestFixture]
     public class CSharp330Tests
     {
-        private MongoServer _server;
-        private MongoDatabase _database;
-
-        [TestFixtureSetUp]
-        public void TestFixtureSetup()
-        {
-            _server = Configuration.TestServer;
-            _database = Configuration.TestDatabase;
-        }
-
         [Test]
         public void TestMongoGridFSSettingsInheritsSafeModeFromDatabase()
         {
-            var gridFS = _database.GridFS;
-            Assert.AreEqual(true, gridFS.Settings.SafeMode.Enabled);
+            using (var session = Configuration.TestServer.GetSession())
+            {
+                var database = session.GetDatabase(Configuration.TestDatabaseName);
+                var gridFS = database.GridFS;
+                Assert.AreEqual(true, gridFS.Settings.SafeMode.Enabled);
+            }
         }
     }
 }

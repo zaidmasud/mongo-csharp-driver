@@ -28,16 +28,6 @@ namespace MongoDB.DriverUnitTests.CommandResults
     [TestFixture]
     public class CommandResultTests
     {
-        private MongoServer _server;
-        private MongoDatabase _database;
-
-        [TestFixtureSetUp]
-        public void Setup()
-        {
-            _server = Configuration.TestServer;
-            _database = Configuration.TestDatabase;
-        }
-
         [Test]
         public void TestOkMissing()
         {
@@ -135,18 +125,23 @@ namespace MongoDB.DriverUnitTests.CommandResults
         [Test]
         public void TestIsMasterCommand()
         {
-            var result = _database.RunCommand("ismaster");
-            Assert.IsTrue(result.Ok);
+            using (var session = Configuration.TestServer.GetSession())
+            {
+                var database = session.GetDatabase(Configuration.TestDatabaseName);
+                var result = database.RunCommand("ismaster");
+                Assert.IsTrue(result.Ok);
+            }
         }
 
         [Test]
         public void TestInvalidCommand()
         {
-            using (_database.RequestStart())
+            using (var session = Configuration.TestServer.GetSession())
             {
+                var database = session.GetDatabase(Configuration.TestDatabaseName);
                 try
                 {
-                    var result = _database.RunCommand("invalid");
+                    var result = database.RunCommand("invalid");
                 }
                 catch (Exception ex)
                 {
@@ -154,7 +149,7 @@ namespace MongoDB.DriverUnitTests.CommandResults
                     // but when connected to mongos a MongoQueryException is thrown
                     // this should be considered a server bug that they don't report the error in the same way
 
-                    var instance = _server.RequestConnection.ServerInstance;
+                    var instance = session.ServerInstance;
                     if (instance.InstanceType == MongoServerInstanceType.ShardRouter)
                     {
                         Assert.IsInstanceOf<MongoQueryException>(ex);

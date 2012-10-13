@@ -28,101 +28,113 @@ namespace MongoDB.DriverUnitTests.GridFS
     [TestFixture]
     public class MongoGridFSSettingsTests
     {
-        private MongoDatabase _database;
-
-        [TestFixtureSetUp]
-        public void TestFixtureSetup()
-        {
-            _database = Configuration.TestDatabase;
-        }
-
         [Test]
         public void TestDefaults()
         {
-            var settings = new MongoGridFSSettings(_database);
-            Assert.IsFalse(settings.IsFrozen);
-            Assert.AreEqual("fs.chunks", settings.ChunksCollectionName);
-            Assert.AreEqual(256 * 1024, settings.ChunkSize);
-            Assert.AreEqual("fs.files", settings.FilesCollectionName);
-            Assert.AreEqual("fs", settings.Root);
-            Assert.AreEqual(SafeMode.True, settings.SafeMode);
+            using (var session = Configuration.TestServer.GetSession())
+            {
+                var database = session.GetDatabase(Configuration.TestDatabaseName);
+                var settings = new MongoGridFSSettings(database);
+                Assert.IsFalse(settings.IsFrozen);
+                Assert.AreEqual("fs.chunks", settings.ChunksCollectionName);
+                Assert.AreEqual(256 * 1024, settings.ChunkSize);
+                Assert.AreEqual("fs.files", settings.FilesCollectionName);
+                Assert.AreEqual("fs", settings.Root);
+                Assert.AreEqual(SafeMode.True, settings.SafeMode);
+            }
         }
 
         [Test]
         public void TestCreation()
         {
-            var settings = new MongoGridFSSettings(_database)
+            using (var session = Configuration.TestServer.GetSession())
             {
-                ChunkSize = 64 * 1024,
-                Root = "root",
-                SafeMode = SafeMode.True
-            };
-            Assert.IsFalse(settings.IsFrozen);
-            Assert.AreEqual("root.chunks", settings.ChunksCollectionName);
-            Assert.AreEqual(64 * 1024, settings.ChunkSize);
-            Assert.AreEqual("root.files", settings.FilesCollectionName);
-            Assert.AreEqual("root", settings.Root);
-            Assert.AreEqual(SafeMode.True, settings.SafeMode);
+                var database = session.GetDatabase(Configuration.TestDatabaseName);
+                var settings = new MongoGridFSSettings(database)
+                {
+                    ChunkSize = 64 * 1024,
+                    Root = "root",
+                    SafeMode = SafeMode.True
+                };
+                Assert.IsFalse(settings.IsFrozen);
+                Assert.AreEqual("root.chunks", settings.ChunksCollectionName);
+                Assert.AreEqual(64 * 1024, settings.ChunkSize);
+                Assert.AreEqual("root.files", settings.FilesCollectionName);
+                Assert.AreEqual("root", settings.Root);
+                Assert.AreEqual(SafeMode.True, settings.SafeMode);
+            }
         }
 
         [Test]
         public void TestCloneAndEquals()
         {
-            var settings = new MongoGridFSSettings(_database)
+            using (var session = Configuration.TestServer.GetSession())
             {
-                ChunkSize = 64 * 1024,
-                Root = "root",
-                SafeMode = SafeMode.True,
-                UpdateMD5 = false,
-                VerifyMD5 = false
-            };
-            var clone = settings.Clone();
-            Assert.IsTrue(settings == clone);
-            Assert.AreEqual(settings, clone);
+                var database = session.GetDatabase(Configuration.TestDatabaseName);
+                var settings = new MongoGridFSSettings(database)
+                {
+                    ChunkSize = 64 * 1024,
+                    Root = "root",
+                    SafeMode = SafeMode.True,
+                    UpdateMD5 = false,
+                    VerifyMD5 = false
+                };
+                var clone = settings.Clone();
+                Assert.IsTrue(settings == clone);
+                Assert.AreEqual(settings, clone);
+            }
         }
 
         [Test]
         public void TestEquals()
         {
-            var a = new MongoGridFSSettings(_database) { ChunkSize = 123 };
-            var b = new MongoGridFSSettings(_database) { ChunkSize = 123 };
-            var c = new MongoGridFSSettings(_database) { ChunkSize = 345 };
-            var n = (SafeMode)null;
+            using (var session = Configuration.TestServer.GetSession())
+            {
+                var database = session.GetDatabase(Configuration.TestDatabaseName);
+                var a = new MongoGridFSSettings(database) { ChunkSize = 123 };
+                var b = new MongoGridFSSettings(database) { ChunkSize = 123 };
+                var c = new MongoGridFSSettings(database) { ChunkSize = 345 };
+                var n = (SafeMode)null;
 
-            Assert.IsTrue(object.Equals(a, b));
-            Assert.IsFalse(object.Equals(a, c));
-            Assert.IsFalse(a.Equals(n));
-            Assert.IsFalse(a.Equals(null));
+                Assert.IsTrue(object.Equals(a, b));
+                Assert.IsFalse(object.Equals(a, c));
+                Assert.IsFalse(a.Equals(n));
+                Assert.IsFalse(a.Equals(null));
 
-            Assert.IsTrue(a == b);
-            Assert.IsFalse(a == c);
-            Assert.IsFalse(a == null);
-            Assert.IsFalse(null == a);
-            Assert.IsTrue(n == null);
-            Assert.IsTrue(null == n);
+                Assert.IsTrue(a == b);
+                Assert.IsFalse(a == c);
+                Assert.IsFalse(a == null);
+                Assert.IsFalse(null == a);
+                Assert.IsTrue(n == null);
+                Assert.IsTrue(null == n);
 
-            Assert.IsFalse(a != b);
-            Assert.IsTrue(a != c);
-            Assert.IsTrue(a != null);
-            Assert.IsTrue(null != a);
-            Assert.IsFalse(n != null);
-            Assert.IsFalse(null != n);
+                Assert.IsFalse(a != b);
+                Assert.IsTrue(a != c);
+                Assert.IsTrue(a != null);
+                Assert.IsTrue(null != a);
+                Assert.IsFalse(n != null);
+                Assert.IsFalse(null != n);
+            }
         }
 
         [Test]
         public void TestFreeze()
         {
-            var settings = new MongoGridFSSettings(_database);
-            Assert.IsFalse(settings.IsFrozen);
-            settings.Freeze();
-            Assert.IsTrue(settings.IsFrozen);
-            settings.Freeze(); // test that it's OK to call Freeze more than once
-            Assert.IsTrue(settings.IsFrozen);
-            Assert.Throws<InvalidOperationException>(() => settings.ChunkSize = 64 * 1024);
-            Assert.Throws<InvalidOperationException>(() => settings.Root = "root");
-            Assert.Throws<InvalidOperationException>(() => settings.SafeMode = SafeMode.True);
-            Assert.Throws<InvalidOperationException>(() => settings.UpdateMD5 = true);
-            Assert.Throws<InvalidOperationException>(() => settings.VerifyMD5 = true);
+            using (var session = Configuration.TestServer.GetSession())
+            {
+                var database = session.GetDatabase(Configuration.TestDatabaseName);
+                var settings = new MongoGridFSSettings(database);
+                Assert.IsFalse(settings.IsFrozen);
+                settings.Freeze();
+                Assert.IsTrue(settings.IsFrozen);
+                settings.Freeze(); // test that it's OK to call Freeze more than once
+                Assert.IsTrue(settings.IsFrozen);
+                Assert.Throws<InvalidOperationException>(() => settings.ChunkSize = 64 * 1024);
+                Assert.Throws<InvalidOperationException>(() => settings.Root = "root");
+                Assert.Throws<InvalidOperationException>(() => settings.SafeMode = SafeMode.True);
+                Assert.Throws<InvalidOperationException>(() => settings.UpdateMD5 = true);
+                Assert.Throws<InvalidOperationException>(() => settings.VerifyMD5 = true);
+            }
         }
     }
 }

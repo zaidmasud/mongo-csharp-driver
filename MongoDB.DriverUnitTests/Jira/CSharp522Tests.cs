@@ -35,29 +35,26 @@ namespace MongoDB.DriverUnitTests.Jira.CSharp522
             public int Y { get; set; }
         }
 
-        private MongoCollection<C> _collection;
-
-        [TestFixtureSetUp]
-        public void TestFixtureSetup()
-        {
-            _collection = Configuration.GetTestCollection<C>();
-            _collection.Drop();
-        }
-
         [Test]
         public void Test()
         {
-            _collection.RemoveAll();
-            _collection.Insert(new C { Id = 1, X = 1, Y = 2 });
-            _collection.Insert(new C { Id = 2, X = 1, Y = 2 });
-            _collection.Insert(new C { Id = 3, X = 2, Y = 3 });
+            using (var session = Configuration.TestServer.GetSession())
+            {
+                var database = session.GetDatabase(Configuration.TestDatabaseName);
+                var collection = database.GetCollection<C>(Configuration.TestCollectionName);
 
-            var query = _collection.AsQueryable()
-                .Select(d => new { d.X, d.Y })
-                .Distinct();
-            var ex = Assert.Throws<NotSupportedException>(() => { query.ToList(); });
-            var message = "Distinct is only supported for a single field. Projections used with Distinct must resolve to a single field in the document.";
-            Assert.AreEqual(message, ex.Message);
+                collection.Drop();
+                collection.Insert(new C { Id = 1, X = 1, Y = 2 });
+                collection.Insert(new C { Id = 2, X = 1, Y = 2 });
+                collection.Insert(new C { Id = 3, X = 2, Y = 3 });
+
+                var query = collection.AsQueryable()
+                    .Select(d => new { d.X, d.Y })
+                    .Distinct();
+                var ex = Assert.Throws<NotSupportedException>(() => { query.ToList(); });
+                var message = "Distinct is only supported for a single field. Projections used with Distinct must resolve to a single field in the document.";
+                Assert.AreEqual(message, ex.Message);
+            }
         }
     }
 }

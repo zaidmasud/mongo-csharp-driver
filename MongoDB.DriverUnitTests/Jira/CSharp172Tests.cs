@@ -37,30 +37,24 @@ namespace MongoDB.DriverUnitTests.Jira.CSharp172
             public int N;
         }
 
-        private MongoServer _server;
-        private MongoDatabase _database;
-        private MongoCollection<C> _collection;
-
-        [TestFixtureSetUp]
-        public void TestFixtureSetup()
-        {
-            _server = Configuration.TestServer;
-            _database = Configuration.TestDatabase;
-            _collection = Configuration.GetTestCollection<C>();
-        }
-
         [Test]
         public void TestRoundtrip()
         {
-            var obj1 = new C { N = 1 };
-            Assert.IsNullOrEmpty(obj1.Id);
-            _collection.RemoveAll();
-            _collection.Insert(obj1);
-            Assert.IsNotNullOrEmpty(obj1.Id);
+            using (var session = Configuration.TestServer.GetSession())
+            {
+                var database = session.GetDatabase(Configuration.TestDatabaseName);
+                var collection = database.GetCollection<C>(Configuration.TestCollectionName);
 
-            var obj2 = _collection.FindOne();
-            Assert.AreEqual(obj1.Id, obj2.Id);
-            Assert.AreEqual(obj1.N, obj2.N);
+                var obj1 = new C { N = 1 };
+                Assert.IsNullOrEmpty(obj1.Id);
+                collection.RemoveAll();
+                collection.Insert(obj1);
+                Assert.IsNotNullOrEmpty(obj1.Id);
+
+                var obj2 = collection.FindOne();
+                Assert.AreEqual(obj1.Id, obj2.Id);
+                Assert.AreEqual(obj1.N, obj2.N);
+            }
         }
     }
 }

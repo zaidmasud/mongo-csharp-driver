@@ -37,160 +37,238 @@ namespace MongoDB.DriverUnitTests.Linq
             public int? X { get; set; }
         }
 
-        private MongoServer _server;
-        private MongoDatabase _database;
-        private MongoCollection<C> _collection;
-
-        [TestFixtureSetUp]
-        public void Setup()
-        {
-            _server = Configuration.TestServer;
-            _database = Configuration.TestDatabase;
-            _collection = Configuration.GetTestCollection<C>();
-        }
-
         [Test]
         public void TestSkip()
         {
-            var s = new List<string> { "one", "two", "three" };
+            using (var session = Configuration.TestServer.GetSession())
+            {
+                var database = session.GetDatabase(Configuration.TestDatabaseName);
+                var collection = database.GetCollection<C>(Configuration.TestCollectionName);
 
-            var list = s.Take(3).Take(5).ToList();
+                var s = new List<string> { "one", "two", "three" };
 
-            var query = _collection.AsQueryable<C>().Skip(5);
+                var list = s.Take(3).Take(5).ToList();
 
-            var selectQuery = (SelectQuery)MongoQueryTranslator.Translate(query);
-            Assert.AreEqual(5, selectQuery.Skip);
-            Assert.IsNull(selectQuery.Take);
+                var query = collection.AsQueryable<C>().Skip(5);
+
+                var selectQuery = (SelectQuery)MongoQueryTranslator.Translate(query);
+                Assert.AreEqual(5, selectQuery.Skip);
+                Assert.IsNull(selectQuery.Take);
+            }
         }
 
         [Test]
         public void TestSkipThenSkip()
         {
-            var query = _collection.AsQueryable<C>().Skip(5).Skip(15);
+            using (var session = Configuration.TestServer.GetSession())
+            {
+                var database = session.GetDatabase(Configuration.TestDatabaseName);
+                var collection = database.GetCollection<C>(Configuration.TestCollectionName);
 
-            var selectQuery = (SelectQuery)MongoQueryTranslator.Translate(query);
-            Assert.AreEqual(20, selectQuery.Skip);
-            Assert.IsNull(selectQuery.Take);
+                var query = collection.AsQueryable<C>().Skip(5).Skip(15);
+
+                var selectQuery = (SelectQuery)MongoQueryTranslator.Translate(query);
+                Assert.AreEqual(20, selectQuery.Skip);
+                Assert.IsNull(selectQuery.Take);
+            }
         }
 
         [Test]
         public void TestSkipThenTake()
         {
-            var query = _collection.AsQueryable<C>().Skip(5).Take(20);
+            using (var session = Configuration.TestServer.GetSession())
+            {
+                var database = session.GetDatabase(Configuration.TestDatabaseName);
+                var collection = database.GetCollection<C>(Configuration.TestCollectionName);
 
-            var selectQuery = (SelectQuery)MongoQueryTranslator.Translate(query);
-            Assert.AreEqual(5, selectQuery.Skip);
-            Assert.AreEqual(20, selectQuery.Take);
+                var query = collection.AsQueryable<C>().Skip(5).Take(20);
+
+                var selectQuery = (SelectQuery)MongoQueryTranslator.Translate(query);
+                Assert.AreEqual(5, selectQuery.Skip);
+                Assert.AreEqual(20, selectQuery.Take);
+            }
         }
 
         [Test]
         public void TestSkipThenTakeThenSkip()
         {
-            var query = _collection.AsQueryable<C>().Skip(5).Take(20).Skip(10);
+            using (var session = Configuration.TestServer.GetSession())
+            {
+                var database = session.GetDatabase(Configuration.TestDatabaseName);
+                var collection = database.GetCollection<C>(Configuration.TestCollectionName);
 
-            var selectQuery = (SelectQuery)MongoQueryTranslator.Translate(query);
-            Assert.AreEqual(15, selectQuery.Skip);
-            Assert.AreEqual(10, selectQuery.Take);
+                var query = collection.AsQueryable<C>().Skip(5).Take(20).Skip(10);
+
+                var selectQuery = (SelectQuery)MongoQueryTranslator.Translate(query);
+                Assert.AreEqual(15, selectQuery.Skip);
+                Assert.AreEqual(10, selectQuery.Take);
+            }
         }
 
         [Test]
         public void TestSkipThenTakeThenSkipWithTooMany()
         {
-            var query = _collection.AsQueryable<C>().Skip(5).Take(20).Skip(30);
+            using (var session = Configuration.TestServer.GetSession())
+            {
+                var database = session.GetDatabase(Configuration.TestDatabaseName);
+                var collection = database.GetCollection<C>(Configuration.TestCollectionName);
 
-            var selectQuery = (SelectQuery)MongoQueryTranslator.Translate(query);
-            Assert.IsNull(selectQuery.Skip);
-            Assert.AreEqual(0, selectQuery.Take);
+                var query = collection.AsQueryable<C>().Skip(5).Take(20).Skip(30);
+
+                var selectQuery = (SelectQuery)MongoQueryTranslator.Translate(query);
+                Assert.IsNull(selectQuery.Skip);
+                Assert.AreEqual(0, selectQuery.Take);
+            }
         }
 
         [Test]
         public void TestSkipThenWhereThenTake()
         {
-            var query = _collection.AsQueryable<C>().Skip(20).Where(c => c.X == 10).Take(30);
+            using (var session = Configuration.TestServer.GetSession())
+            {
+                var database = session.GetDatabase(Configuration.TestDatabaseName);
+                var collection = database.GetCollection<C>(Configuration.TestCollectionName);
 
-            Assert.Throws(typeof(MongoQueryException), () => MongoQueryTranslator.Translate(query));
+                var query = collection.AsQueryable<C>().Skip(20).Where(c => c.X == 10).Take(30);
+
+                Assert.Throws(typeof(MongoQueryException), () => MongoQueryTranslator.Translate(query));
+            }
         }
 
         [Test]
         public void TestTake()
         {
-            var query = _collection.AsQueryable<C>().Take(5);
+            using (var session = Configuration.TestServer.GetSession())
+            {
+                var database = session.GetDatabase(Configuration.TestDatabaseName);
+                var collection = database.GetCollection<C>(Configuration.TestCollectionName);
 
-            var selectQuery = (SelectQuery)MongoQueryTranslator.Translate(query);
-            Assert.IsNull(selectQuery.Skip);
-            Assert.AreEqual(5, selectQuery.Take);
+                var query = collection.AsQueryable<C>().Take(5);
+
+                var selectQuery = (SelectQuery)MongoQueryTranslator.Translate(query);
+                Assert.IsNull(selectQuery.Skip);
+                Assert.AreEqual(5, selectQuery.Take);
+            }
         }
 
         [Test]
         public void TestTakeThenSkip()
         {
-            var query = _collection.AsQueryable<C>().Take(20).Skip(10);
+            using (var session = Configuration.TestServer.GetSession())
+            {
+                var database = session.GetDatabase(Configuration.TestDatabaseName);
+                var collection = database.GetCollection<C>(Configuration.TestCollectionName);
 
-            var selectQuery = (SelectQuery)MongoQueryTranslator.Translate(query);
-            Assert.AreEqual(10, selectQuery.Skip);
-            Assert.AreEqual(10, selectQuery.Take);
+                var query = collection.AsQueryable<C>().Take(20).Skip(10);
+
+                var selectQuery = (SelectQuery)MongoQueryTranslator.Translate(query);
+                Assert.AreEqual(10, selectQuery.Skip);
+                Assert.AreEqual(10, selectQuery.Take);
+            }
         }
 
         [Test]
         public void TestTakeThenSkipThenTake()
         {
-            var query = _collection.AsQueryable<C>().Take(20).Skip(10).Take(5);
+            using (var session = Configuration.TestServer.GetSession())
+            {
+                var database = session.GetDatabase(Configuration.TestDatabaseName);
+                var collection = database.GetCollection<C>(Configuration.TestCollectionName);
 
-            var selectQuery = (SelectQuery)MongoQueryTranslator.Translate(query);
-            Assert.AreEqual(10, selectQuery.Skip);
-            Assert.AreEqual(5, selectQuery.Take);
+                var query = collection.AsQueryable<C>().Take(20).Skip(10).Take(5);
+
+                var selectQuery = (SelectQuery)MongoQueryTranslator.Translate(query);
+                Assert.AreEqual(10, selectQuery.Skip);
+                Assert.AreEqual(5, selectQuery.Take);
+            }
         }
 
         [Test]
         public void TestTakeThenSkipThenTakeWithTooMany()
         {
-            var query = _collection.AsQueryable<C>().Take(20).Skip(10).Take(15);
+            using (var session = Configuration.TestServer.GetSession())
+            {
+                var database = session.GetDatabase(Configuration.TestDatabaseName);
+                var collection = database.GetCollection<C>(Configuration.TestCollectionName);
 
-            var selectQuery = (SelectQuery)MongoQueryTranslator.Translate(query);
-            Assert.AreEqual(10, selectQuery.Skip);
-            Assert.AreEqual(10, selectQuery.Take);
+                var query = collection.AsQueryable<C>().Take(20).Skip(10).Take(15);
+
+                var selectQuery = (SelectQuery)MongoQueryTranslator.Translate(query);
+                Assert.AreEqual(10, selectQuery.Skip);
+                Assert.AreEqual(10, selectQuery.Take);
+            }
         }
 
         [Test]
         public void TestTakeThenTake()
         {
-            var query = _collection.AsQueryable<C>().Take(20).Take(5);
+            using (var session = Configuration.TestServer.GetSession())
+            {
+                var database = session.GetDatabase(Configuration.TestDatabaseName);
+                var collection = database.GetCollection<C>(Configuration.TestCollectionName);
 
-            var selectQuery = (SelectQuery)MongoQueryTranslator.Translate(query);
-            Assert.IsNull(selectQuery.Skip);
-            Assert.AreEqual(5, selectQuery.Take);
+                var query = collection.AsQueryable<C>().Take(20).Take(5);
+
+                var selectQuery = (SelectQuery)MongoQueryTranslator.Translate(query);
+                Assert.IsNull(selectQuery.Skip);
+                Assert.AreEqual(5, selectQuery.Take);
+            }
         }
 
         [Test]
         public void TestTakeThenWhereThenSkip()
         {
-            var query = _collection.AsQueryable<C>().Take(20).Where(c => c.X == 10).Skip(30);
+            using (var session = Configuration.TestServer.GetSession())
+            {
+                var database = session.GetDatabase(Configuration.TestDatabaseName);
+                var collection = database.GetCollection<C>(Configuration.TestCollectionName);
 
-            Assert.Throws(typeof(MongoQueryException), () => MongoQueryTranslator.Translate(query));
+                var query = collection.AsQueryable<C>().Take(20).Where(c => c.X == 10).Skip(30);
+
+                Assert.Throws(typeof(MongoQueryException), () => MongoQueryTranslator.Translate(query));
+            }
         }
 
         [Test]
         public void TestWhereThenSkipThenTake()
         {
-            var query = _collection.AsQueryable<C>().Where(c => c.X == 10).Skip(10).Take(5);
+            using (var session = Configuration.TestServer.GetSession())
+            {
+                var database = session.GetDatabase(Configuration.TestDatabaseName);
+                var collection = database.GetCollection<C>(Configuration.TestCollectionName);
 
-            var selectQuery = (SelectQuery)MongoQueryTranslator.Translate(query);
-            Assert.AreEqual(10, selectQuery.Skip);
-            Assert.AreEqual(5, selectQuery.Take);
+                var query = collection.AsQueryable<C>().Where(c => c.X == 10).Skip(10).Take(5);
+
+                var selectQuery = (SelectQuery)MongoQueryTranslator.Translate(query);
+                Assert.AreEqual(10, selectQuery.Skip);
+                Assert.AreEqual(5, selectQuery.Take);
+            }
         }
 
         [Test]
         public void Test0Take()
         {
-            var query = _collection.AsQueryable<C>().Take(0).ToList();
-            Assert.AreEqual(0, query.Count);
+            using (var session = Configuration.TestServer.GetSession())
+            {
+                var database = session.GetDatabase(Configuration.TestDatabaseName);
+                var collection = database.GetCollection<C>(Configuration.TestCollectionName);
+
+                var query = collection.AsQueryable<C>().Take(0).ToList();
+                Assert.AreEqual(0, query.Count);
+            }
         }
 
         [Test]
         public void TestOfTypeCWith0Take()
         {
-            var query = _collection.AsQueryable<Uri>().OfType<C>().Take(0).ToList();
-            Assert.AreEqual(0, query.Count);
+            using (var session = Configuration.TestServer.GetSession())
+            {
+                var database = session.GetDatabase(Configuration.TestDatabaseName);
+                var collection = database.GetCollection<C>(Configuration.TestCollectionName);
+
+                var query = collection.AsQueryable<Uri>().OfType<C>().Take(0).ToList();
+                Assert.AreEqual(0, query.Count);
+            }
         }
     }
 }

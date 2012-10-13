@@ -28,25 +28,20 @@ namespace MongoDB.DriverUnitTests.Jira
     [TestFixture]
     public class CSharp325Tests
     {
-        private MongoServer _server;
-
-        [TestFixtureSetUp]
-        public void TestFixtureSetup()
-        {
-            _server = Configuration.TestServer;
-        }
-
         [Test]
         public void TestValidateDatabaseName()
         {
-            var invalidChars = new HashSet<char>() { '\0', ' ', '.', '$', '/', '\\' };
-            foreach (var c in Path.GetInvalidPathChars()) { invalidChars.Add(c); }
-            foreach (var c in Path.GetInvalidFileNameChars()) { invalidChars.Add(c); }
-
-            foreach (var c in invalidChars)
+            using (var session = Configuration.TestServer.GetSession())
             {
-                var databaseName = new string(new char[] { 'x', c });
-                Assert.Throws<ArgumentOutOfRangeException>(() => { var database = _server[databaseName]; });
+                var invalidChars = new HashSet<char>() { '\0', ' ', '.', '$', '/', '\\' };
+                foreach (var c in Path.GetInvalidPathChars()) { invalidChars.Add(c); }
+                foreach (var c in Path.GetInvalidFileNameChars()) { invalidChars.Add(c); }
+
+                foreach (var c in invalidChars)
+                {
+                    var databaseName = new string(new char[] { 'x', c });
+                    Assert.Throws<ArgumentOutOfRangeException>(() => { var database = session.GetDatabase(databaseName); });
+                }
             }
         }
     }

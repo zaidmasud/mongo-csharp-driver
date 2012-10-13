@@ -41,34 +41,40 @@ namespace MongoDB.DriverUnitTests.Jira.CSharp92
         public void TestSaveDocument()
         {
             var server = Configuration.TestServer;
-            var database = Configuration.TestDatabase;
-            var collection = Configuration.TestCollection;
+            using (var session = server.GetSession())
+            {
+                var database = session.GetDatabase(Configuration.TestDatabaseName);
+                var collection = database.GetCollection(Configuration.TestCollectionName);
 
-            var document = new BsonDocument { { "_id", -1 }, { "P", "x" } };
-            collection.RemoveAll();
-            collection.Insert(document);
+                var document = new BsonDocument { { "_id", -1 }, { "P", "x" } };
+                collection.RemoveAll();
+                collection.Insert(document);
 
-            var fetched = collection.FindOne();
-            Assert.IsInstanceOf<BsonDocument>(fetched);
-            Assert.AreEqual(-1, fetched["_id"].AsInt32);
-            Assert.AreEqual("x", fetched["P"].AsString);
+                var fetched = collection.FindOne();
+                Assert.IsInstanceOf<BsonDocument>(fetched);
+                Assert.AreEqual(-1, fetched["_id"].AsInt32);
+                Assert.AreEqual("x", fetched["P"].AsString);
+            }
         }
 
         [Test]
         public void TestSaveClass()
         {
             var server = Configuration.TestServer;
-            var database = Configuration.TestDatabase;
-            var collection = Configuration.GetTestCollection<C>();
+            using (var session = server.GetSession())
+            {
+                var database = session.GetDatabase(Configuration.TestDatabaseName);
+                var collection = database.GetCollection<C>(Configuration.TestCollectionName);
 
-            var document = new C { Id = -1, P = "x" };
-            collection.RemoveAll();
-            collection.Insert(document);
+                var document = new C { Id = -1, P = "x" };
+                collection.RemoveAll();
+                collection.Insert(document);
 
-            var fetched = collection.FindOne();
-            Assert.IsInstanceOf<C>(fetched);
-            Assert.AreEqual(-1, fetched.Id);
-            Assert.AreEqual("x", fetched.P);
+                var fetched = collection.FindOne();
+                Assert.IsInstanceOf<C>(fetched);
+                Assert.AreEqual(-1, fetched.Id);
+                Assert.AreEqual("x", fetched.P);
+            }
         }
     }
 }

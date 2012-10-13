@@ -33,11 +33,11 @@ namespace MongoDB.Driver
     public class MongoCursorEnumerator<TDocument> : IEnumerator<TDocument>
     {
         // private fields
+        private readonly MongoCursor<TDocument> _cursor;
+
         private bool _disposed = false;
         private bool _started = false;
         private bool _done = false;
-        private MongoCursor<TDocument> _cursor;
-        private MongoServerInstance _serverInstance; // set when first request is sent to server instance
         private int _count;
         private int _positiveLimit;
         private MongoReplyMessage<TDocument> _reply;
@@ -200,97 +200,67 @@ namespace MongoDB.Driver
         }
 
         // private methods
-        private MongoConnection AcquireConnection()
+        private MongoReplyMessage<TDocument> GetFirst()
         {
-            if (_serverInstance == null)
+            var connection = _cursor.Session.Connection;
+            // some of these weird conditions are necessary to get commands to run correctly
+            // specifically numberToReturn has to be 1 or -1 for commands
+            int numberToReturn;
+            if (_cursor.Limit < 0)
             {
-                // first time we need a connection let Server.AcquireConnection pick the server instance
-                var connection = _cursor.Server.AcquireConnection(_cursor.Database, _cursor.ReadPreference);
-                _serverInstance = connection.ServerInstance;
-                return connection;
+                numberToReturn = _cursor.Limit;
+            }
+            else if (_cursor.Limit == 0)
+            {
+                numberToReturn = _cursor.BatchSize;
+            }
+            else if (_cursor.BatchSize == 0)
+            {
+                numberToReturn = _cursor.Limit;
+            }
+            else if (_cursor.Limit < _cursor.BatchSize)
+            {
+                numberToReturn = _cursor.Limit;
             }
             else
             {
-                // all subsequent requests for the same cursor must go to the same server instance
-                return _cursor.Server.AcquireConnection(_cursor.Database, _serverInstance);
+                numberToReturn = _cursor.BatchSize;
             }
-        }
 
-        private MongoReplyMessage<TDocument> GetFirst()
-        {
-            var connection = AcquireConnection();
-            try
+            var writerSettings = _cursor.Collection.GetWriterSettings(connection);
+            using (var message = new MongoQueryMessage(writerSettings, _cursor.Collection.FullName, _cursor.Flags, _cursor.Skip, numberToReturn, WrapQuery(), _cursor.Fields))
             {
-                // some of these weird conditions are necessary to get commands to run correctly
-                // specifically numberToReturn has to be 1 or -1 for commands
-                int numberToReturn;
-                if (_cursor.Limit < 0)
-                {
-                    numberToReturn = _cursor.Limit;
-                }
-                else if (_cursor.Limit == 0)
-                {
-                    numberToReturn = _cursor.BatchSize;
-                }
-                else if (_cursor.BatchSize == 0)
-                {
-                    numberToReturn = _cursor.Limit;
-                }
-                else if (_cursor.Limit < _cursor.BatchSize)
-                {
-                    numberToReturn = _cursor.Limit;
-                }
-                else
-                {
-                    numberToReturn = _cursor.BatchSize;
-                }
-
-                var writerSettings = _cursor.Collection.GetWriterSettings(connection);
-                using (var message = new MongoQueryMessage(writerSettings, _cursor.Collection.FullName, _cursor.Flags, _cursor.Skip, numberToReturn, WrapQuery(), _cursor.Fields))
-                {
-                    return GetReply(connection, message);
-                }
-            }
-            finally
-            {
-                _cursor.Server.ReleaseConnection(connection);
+                return GetReply(connection, message);
             }
         }
 
         private MongoReplyMessage<TDocument> GetMore()
         {
-            var connection = AcquireConnection();
-            try
+            var connection = _cursor.Session.Connection;
+            int numberToReturn;
+            if (_positiveLimit != 0)
             {
-                int numberToReturn;
-                if (_positiveLimit != 0)
-                {
-                    numberToReturn = _positiveLimit - _count;
-                    if (_cursor.BatchSize != 0 && numberToReturn > _cursor.BatchSize)
-                    {
-                        numberToReturn = _cursor.BatchSize;
-                    }
-                }
-                else
+                numberToReturn = _positiveLimit - _count;
+                if (_cursor.BatchSize != 0 && numberToReturn > _cursor.BatchSize)
                 {
                     numberToReturn = _cursor.BatchSize;
                 }
-
-                using (var message = new MongoGetMoreMessage(_cursor.Collection.FullName, numberToReturn, _openCursorId))
-                {
-                    return GetReply(connection, message);
-                }
             }
-            finally
+            else
             {
-                _cursor.Server.ReleaseConnection(connection);
+                numberToReturn = _cursor.BatchSize;
+            }
+
+            using (var message = new MongoGetMoreMessage(_cursor.Collection.FullName, numberToReturn, _openCursorId))
+            {
+                return GetReply(connection, message);
             }
         }
 
         private MongoReplyMessage<TDocument> GetReply(MongoConnection connection, MongoRequestMessage message)
         {
             var readerSettings = _cursor.Collection.GetReaderSettings(connection);
-            connection.SendMessage(message, SafeMode.False, _cursor.Database.Name); // safemode doesn't apply to queries
+            connection.SendMessage(message, SafeMode.False, _cursor.Collection.Database.Name); // safemode doesn't apply to queries
             var reply = connection.ReceiveMessage<TDocument>(readerSettings, _cursor.SerializationOptions);
             _responseFlags = reply.ResponseFlags;
             _openCursorId = reply.CursorId;
@@ -303,35 +273,26 @@ namespace MongoDB.Driver
             {
                 try
                 {
-                    if (_serverInstance != null && _serverInstance.State == MongoServerState.Connected)
+                    var connection = _cursor.Session.Connection;
+                    using (var message = new MongoKillCursorsMessage(_openCursorId))
                     {
-                        var connection = _cursor.Server.AcquireConnection(_cursor.Database, _serverInstance);
-                        try
-                        {
-                            using (var message = new MongoKillCursorsMessage(_openCursorId))
-                            {
-                                connection.SendMessage(message, SafeMode.False, _cursor.Database.Name); // no need to use SafeMode for KillCursors
-                            }
-                        }
-                        finally
-                        {
-                            _cursor.Server.ReleaseConnection(connection);
-                        }
+                        connection.SendMessage(message, SafeMode.False, _cursor.Collection.Database.Name); // no need to use SafeMode for KillCursors
                     }
                 }
-                finally
+                catch
                 {
-                    _openCursorId = 0;
+                    // ignore exceptions
                 }
+                _openCursorId = 0;
             }
         }
 
         private IMongoQuery WrapQuery()
         {
             BsonDocument formattedReadPreference = null;
-            if (_serverInstance.InstanceType == MongoServerInstanceType.ShardRouter)
+            if (_cursor.Session.ServerInstance.InstanceType == MongoServerInstanceType.ShardRouter)
             {
-                var readPreference = _cursor.ReadPreference;
+                var readPreference = _cursor.Session.ReadPreference;
 
                 BsonArray tagSetsArray = null;
                 if (readPreference.ReadPreferenceMode != ReadPreferenceMode.Primary && readPreference.TagSets != null)

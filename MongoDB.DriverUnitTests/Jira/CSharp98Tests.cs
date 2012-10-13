@@ -45,16 +45,19 @@ namespace MongoDB.DriverUnitTests.Jira.CSharp98
         public void TestDeserializationOfTwoBs()
         {
             var server = Configuration.TestServer;
-            var database = Configuration.TestDatabase;
-            var collection = Configuration.GetTestCollection<A>();
+            using (var session = server.GetSession())
+            {
+                var database = session.GetDatabase(Configuration.TestDatabaseName);
+                var collection = database.GetCollection<A>(Configuration.TestCollectionName);
 
-            collection.RemoveAll();
-            var b1 = new B { PA = 1, PB = 2 };
-            var b2 = new B { PA = 3, PB = 4 };
-            collection.Insert<A>(b1);
-            collection.Insert<A>(b2);
+                collection.RemoveAll();
+                var b1 = new B { PA = 1, PB = 2 };
+                var b2 = new B { PA = 3, PB = 4 };
+                collection.Insert<A>(b1);
+                collection.Insert<A>(b2);
 
-            var docs = collection.FindAll().ToList();
+                var docs = collection.FindAll().ToList();
+            }
         }
     }
 }

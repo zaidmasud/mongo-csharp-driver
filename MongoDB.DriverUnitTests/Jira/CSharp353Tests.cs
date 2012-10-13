@@ -30,26 +30,20 @@ namespace MongoDB.DriverUnitTests.Jira.CSharp353
     [TestFixture]
     public class CSharp353Tests
     {
-        private MongoServer _server;
-        private MongoDatabase _database;
-        private MongoCollection<BsonDocument> _collection;
-
-        [TestFixtureSetUp]
-        public void TestFixtureSetup()
-        {
-            _server = Configuration.TestServer;
-            _database = Configuration.TestDatabase;
-            _collection = Configuration.TestCollection;
-        }
-
         [Test]
         public void TestDropDatabaseClearsIndexCache()
         {
-            _server.IndexCache.Reset();
-            _collection.EnsureIndex("x");
-            Assert.IsTrue(_server.IndexCache.Contains(_collection, "x_1"));
-            _database.Drop();
-            Assert.IsFalse(_server.IndexCache.Contains(_collection, "x_1"));
+            using (var session = Configuration.TestServer.GetSession())
+            {
+                var database = session.GetDatabase(Configuration.TestDatabaseName);
+                var collection = database.GetCollection(Configuration.TestCollectionName);
+
+                session.Server.IndexCache.Reset();
+                collection.EnsureIndex("x");
+                Assert.IsTrue(session.Server.IndexCache.Contains(collection, "x_1"));
+                database.Drop();
+                Assert.IsFalse(session.Server.IndexCache.Contains(collection, "x_1"));
+            }
         }
     }
 }

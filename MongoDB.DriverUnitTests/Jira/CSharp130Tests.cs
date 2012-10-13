@@ -38,38 +38,30 @@ namespace MongoDB.DriverUnitTests.Jira.CSharp130
         }
 #pragma warning restore
 
-        private MongoServer _server;
-        private MongoDatabase _database;
-        private MongoCollection _collection;
-
-        [TestFixtureSetUp]
-        public void TestFixtureSetup()
-        {
-            var serverSettings = Configuration.TestServer.Settings.Clone();
-            serverSettings.SafeMode = SafeMode.False;
-            _server = MongoServer.Create(serverSettings); // not safe=true
-            _database = _server[Configuration.TestDatabase.Name];
-            _collection = _database.GetCollection<C>(Configuration.TestCollection.Name);
-        }
-
         [Test]
         public void TestLastErrorMessage()
         {
-            using (_server.RequestStart(_database))
+            var serverSettings = Configuration.TestServer.Settings.Clone();
+            serverSettings.SafeMode = SafeMode.False;
+            var server = MongoServer.Create(serverSettings); // not safe=true
+            using (var session = server.GetSession())
             {
+                var database = session.GetDatabase(Configuration.TestDatabaseName);
+                var collection = database.GetCollection<C>(Configuration.TestCollectionName);
+
                 var c = new C { List = new List<int>() };
 
                 // insert it once
-                _collection.Insert(c);
-                var lastError = _server.GetLastError();
+                collection.Insert(c);
+                var lastError = session.GetLastError();
                 Assert.AreEqual(0, lastError.DocumentsAffected);
                 Assert.IsFalse(lastError.HasLastErrorMessage);
                 Assert.IsNull(lastError.LastErrorMessage);
                 Assert.IsFalse(lastError.UpdatedExisting);
 
                 // insert it again (expect duplicate key error)
-                _collection.Insert(c);
-                lastError = _server.GetLastError();
+                collection.Insert(c);
+                lastError = session.GetLastError();
                 Assert.AreEqual(0, lastError.DocumentsAffected);
                 Assert.IsTrue(lastError.HasLastErrorMessage);
                 Assert.IsNotNull(lastError.LastErrorMessage);

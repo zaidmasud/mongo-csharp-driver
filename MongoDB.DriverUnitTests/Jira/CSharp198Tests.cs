@@ -46,50 +46,44 @@ namespace MongoDB.DriverUnitTests.Jira.CSharp198
             public string Name;
         }
 
-        private MongoServer _server;
-        private MongoDatabase _database;
-        private MongoCollection<Foo> _collection;
-
-        [TestFixtureSetUp]
-        public void TestFixtureSetup()
-        {
-            _server = Configuration.TestServer;
-            _database = Configuration.TestDatabase;
-            _collection = Configuration.GetTestCollection<Foo>();
-        }
-
         [Test]
         public void TestSave()
         {
-            _collection.RemoveAll();
-            var foo1 = new Foo
+            using (var session = Configuration.TestServer.GetSession())
             {
-                Id = new Id { AccountId = 1, Index = 2 },
-                Name = "foo1"
-            };
-            _collection.Save(foo1);
+                var database = session.GetDatabase(Configuration.TestDatabaseName);
+                var collection = database.GetCollection<Foo>(Configuration.TestCollectionName);
 
-            var foo1Rehydrated = _collection.FindOne(Query.EQ("_id", BsonDocumentWrapper.Create(foo1.Id)));
-            Assert.IsInstanceOf<Foo>(foo1Rehydrated);
-            Assert.IsInstanceOf<Id>(foo1Rehydrated.Id);
-            Assert.AreEqual(1, foo1Rehydrated.Id.AccountId);
-            Assert.AreEqual(2, foo1Rehydrated.Id.Index);
-            Assert.AreEqual("foo1", foo1Rehydrated.Name);
+                collection.RemoveAll();
+                var foo1 = new Foo
+                {
+                    Id = new Id { AccountId = 1, Index = 2 },
+                    Name = "foo1"
+                };
+                collection.Save(foo1);
 
-            var foo2 = new Foo
-            {
-                Id = new IdWithExtraField { AccountId = 3, Index = 4, Extra = 5 },
-                Name = "foo2"
-            };
-            _collection.Save(foo2);
+                var foo1Rehydrated = collection.FindOne(Query.EQ("_id", BsonDocumentWrapper.Create(foo1.Id)));
+                Assert.IsInstanceOf<Foo>(foo1Rehydrated);
+                Assert.IsInstanceOf<Id>(foo1Rehydrated.Id);
+                Assert.AreEqual(1, foo1Rehydrated.Id.AccountId);
+                Assert.AreEqual(2, foo1Rehydrated.Id.Index);
+                Assert.AreEqual("foo1", foo1Rehydrated.Name);
 
-            var foo2Rehydrated = _collection.FindOne(Query.EQ("_id", BsonDocumentWrapper.Create(foo2.Id)));
-            Assert.IsInstanceOf<Foo>(foo2Rehydrated);
-            Assert.IsInstanceOf<IdWithExtraField>(foo2Rehydrated.Id);
-            Assert.AreEqual(3, foo2Rehydrated.Id.AccountId);
-            Assert.AreEqual(4, foo2Rehydrated.Id.Index);
-            Assert.AreEqual(5, ((IdWithExtraField)foo2Rehydrated.Id).Extra);
-            Assert.AreEqual("foo2", foo2Rehydrated.Name);
+                var foo2 = new Foo
+                {
+                    Id = new IdWithExtraField { AccountId = 3, Index = 4, Extra = 5 },
+                    Name = "foo2"
+                };
+                collection.Save(foo2);
+
+                var foo2Rehydrated = collection.FindOne(Query.EQ("_id", BsonDocumentWrapper.Create(foo2.Id)));
+                Assert.IsInstanceOf<Foo>(foo2Rehydrated);
+                Assert.IsInstanceOf<IdWithExtraField>(foo2Rehydrated.Id);
+                Assert.AreEqual(3, foo2Rehydrated.Id.AccountId);
+                Assert.AreEqual(4, foo2Rehydrated.Id.Index);
+                Assert.AreEqual(5, ((IdWithExtraField)foo2Rehydrated.Id).Extra);
+                Assert.AreEqual("foo2", foo2Rehydrated.Name);
+            }
         }
     }
 }

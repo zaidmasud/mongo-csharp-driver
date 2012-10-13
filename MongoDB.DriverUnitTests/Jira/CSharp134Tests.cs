@@ -38,30 +38,24 @@ namespace MongoDB.DriverUnitTests.Jira.CSharp134
         }
 #pragma warning restore
 
-        private MongoServer _server;
-        private MongoDatabase _database;
-        private MongoCollection<C> _collection;
-
-        [TestFixtureSetUp]
-        public void TestFixtureSetup()
-        {
-            _server = Configuration.TestServer;
-            _database = Configuration.TestDatabase;
-            _collection = Configuration.GetTestCollection<C>();
-        }
-
         [Test]
         public void TestDeserializeMongoDBRef()
         {
-            var dbRef = new MongoDBRef("test", ObjectId.GenerateNewId());
-            var c = new C { DbRef = dbRef };
-            _collection.RemoveAll();
-            _collection.Insert(c);
+            using (var session = Configuration.TestServer.GetSession())
+            {
+                var database = session.GetDatabase(Configuration.TestDatabaseName);
+                var collection = database.GetCollection<C>(Configuration.TestCollectionName);
 
-            var rehydrated = _collection.FindOne();
-            Assert.IsNull(rehydrated.DbRef.DatabaseName);
-            Assert.AreEqual(dbRef.CollectionName, rehydrated.DbRef.CollectionName);
-            Assert.AreEqual(dbRef.Id, rehydrated.DbRef.Id);
+                var dbRef = new MongoDBRef("test", ObjectId.GenerateNewId());
+                var c = new C { DbRef = dbRef };
+                collection.RemoveAll();
+                collection.Insert(c);
+
+                var rehydrated = collection.FindOne();
+                Assert.IsNull(rehydrated.DbRef.DatabaseName);
+                Assert.AreEqual(dbRef.CollectionName, rehydrated.DbRef.CollectionName);
+                Assert.AreEqual(dbRef.Id, rehydrated.DbRef.Id);
+            }
         }
     }
 }

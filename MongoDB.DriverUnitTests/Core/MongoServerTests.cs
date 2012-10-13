@@ -27,22 +27,20 @@ namespace MongoDB.DriverUnitTests
     [TestFixture]
     public class MongoServerTests
     {
-        private MongoServer _server;
-        private MongoDatabase _database;
-        private MongoCollection<BsonDocument> _collection;
+        MongoServer _server;
         private bool _isMasterSlavePair;
 
         [TestFixtureSetUp]
         public void Setup()
         {
             _server = Configuration.TestServer;
-            _database = Configuration.TestDatabase;
-            _collection = Configuration.TestCollection;
-
-            var adminDatabase = _server.GetDatabase("admin");
-            var commandResult = adminDatabase.RunCommand("getCmdLineOpts");
-            var argv = commandResult.Response["argv"].AsBsonArray;
-            _isMasterSlavePair = argv.Contains("--master") || argv.Contains("--slave");
+            using (var session = _server.GetSession())
+            {
+                var adminDatabase = session.GetDatabase("admin");
+                var commandResult = adminDatabase.RunCommand("getCmdLineOpts");
+                var argv = commandResult.Response["argv"].AsBsonArray;
+                _isMasterSlavePair = argv.Contains("--master") || argv.Contains("--slave");
+            }
         }
 
         [Test]
@@ -54,10 +52,13 @@ namespace MongoDB.DriverUnitTests
         [Test]
         public void TestBuildInfo()
         {
-            var versionZero = new Version(0, 0, 0, 0);
-            var buildInfo = _server.BuildInfo;
-            Assert.IsTrue(buildInfo.Bits == 32 || buildInfo.Bits == 64);
-            Assert.AreNotEqual(versionZero, buildInfo.Version);
+            using (var session = _server.GetSession())
+            {
+                var versionZero = new Version(0, 0, 0, 0);
+                var buildInfo = session.ServerInstance.BuildInfo;
+                Assert.IsTrue(buildInfo.Bits == 32 || buildInfo.Bits == 64);
+                Assert.AreNotEqual(versionZero, buildInfo.Version);
+            }
         }
 
         [Test]
@@ -88,40 +89,58 @@ namespace MongoDB.DriverUnitTests
         [Test]
         public void TestDatabaseExists()
         {
-            if (!_isMasterSlavePair)
+            using (var session = _server.GetSession())
             {
-                _database.Drop();
-                Assert.IsFalse(_server.DatabaseExists(_database.Name));
-                _collection.Insert(new BsonDocument("x", 1));
-                Assert.IsTrue(_server.DatabaseExists(_database.Name));
+                var database = session.GetDatabase(Configuration.TestDatabaseName);
+                var collection = database.GetCollection(Configuration.TestCollectionName);
+
+                if (!_isMasterSlavePair)
+                {
+                    database.Drop();
+                    Assert.IsFalse(session.DatabaseExists(database.Name));
+                    collection.Insert(new BsonDocument("x", 1));
+                    Assert.IsTrue(session.DatabaseExists(database.Name));
+                }
             }
         }
 
         [Test]
         public void TestDropDatabase()
         {
-            if (!_isMasterSlavePair)
+            using (var session = _server.GetSession())
             {
-                _collection.Insert(new BsonDocument());
-                var databaseNames = _server.GetDatabaseNames();
-                Assert.IsTrue(databaseNames.Contains(_database.Name));
+                var database = session.GetDatabase(Configuration.TestDatabaseName);
+                var collection = database.GetCollection(Configuration.TestCollectionName);
 
-                var result = _server.DropDatabase(_database.Name);
-                databaseNames = _server.GetDatabaseNames();
-                Assert.IsFalse(databaseNames.Contains(_database.Name));
+                if (!_isMasterSlavePair)
+                {
+                    collection.Insert(new BsonDocument());
+                    var databaseNames = session.GetDatabaseNames();
+                    Assert.IsTrue(databaseNames.Contains(database.Name));
+
+                    var result = session.DropDatabase(database.Name);
+                    databaseNames = session.GetDatabaseNames();
+                    Assert.IsFalse(databaseNames.Contains(database.Name));
+                }
             }
         }
 
         [Test]
         public void TestFetchDBRef()
         {
-            _collection.Drop();
-            _collection.Insert(new BsonDocument { { "_id", 1 }, { "x", 2 } });
-            var dbRef = new MongoDBRef(_database.Name, _collection.Name, 1);
-            var document = _server.FetchDBRef(dbRef);
-            Assert.AreEqual(2, document.ElementCount);
-            Assert.AreEqual(1, document["_id"].AsInt32);
-            Assert.AreEqual(2, document["x"].AsInt32);
+            using (var session = _server.GetSession())
+            {
+                var database = session.GetDatabase(Configuration.TestDatabaseName);
+                var collection = database.GetCollection(Configuration.TestCollectionName);
+
+                collection.Drop();
+                collection.Insert(new BsonDocument { { "_id", 1 }, { "x", 2 } });
+                var dbRef = new MongoDBRef(database.Name, collection.Name, 1);
+                var document = session.FetchDBRef(dbRef);
+                Assert.AreEqual(2, document.ElementCount);
+                Assert.AreEqual(1, document["_id"].AsInt32);
+                Assert.AreEqual(2, document["x"].AsInt32);
+            }
         }
 
         [Test]
@@ -142,16 +161,22 @@ namespace MongoDB.DriverUnitTests
         [Test]
         public void TestGetDatabase()
         {
-            var settings = new MongoDatabaseSettings { ReadPreference = ReadPreference.Primary };
-            var database = _server.GetDatabase("test", settings);
-            Assert.AreEqual("test", database.Name);
-            Assert.AreEqual(ReadPreference.Primary, database.Settings.ReadPreference);
+            using (var session = _server.GetSession())
+            {
+                var settings = new MongoDatabaseSettings { ReadPreference = ReadPreference.Primary };
+                var database = session.GetDatabase("test", settings);
+                Assert.AreEqual("test", database.Name);
+                Assert.AreEqual(ReadPreference.Primary, database.Settings.ReadPreference);
+            }
         }
 
         [Test]
         public void TestGetDatabaseNames()
         {
-            var databaseNames = _server.GetDatabaseNames();
+            using (var session = _server.GetSession())
+            {
+                var databaseNames = session.GetDatabaseNames();
+            }
         }
 
         [Test]
@@ -234,44 +259,6 @@ namespace MongoDB.DriverUnitTests
         }
 
         [Test]
-        public void TestRequestStart()
-        {
-            Assert.AreEqual(0, _server.RequestNestingLevel);
-            using (_server.RequestStart(_database))
-            {
-                Assert.AreEqual(1, _server.RequestNestingLevel);
-            }
-            Assert.AreEqual(0, _server.RequestNestingLevel);
-        }
-
-        [Test]
-        public void TestRequestStartPrimary()
-        {
-            Assert.AreEqual(0, _server.RequestNestingLevel);
-            using (_server.RequestStart(_database, _server.Primary))
-            {
-                Assert.AreEqual(1, _server.RequestNestingLevel);
-            }
-            Assert.AreEqual(0, _server.RequestNestingLevel);
-        }
-
-        [Test]
-        public void TestRequestStartPrimaryNested()
-        {
-            Assert.AreEqual(0, _server.RequestNestingLevel);
-            using (_server.RequestStart(_database, _server.Primary))
-            {
-                Assert.AreEqual(1, _server.RequestNestingLevel);
-                using (_server.RequestStart(_database, _server.Primary))
-                {
-                    Assert.AreEqual(2, _server.RequestNestingLevel);
-                }
-                Assert.AreEqual(1, _server.RequestNestingLevel);
-            }
-            Assert.AreEqual(0, _server.RequestNestingLevel);
-        }
-
-        [Test]
         public void TestSecondaries()
         {
             Assert.IsTrue(_server.Secondaries.Length < _server.Instances.Length);
@@ -286,8 +273,11 @@ namespace MongoDB.DriverUnitTests
         [Test]
         public void TestVersion()
         {
-            var versionZero = new Version(0, 0, 0, 0);
-            Assert.AreNotEqual(versionZero, _server.BuildInfo.Version);
+            using (var session = _server.GetSession())
+            {
+                var versionZero = new Version(0, 0, 0, 0);
+                Assert.AreNotEqual(versionZero, session.ServerInstance.BuildInfo.Version);
+            }
         }
     }
 }

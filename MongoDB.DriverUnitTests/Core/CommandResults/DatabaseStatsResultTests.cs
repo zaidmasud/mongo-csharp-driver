@@ -28,30 +28,21 @@ namespace MongoDB.DriverUnitTests.CommandResults
     [TestFixture]
     public class DatabaseStatsResultTests
     {
-        private MongoServer _server;
-        private MongoDatabase _database;
-        private MongoCollection<BsonDocument> _collection;
-
-        [TestFixtureSetUp]
-        public void Setup()
-        {
-            _server = Configuration.TestServer;
-            _database = Configuration.TestDatabase;
-            _collection = Configuration.TestCollection;
-        }
-
         [Test]
         public void Test()
         {
-            using (_database.RequestStart())
+            using (var session = Configuration.TestServer.GetSession())
             {
-                var instance = _server.RequestConnection.ServerInstance;
+                var database = session.GetDatabase(Configuration.TestDatabaseName);
+                var collection = database.GetCollection(Configuration.TestCollectionName);
+
+                var instance = session.ServerInstance;
                 if (instance.InstanceType != MongoServerInstanceType.ShardRouter)
                 {
                     // make sure collection and database exist
-                    _collection.Insert(new BsonDocument());
+                    collection.Insert(new BsonDocument());
 
-                    var result = _database.GetStats();
+                    var result = database.GetStats();
                     Assert.IsTrue(result.Ok);
                     Assert.IsTrue(result.AverageObjectSize > 0);
                     Assert.IsTrue(result.CollectionCount > 0);

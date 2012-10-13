@@ -34,12 +34,15 @@ namespace MongoDB.DriverUnitTests.Jira.CSharp361
         public void TestInsertUpdateAndSaveWithElementNameStartingWithDollarSign()
         {
             var server = Configuration.TestServer;
-            var database = Configuration.TestDatabase;
-            var collection = Configuration.TestCollection;
-            collection.Drop();
+            using (var session = server.GetSession())
+            {
+                var database = session.GetDatabase(Configuration.TestDatabaseName);
+                var collection = database.GetCollection(Configuration.TestCollectionName);
+                collection.Drop();
 
-            collection.Insert(new BsonDocument("_id", 1));
-            Assert.Throws<ArgumentOutOfRangeException>(() => { database.RenameCollection("test", ""); });
+                collection.Insert(new BsonDocument("_id", 1));
+                Assert.Throws<ArgumentOutOfRangeException>(() => { database.RenameCollection("test", ""); });
+            }
         }
     }
 }

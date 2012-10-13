@@ -47,151 +47,199 @@ namespace MongoDB.DriverUnitTests.Jira.CSharp218
             public int Y;
         }
 
-        private MongoServer _server;
-        private MongoDatabase _database;
-        private MongoCollection<BsonDocument> _collection;
-
-        [TestFixtureSetUp]
-        public void TestFixtureSetup()
-        {
-            _server = Configuration.TestServer;
-            _database = Configuration.TestDatabase;
-            _collection = Configuration.TestCollection;
-        }
-
         [Test]
         public void TestDeserializeClassWithStructPropertyFails()
         {
-            _collection.RemoveAll();
-            var c = new C { Id = ObjectId.GenerateNewId(), P = new P { X = 1, Y = 2 } };
-            _collection.Insert(c);
-            try
+            using (var session = Configuration.TestServer.GetSession())
             {
-                _collection.FindOneAs<C>();
-                Assert.Fail("Expected an exception to be thrown.");
-            }
-            catch (Exception ex)
-            {
-                var expectedMessage = "An error occurred while deserializing the P field of class MongoDB.DriverUnitTests.Jira.CSharp218.CSharp218Tests+C: Value class MongoDB.DriverUnitTests.Jira.CSharp218.CSharp218Tests+P cannot be deserialized.";
-                Assert.IsInstanceOf<FileFormatException>(ex);
-                Assert.IsInstanceOf<BsonSerializationException>(ex.InnerException);
-                Assert.AreEqual(expectedMessage, ex.Message);
+                var database = session.GetDatabase(Configuration.TestDatabaseName);
+                var collection = database.GetCollection(Configuration.TestCollectionName);
+
+                collection.RemoveAll();
+                var c = new C { Id = ObjectId.GenerateNewId(), P = new P { X = 1, Y = 2 } };
+                collection.Insert(c);
+                try
+                {
+                    collection.FindOneAs<C>();
+                    Assert.Fail("Expected an exception to be thrown.");
+                }
+                catch (Exception ex)
+                {
+                    var expectedMessage = "An error occurred while deserializing the P field of class MongoDB.DriverUnitTests.Jira.CSharp218.CSharp218Tests+C: Value class MongoDB.DriverUnitTests.Jira.CSharp218.CSharp218Tests+P cannot be deserialized.";
+                    Assert.IsInstanceOf<FileFormatException>(ex);
+                    Assert.IsInstanceOf<BsonSerializationException>(ex.InnerException);
+                    Assert.AreEqual(expectedMessage, ex.Message);
+                }
             }
         }
 
         [Test]
         public void TestDeserializeStructFails()
         {
-            _collection.RemoveAll();
-            var s = new S { Id = ObjectId.GenerateNewId(), P = new P { X = 1, Y = 2 } };
-            _collection.Insert(s);
-            Assert.Throws<BsonSerializationException>(() => _collection.FindOneAs<S>());
+            using (var session = Configuration.TestServer.GetSession())
+            {
+                var database = session.GetDatabase(Configuration.TestDatabaseName);
+                var collection = database.GetCollection(Configuration.TestCollectionName);
+
+                collection.RemoveAll();
+                var s = new S { Id = ObjectId.GenerateNewId(), P = new P { X = 1, Y = 2 } };
+                collection.Insert(s);
+                Assert.Throws<BsonSerializationException>(() => collection.FindOneAs<S>());
+            }
         }
 
         [Test]
         public void TestInsertForClassWithIdSucceeds()
         {
-            _collection.RemoveAll();
-            var c = new C { Id = ObjectId.GenerateNewId(), P = new P { X = 1, Y = 2 } };
-            _collection.Insert(c);
-            Assert.AreEqual(1, _collection.Count());
-            var r = _collection.FindOne();
-            Assert.AreEqual(2, r.ElementCount);
-            Assert.AreEqual(2, r["P"].AsBsonDocument.ElementCount);
-            Assert.AreEqual(c.Id, r["_id"].AsObjectId);
-            Assert.AreEqual(c.P.X, r["P"]["X"].AsInt32);
-            Assert.AreEqual(c.P.Y, r["P"]["Y"].AsInt32);
+            using (var session = Configuration.TestServer.GetSession())
+            {
+                var database = session.GetDatabase(Configuration.TestDatabaseName);
+                var collection = database.GetCollection(Configuration.TestCollectionName);
+
+                collection.RemoveAll();
+                var c = new C { Id = ObjectId.GenerateNewId(), P = new P { X = 1, Y = 2 } };
+                collection.Insert(c);
+                Assert.AreEqual(1, collection.Count());
+                var r = collection.FindOne();
+                Assert.AreEqual(2, r.ElementCount);
+                Assert.AreEqual(2, r["P"].AsBsonDocument.ElementCount);
+                Assert.AreEqual(c.Id, r["_id"].AsObjectId);
+                Assert.AreEqual(c.P.X, r["P"]["X"].AsInt32);
+                Assert.AreEqual(c.P.Y, r["P"]["Y"].AsInt32);
+            }
         }
 
         [Test]
         public void TestInsertForClassWithoutIdSucceeds()
         {
-            _collection.RemoveAll();
-            var c = new C { P = new P { X = 1, Y = 2 } };
-            _collection.Insert(c);
-            Assert.AreEqual(1, _collection.Count());
-            var r = _collection.FindOne();
-            Assert.AreEqual(2, r.ElementCount);
-            Assert.AreEqual(2, r["P"].AsBsonDocument.ElementCount);
-            Assert.AreEqual(c.Id, r["_id"].AsObjectId);
-            Assert.AreEqual(c.P.X, r["P"]["X"].AsInt32);
-            Assert.AreEqual(c.P.Y, r["P"]["Y"].AsInt32);
+            using (var session = Configuration.TestServer.GetSession())
+            {
+                var database = session.GetDatabase(Configuration.TestDatabaseName);
+                var collection = database.GetCollection(Configuration.TestCollectionName);
+
+                collection.RemoveAll();
+                var c = new C { P = new P { X = 1, Y = 2 } };
+                collection.Insert(c);
+                Assert.AreEqual(1, collection.Count());
+                var r = collection.FindOne();
+                Assert.AreEqual(2, r.ElementCount);
+                Assert.AreEqual(2, r["P"].AsBsonDocument.ElementCount);
+                Assert.AreEqual(c.Id, r["_id"].AsObjectId);
+                Assert.AreEqual(c.P.X, r["P"]["X"].AsInt32);
+                Assert.AreEqual(c.P.Y, r["P"]["Y"].AsInt32);
+            }
         }
 
         [Test]
         public void TestInsertForStructWithIdSucceeds()
         {
-            _collection.RemoveAll();
-            var s = new S { Id = ObjectId.GenerateNewId(), P = new P { X = 1, Y = 2 } };
-            _collection.Insert(s);
-            Assert.AreEqual(1, _collection.Count());
-            var r = _collection.FindOne();
-            Assert.AreEqual(2, r.ElementCount);
-            Assert.AreEqual(2, r["P"].AsBsonDocument.ElementCount);
-            Assert.AreEqual(s.Id, r["_id"].AsObjectId);
-            Assert.AreEqual(s.P.X, r["P"]["X"].AsInt32);
-            Assert.AreEqual(s.P.Y, r["P"]["Y"].AsInt32);
+            using (var session = Configuration.TestServer.GetSession())
+            {
+                var database = session.GetDatabase(Configuration.TestDatabaseName);
+                var collection = database.GetCollection(Configuration.TestCollectionName);
+
+                collection.RemoveAll();
+                var s = new S { Id = ObjectId.GenerateNewId(), P = new P { X = 1, Y = 2 } };
+                collection.Insert(s);
+                Assert.AreEqual(1, collection.Count());
+                var r = collection.FindOne();
+                Assert.AreEqual(2, r.ElementCount);
+                Assert.AreEqual(2, r["P"].AsBsonDocument.ElementCount);
+                Assert.AreEqual(s.Id, r["_id"].AsObjectId);
+                Assert.AreEqual(s.P.X, r["P"]["X"].AsInt32);
+                Assert.AreEqual(s.P.Y, r["P"]["Y"].AsInt32);
+            }
         }
 
         [Test]
         public void TestInsertForStructWithoutIdFails()
         {
-            _collection.RemoveAll();
-            var s = new S { P = new P { X = 1, Y = 2 } };
-            Assert.Throws<BsonSerializationException>(() => _collection.Insert(s));
+            using (var session = Configuration.TestServer.GetSession())
+            {
+                var database = session.GetDatabase(Configuration.TestDatabaseName);
+                var collection = database.GetCollection(Configuration.TestCollectionName);
+
+                collection.RemoveAll();
+                var s = new S { P = new P { X = 1, Y = 2 } };
+                Assert.Throws<BsonSerializationException>(() => collection.Insert(s));
+            }
         }
 
         [Test]
         public void TestSaveForClassWithIdSucceeds()
         {
-            _collection.RemoveAll();
-            var c = new C { Id = ObjectId.GenerateNewId(), P = new P { X = 1, Y = 2 } };
-            _collection.Save(c);
-            Assert.AreEqual(1, _collection.Count());
-            var r = _collection.FindOne();
-            Assert.AreEqual(2, r.ElementCount);
-            Assert.AreEqual(2, r["P"].AsBsonDocument.ElementCount);
-            Assert.AreEqual(c.Id, r["_id"].AsObjectId);
-            Assert.AreEqual(c.P.X, r["P"]["X"].AsInt32);
-            Assert.AreEqual(c.P.Y, r["P"]["Y"].AsInt32);
+            using (var session = Configuration.TestServer.GetSession())
+            {
+                var database = session.GetDatabase(Configuration.TestDatabaseName);
+                var collection = database.GetCollection(Configuration.TestCollectionName);
+
+                collection.RemoveAll();
+                var c = new C { Id = ObjectId.GenerateNewId(), P = new P { X = 1, Y = 2 } };
+                collection.Save(c);
+                Assert.AreEqual(1, collection.Count());
+                var r = collection.FindOne();
+                Assert.AreEqual(2, r.ElementCount);
+                Assert.AreEqual(2, r["P"].AsBsonDocument.ElementCount);
+                Assert.AreEqual(c.Id, r["_id"].AsObjectId);
+                Assert.AreEqual(c.P.X, r["P"]["X"].AsInt32);
+                Assert.AreEqual(c.P.Y, r["P"]["Y"].AsInt32);
+            }
         }
 
         [Test]
         public void TestSaveForClassWithoutIdSucceeds()
         {
-            _collection.RemoveAll();
-            var c = new C { P = new P { X = 1, Y = 2 } };
-            _collection.Save(c);
-            Assert.AreEqual(1, _collection.Count());
-            var r = _collection.FindOne();
-            Assert.AreEqual(2, r.ElementCount);
-            Assert.AreEqual(2, r["P"].AsBsonDocument.ElementCount);
-            Assert.AreEqual(c.Id, r["_id"].AsObjectId);
-            Assert.AreEqual(c.P.X, r["P"]["X"].AsInt32);
-            Assert.AreEqual(c.P.Y, r["P"]["Y"].AsInt32);
+            using (var session = Configuration.TestServer.GetSession())
+            {
+                var database = session.GetDatabase(Configuration.TestDatabaseName);
+                var collection = database.GetCollection(Configuration.TestCollectionName);
+
+                collection.RemoveAll();
+                var c = new C { P = new P { X = 1, Y = 2 } };
+                collection.Save(c);
+                Assert.AreEqual(1, collection.Count());
+                var r = collection.FindOne();
+                Assert.AreEqual(2, r.ElementCount);
+                Assert.AreEqual(2, r["P"].AsBsonDocument.ElementCount);
+                Assert.AreEqual(c.Id, r["_id"].AsObjectId);
+                Assert.AreEqual(c.P.X, r["P"]["X"].AsInt32);
+                Assert.AreEqual(c.P.Y, r["P"]["Y"].AsInt32);
+            }
         }
 
         [Test]
         public void TestSaveForStructWithIdSucceeds()
         {
-            _collection.RemoveAll();
-            var s = new S { Id = ObjectId.GenerateNewId(), P = new P { X = 1, Y = 2 } };
-            _collection.Save(s);
-            Assert.AreEqual(1, _collection.Count());
-            var r = _collection.FindOne();
-            Assert.AreEqual(2, r.ElementCount);
-            Assert.AreEqual(2, r["P"].AsBsonDocument.ElementCount);
-            Assert.AreEqual(s.Id, r["_id"].AsObjectId);
-            Assert.AreEqual(s.P.X, r["P"]["X"].AsInt32);
-            Assert.AreEqual(s.P.Y, r["P"]["Y"].AsInt32);
+            using (var session = Configuration.TestServer.GetSession())
+            {
+                var database = session.GetDatabase(Configuration.TestDatabaseName);
+                var collection = database.GetCollection(Configuration.TestCollectionName);
+
+                collection.RemoveAll();
+                var s = new S { Id = ObjectId.GenerateNewId(), P = new P { X = 1, Y = 2 } };
+                collection.Save(s);
+                Assert.AreEqual(1, collection.Count());
+                var r = collection.FindOne();
+                Assert.AreEqual(2, r.ElementCount);
+                Assert.AreEqual(2, r["P"].AsBsonDocument.ElementCount);
+                Assert.AreEqual(s.Id, r["_id"].AsObjectId);
+                Assert.AreEqual(s.P.X, r["P"]["X"].AsInt32);
+                Assert.AreEqual(s.P.Y, r["P"]["Y"].AsInt32);
+            }
         }
 
         [Test]
         public void TestSaveForStructWithoutIdFails()
         {
-            _collection.RemoveAll();
-            var s = new S { P = new P { X = 1, Y = 2 } };
-            Assert.Throws<BsonSerializationException>(() => _collection.Save(s));
+            using (var session = Configuration.TestServer.GetSession())
+            {
+                var database = session.GetDatabase(Configuration.TestDatabaseName);
+                var collection = database.GetCollection(Configuration.TestCollectionName);
+
+                collection.RemoveAll();
+                var s = new S { P = new P { X = 1, Y = 2 } };
+                Assert.Throws<BsonSerializationException>(() => collection.Save(s));
+            }
         }
     }
 }

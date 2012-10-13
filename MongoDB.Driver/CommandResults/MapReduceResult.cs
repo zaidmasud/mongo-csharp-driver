@@ -168,9 +168,9 @@ namespace MongoDB.Driver
                 }
                 else
                 {
-                    outputDatabase = _inputDatabase.Server[outputDatabaseName];
+                    outputDatabase = _inputDatabase.Session.GetDatabase(outputDatabaseName);
                 }
-                return outputDatabase[CollectionName].FindAll();
+                return outputDatabase.GetCollection(CollectionName).FindAll();
             }
         }
 
@@ -205,9 +205,9 @@ namespace MongoDB.Driver
                 }
                 else
                 {
-                    outputDatabase = _inputDatabase.Server[outputDatabaseName];
+                    outputDatabase = _inputDatabase.Session.GetDatabase(outputDatabaseName);
                 }
-                return outputDatabase[CollectionName].FindAllAs(documentType).Cast<object>();
+                return outputDatabase.GetCollection(CollectionName).FindAllAs(documentType).Cast<object>();
             }
         }
 

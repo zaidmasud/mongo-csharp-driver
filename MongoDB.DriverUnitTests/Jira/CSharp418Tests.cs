@@ -39,42 +39,36 @@ namespace MongoDB.DriverUnitTests.Jira.CSharp418
             public int Y;
         }
 
-        private MongoServer _server;
-        private MongoDatabase _database;
-        private MongoCollection<D> _collection;
-
-        [TestFixtureSetUp]
-        public void TestFixtureSetup()
-        {
-            _server = Configuration.TestServer;
-            _database = Configuration.TestDatabase;
-            _collection = Configuration.GetTestCollection<D>();
-        }
-
         [Test]
         public void TestQueryAgainstInheritedField()
         {
-            _collection.Drop();
-            _collection.Insert(new D { X = 1, Y = 2 });
+            using (var session = Configuration.TestServer.GetSession())
+            {
+                var database = session.GetDatabase(Configuration.TestDatabaseName);
+                var collection = database.GetCollection<D>(Configuration.TestCollectionName);
 
-            var query = from d in _collection.AsQueryable<D>()
-                        where d.X == 1
-                        select d;
+                collection.Drop();
+                collection.Insert(new D { X = 1, Y = 2 });
 
-            var translatedQuery = MongoQueryTranslator.Translate(query);
-            Assert.IsInstanceOf<SelectQuery>(translatedQuery);
-            Assert.AreSame(_collection, translatedQuery.Collection);
-            Assert.AreSame(typeof(D), translatedQuery.DocumentType);
+                var query = from d in collection.AsQueryable<D>()
+                            where d.X == 1
+                            select d;
 
-            var selectQuery = (SelectQuery)translatedQuery;
-            Assert.AreEqual("(D d) => (d.X == 1)", ExpressionFormatter.ToString(selectQuery.Where));
-            Assert.IsNull(selectQuery.OrderBy);
-            Assert.IsNull(selectQuery.Projection);
-            Assert.IsNull(selectQuery.Skip);
-            Assert.IsNull(selectQuery.Take);
+                var translatedQuery = MongoQueryTranslator.Translate(query);
+                Assert.IsInstanceOf<SelectQuery>(translatedQuery);
+                Assert.AreSame(collection, translatedQuery.Collection);
+                Assert.AreSame(typeof(D), translatedQuery.DocumentType);
 
-            Assert.AreEqual("{ \"X\" : 1 }", selectQuery.BuildQuery().ToJson());
-            Assert.AreEqual(1, query.ToList().Count);
+                var selectQuery = (SelectQuery)translatedQuery;
+                Assert.AreEqual("(D d) => (d.X == 1)", ExpressionFormatter.ToString(selectQuery.Where));
+                Assert.IsNull(selectQuery.OrderBy);
+                Assert.IsNull(selectQuery.Projection);
+                Assert.IsNull(selectQuery.Skip);
+                Assert.IsNull(selectQuery.Take);
+
+                Assert.AreEqual("{ \"X\" : 1 }", selectQuery.BuildQuery().ToJson());
+                Assert.AreEqual(1, query.ToList().Count);
+            }
         }
     }
 }

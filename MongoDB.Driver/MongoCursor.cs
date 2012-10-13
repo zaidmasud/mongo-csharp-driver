@@ -31,14 +31,13 @@ namespace MongoDB.Driver
     public abstract class MongoCursor : IEnumerable
     {
         // private fields
-        private MongoServer _server;
-        private MongoDatabase _database;
-        private MongoCollection _collection;
+        private readonly MongoSession _session;
+        private readonly MongoCollection _collection;
+
         private IMongoQuery _query;
         private IMongoFields _fields;
         private BsonDocument _options;
         private QueryFlags _flags;
-        private ReadPreference _readPreference;
         private int _skip;
         private int _limit; // number of documents to return (enforced by cursor)
         private int _batchSize; // number of documents to return in each reply
@@ -51,31 +50,20 @@ namespace MongoDB.Driver
         /// </summary>
         /// <param name="collection">The collection.</param>
         /// <param name="query">The query.</param>
-        /// <param name="readPreference">The read preference.</param>
-        protected MongoCursor(MongoCollection collection, IMongoQuery query, ReadPreference readPreference)
+        protected MongoCursor(MongoCollection collection, IMongoQuery query)
         {
-            _server = collection.Database.Server;
-            _database = collection.Database;
+            _session = collection.Database.Session;
             _collection = collection;
             _query = query;
-            _readPreference = readPreference;
         }
 
         // public properties
         /// <summary>
-        /// Gets the server that the query will be sent to.
+        /// Gets the connection that will be used for the query.
         /// </summary>
-        public virtual MongoServer Server
+        public virtual MongoSession Session
         {
-            get { return _server; }
-        }
-
-        /// <summary>
-        /// Gets the database that constains the collection that is being queried.
-        /// </summary>
-        public virtual MongoDatabase Database
-        {
-            get { return _database; }
+            get { return _session; }
         }
 
         /// <summary>
@@ -127,7 +115,7 @@ namespace MongoDB.Driver
         {
             get
             {
-                if (_readPreference.ReadPreferenceMode == ReadPreferenceMode.Primary)
+                if (_session.ReadPreference.ReadPreferenceMode == ReadPreferenceMode.Primary)
                 {
                     return _flags;
                 }
@@ -140,19 +128,6 @@ namespace MongoDB.Driver
             {
                 if (_isFrozen) { ThrowFrozen(); }
                 _flags = value;
-            }
-        }
-
-        /// <summary>
-        /// Gets or sets the read preference.
-        /// </summary>
-        public virtual ReadPreference ReadPreference
-        {
-            get { return _readPreference; }
-            set
-            {
-                if (_isFrozen) { ThrowFrozen(); }
-                _readPreference = value;
             }
         }
 
@@ -224,14 +199,13 @@ namespace MongoDB.Driver
         /// <param name="documentType">The type of the returned documents.</param>
         /// <param name="collection">The collection to query.</param>
         /// <param name="query">A query.</param>
-        /// <param name="readPreference">The read preference.</param>
         /// <returns>A cursor.</returns>
-        public static MongoCursor Create(Type documentType, MongoCollection collection, IMongoQuery query, ReadPreference readPreference)
+        public static MongoCursor Create(Type documentType, MongoCollection collection, IMongoQuery query)
         {
             var cursorDefinition = typeof(MongoCursor<>);
             var cursorType = cursorDefinition.MakeGenericType(documentType);
-            var constructorInfo = cursorType.GetConstructor(new Type[] { typeof(MongoCollection), typeof(IMongoQuery), typeof(ReadPreference) });
-            return (MongoCursor)constructorInfo.Invoke(new object[] { collection, query, readPreference });
+            var constructorInfo = cursorType.GetConstructor(new Type[] { typeof(MongoCollection), typeof(IMongoQuery) });
+            return (MongoCursor)constructorInfo.Invoke(new object[] { collection, query });
         }
 
         // public methods
@@ -252,7 +226,7 @@ namespace MongoDB.Driver
         /// <returns>A clone of the cursor.</returns>
         public virtual MongoCursor Clone(Type documentType)
         {
-            var clone = Create(documentType, _collection, _query, _readPreference);
+            var clone = Create(documentType, _collection, _query);
             clone._options = _options == null ? null : (BsonDocument)_options.Clone();
             clone._flags = _flags;
             clone._skip = _skip;
@@ -275,7 +249,7 @@ namespace MongoDB.Driver
                 { "count", _collection.Name },
                 { "query", BsonDocumentWrapper.Create(_query), _query != null } // query is optional
             };
-            var result = _database.RunCommand(command);
+            var result = _collection.Database.RunCommand(command);
             return result.Response["n"].ToInt64();
         }
 
@@ -480,18 +454,6 @@ namespace MongoDB.Driver
         }
 
         /// <summary>
-        /// Sets the read preference.
-        /// </summary>
-        /// <param name="readPreference">The read preference.</param>
-        /// <returns>The cursor (so you can chain method calls to it).</returns>
-        public virtual MongoCursor SetReadPreference(ReadPreference readPreference)
-        {
-            if (_isFrozen) { ThrowFrozen(); }
-            _readPreference = readPreference;
-            return this;
-        }
-
-        /// <summary>
         /// Sets the serialization options (only needed in rare cases).
         /// </summary>
         /// <param name="serializationOptions">The serialization options.</param>
@@ -579,7 +541,7 @@ namespace MongoDB.Driver
                 { "limit", _limit, _limit != 0 },
                 { "skip", _skip, _skip != 0 }
             };
-            var result = _database.RunCommand(command);
+            var result = _collection.Database.RunCommand(command);
             return result.Response["n"].ToInt64();
         }
 
@@ -617,9 +579,8 @@ namespace MongoDB.Driver
         /// </summary>
         /// <param name="collection">The collection.</param>
         /// <param name="query">The query.</param>
-        /// <param name="readPreference">The read preference.</param>
-        public MongoCursor(MongoCollection collection, IMongoQuery query, ReadPreference readPreference)
-            : base(collection, query, readPreference)
+        public MongoCursor(MongoCollection collection, IMongoQuery query)
+            : base(collection, query)
         {
         }
 
@@ -756,16 +717,6 @@ namespace MongoDB.Driver
         public new virtual MongoCursor<TDocument> SetOptions(BsonDocument options)
         {
             return (MongoCursor<TDocument>)base.SetOptions(options);
-        }
-
-        /// <summary>
-        /// Sets the read preference.
-        /// </summary>
-        /// <param name="readPreference">The read preference.</param>
-        /// <returns>The cursor (so you can chain method calls to it).</returns>
-        public new virtual MongoCursor<TDocument> SetReadPreference(ReadPreference readPreference)
-        {
-            return (MongoCursor<TDocument>)base.SetReadPreference(readPreference);
         }
 
         /// <summary>

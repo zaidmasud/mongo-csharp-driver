@@ -34,32 +34,35 @@ namespace MongoDB.DriverUnitTests.Jira.CSharp358
         public void TestInsertUpdateAndSaveWithElementNameStartingWithDollarSign()
         {
             var server = Configuration.TestServer;
-            var database = Configuration.TestDatabase;
-            var collection = Configuration.TestCollection;
-            collection.Drop();
-
-            var document = new BsonDocument
+            using (var session = server.GetSession())
             {
-                { "_id", 1 },
-                { "v", new BsonDocument("$x", 1) } // server doesn't allow "$" at top level
-            };
-            var insertOptions = new MongoInsertOptions { CheckElementNames = false };
-            collection.Insert(document, insertOptions);
-            document = collection.FindOne();
-            Assert.AreEqual(1, document["v"]["$x"].AsInt32);
+                var database = session.GetDatabase(Configuration.TestDatabaseName);
+                var collection = database.GetCollection(Configuration.TestCollectionName);
+                collection.Drop();
 
-            document["v"]["$x"] = 2;
-            var query = Query.EQ("_id", 1);
-            var update = Update.Replace(document);
-            var updateOptions = new MongoUpdateOptions { CheckElementNames = false };
-            collection.Update(query, update, updateOptions);
-            document = collection.FindOne();
-            Assert.AreEqual(2, document["v"]["$x"].AsInt32);
+                var document = new BsonDocument
+                {
+                    { "_id", 1 },
+                    { "v", new BsonDocument("$x", 1) } // server doesn't allow "$" at top level
+                };
+                var insertOptions = new MongoInsertOptions { CheckElementNames = false };
+                collection.Insert(document, insertOptions);
+                document = collection.FindOne();
+                Assert.AreEqual(1, document["v"]["$x"].AsInt32);
 
-            document["v"]["$x"] = 3;
-            collection.Save(document, insertOptions);
-            document = collection.FindOne();
-            Assert.AreEqual(3, document["v"]["$x"].AsInt32);
+                document["v"]["$x"] = 2;
+                var query = Query.EQ("_id", 1);
+                var update = Update.Replace(document);
+                var updateOptions = new MongoUpdateOptions { CheckElementNames = false };
+                collection.Update(query, update, updateOptions);
+                document = collection.FindOne();
+                Assert.AreEqual(2, document["v"]["$x"].AsInt32);
+
+                document["v"]["$x"] = 3;
+                collection.Save(document, insertOptions);
+                document = collection.FindOne();
+                Assert.AreEqual(3, document["v"]["$x"].AsInt32);
+            }
         }
     }
 }

@@ -27,28 +27,22 @@ namespace MongoDB.DriverUnitTests.Jira
     [TestFixture]
     public class CSharp282Tests
     {
-        private MongoServer _server;
-        private MongoDatabase _database;
-        private MongoCollection<BsonDocument> _collection;
-
-        [TestFixtureSetUp]
-        public void TestFixtureSetup()
-        {
-            _server = Configuration.TestServer;
-            _database = Configuration.TestDatabase;
-            _collection = Configuration.TestCollection;
-            _collection.Drop();
-        }
-
         [Test]
         public void TestEmptyUpdateBuilder()
         {
-            var document = new BsonDocument("x", 1);
-            _collection.Insert(document);
+            using (var session = Configuration.TestServer.GetSession())
+            {
+                var database = session.GetDatabase(Configuration.TestDatabaseName);
+                var collection = database.GetCollection(Configuration.TestCollectionName);
+                collection.Drop();
 
-            var query = Query.EQ("_id", document["_id"]);
-            var update = new UpdateBuilder();
-            Assert.Throws<ArgumentException>(() => _collection.Update(query, update));
+                var document = new BsonDocument("x", 1);
+                collection.Insert(document);
+
+                var query = Query.EQ("_id", document["_id"]);
+                var update = new UpdateBuilder();
+                Assert.Throws<ArgumentException>(() => collection.Update(query, update));
+            }
         }
     }
 }

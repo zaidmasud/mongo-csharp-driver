@@ -40,50 +40,60 @@ namespace MongoDB.DriverUnitTests.Jira.CSharp355
             public Bitmap B { get; set; }
         }
 
-        private MongoServer _server;
-        private MongoDatabase _database;
-        private MongoCollection<C> _collection;
-
         [TestFixtureSetUp]
         public void TestFixtureSetup()
         {
-            _server = Configuration.TestServer;
-            _database = Configuration.TestDatabase;
-            _collection = Configuration.GetTestCollection<C>();
-            _collection.Drop();
+            using (var session = Configuration.TestServer.GetSession())
+            {
+                var database = session.GetDatabase(Configuration.TestDatabaseName);
+                var collection = database.GetCollection<C>(Configuration.TestCollectionName);
+                collection.Drop();
+            }
         }
 
         [Test]
         public void TestBitmap()
         {
-            if (TestEnvironment.IsMono)
+            using (var session = Configuration.TestServer.GetSession())
             {
-                // this test does not work in Mono. Skipping for the time being
-                // CSHARP-389
-                return;
+                var database = session.GetDatabase(Configuration.TestDatabaseName);
+                var collection = database.GetCollection<C>(Configuration.TestCollectionName);
+
+                if (TestEnvironment.IsMono)
+                {
+                    // this test does not work in Mono. Skipping for the time being
+                    // CSHARP-389
+                    return;
+                }
+                var bitmap = new Bitmap(1, 2);
+                var c = new C { I = bitmap, B = bitmap };
+                collection.RemoveAll();
+                collection.Insert(c);
+                var r = collection.FindOne();
+                Assert.IsInstanceOf<C>(r);
+                Assert.IsInstanceOf<Bitmap>(r.I);
+                Assert.AreEqual(1, r.B.Width);
+                Assert.AreEqual(2, r.B.Height);
+                Assert.IsTrue(GetBytes(bitmap).SequenceEqual(GetBytes(r.B)));
             }
-            var bitmap = new Bitmap(1, 2);
-            var c = new C { I = bitmap, B = bitmap };
-            _collection.RemoveAll();
-            _collection.Insert(c);
-            var r = _collection.FindOne();
-            Assert.IsInstanceOf<C>(r);
-            Assert.IsInstanceOf<Bitmap>(r.I);
-            Assert.AreEqual(1, r.B.Width);
-            Assert.AreEqual(2, r.B.Height);
-            Assert.IsTrue(GetBytes(bitmap).SequenceEqual(GetBytes(r.B)));
         }
 
         [Test]
         public void TestImageNull()
         {
-            var c = new C { I = null, B = null };
-            _collection.RemoveAll();
-            _collection.Insert(c);
-            var r = _collection.FindOne();
-            Assert.IsInstanceOf<C>(r);
-            Assert.IsNull(r.I);
-            Assert.IsNull(r.B);
+            using (var session = Configuration.TestServer.GetSession())
+            {
+                var database = session.GetDatabase(Configuration.TestDatabaseName);
+                var collection = database.GetCollection<C>(Configuration.TestCollectionName);
+
+                var c = new C { I = null, B = null };
+                collection.RemoveAll();
+                collection.Insert(c);
+                var r = collection.FindOne();
+                Assert.IsInstanceOf<C>(r);
+                Assert.IsNull(r.I);
+                Assert.IsNull(r.B);
+            }
         }
 
         private byte[] GetBytes(Bitmap bitmap)

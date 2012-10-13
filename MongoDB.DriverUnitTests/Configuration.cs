@@ -31,8 +31,8 @@ namespace MongoDB.DriverUnitTests
     {
         // private static fields
         private static MongoServer __testServer;
-        private static MongoDatabase __testDatabase;
-        private static MongoCollection<BsonDocument> __testCollection;
+        private static string __testDatabaseName;
+        private static string __testCollectionName;
 
         // static constructor
         static Configuration()
@@ -48,25 +48,25 @@ namespace MongoDB.DriverUnitTests
             }
 
             __testServer = MongoServer.Create(serverSettings);
-            __testDatabase = __testServer["csharpdriverunittests"];
-            __testCollection = __testDatabase["testcollection"];
+            __testDatabaseName = "csharpdriverunittests";
+            __testCollectionName = "testcollection";
         }
 
         // public static methods
         /// <summary>
-        /// Gets the test collection.
+        /// Gets the name of the test collection.
         /// </summary>
-        public static MongoCollection<BsonDocument> TestCollection
+        public static string TestCollectionName
         {
-            get { return __testCollection; }
+            get { return __testCollectionName; }
         }
 
         /// <summary>
-        /// Gets the test database.
+        /// Gets the name of the test database.
         /// </summary>
-        public static MongoDatabase TestDatabase
+        public static string TestDatabaseName
         {
-            get { return __testDatabase; }
+            get { return __testDatabaseName; }
         }
 
         /// <summary>
@@ -75,17 +75,6 @@ namespace MongoDB.DriverUnitTests
         public static MongoServer TestServer
         {
             get { return __testServer; }
-        }
-
-        // public static methods
-        /// <summary>
-        /// Gets the test collection with a default document type of T.
-        /// </summary>
-        /// <typeparam name="T">The default document type.</typeparam>
-        /// <returns>The collection.</returns>
-        public static MongoCollection<T> GetTestCollection<T>()
-        {
-            return __testDatabase.GetCollection<T>(__testCollection.Name);
         }
     }
 }

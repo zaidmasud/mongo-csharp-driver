@@ -27,163 +27,200 @@ namespace MongoDB.DriverUnitTests
     [TestFixture]
     public class MongoDatabaseTests
     {
-        private MongoServer _server;
-        private MongoDatabase _database;
-
-        [TestFixtureSetUp]
-        public void Setup()
-        {
-            _server = Configuration.TestServer;
-            _server.Connect();
-            _database = Configuration.TestDatabase;
-            _database.Drop();
-        }
-
         // TODO: more tests for MongoDatabase
 
         [Test]
         public void TestCollectionExists()
         {
-            var collectionName = "testcollectionexists";
-            Assert.IsFalse(_database.CollectionExists(collectionName));
+            using (var session = Configuration.TestServer.GetSession())
+            {
+                var database = session.GetDatabase(Configuration.TestDatabaseName);
+                var collectionName = "testcollectionexists";
+                Assert.IsFalse(database.CollectionExists(collectionName));
 
-            _database[collectionName].Insert(new BsonDocument());
-            Assert.IsTrue(_database.CollectionExists(collectionName));
+                database.GetCollection(collectionName).Insert(new BsonDocument());
+                Assert.IsTrue(database.CollectionExists(collectionName));
+            }
         }
 
         [Test]
         public void TestConstructorArgumentChecking()
         {
-            var settings = new MongoDatabaseSettings();
-            Assert.Throws<ArgumentNullException>(() => { new MongoDatabase(null, "name", settings); });
-            Assert.Throws<ArgumentNullException>(() => { new MongoDatabase(_server, null, settings); });
-            Assert.Throws<ArgumentNullException>(() => { new MongoDatabase(_server, "name", null); });
-            Assert.Throws<ArgumentOutOfRangeException>(() => { new MongoDatabase(_server, "", settings); });
+            using (var session = Configuration.TestServer.GetSession())
+            {
+                var database = session.GetDatabase(Configuration.TestDatabaseName);
+                var settings = new MongoDatabaseSettings();
+                Assert.Throws<ArgumentNullException>(() => { new MongoDatabase(null, "name", settings); });
+                Assert.Throws<ArgumentNullException>(() => { new MongoDatabase(session, null, settings); });
+                Assert.Throws<ArgumentNullException>(() => { new MongoDatabase(session, "name", null); });
+                Assert.Throws<ArgumentOutOfRangeException>(() => { new MongoDatabase(session, "", settings); });
+            }
         }
 
         [Test]
         public void TestCreateCollection()
         {
-            var collectionName = "testcreatecollection";
-            Assert.IsFalse(_database.CollectionExists(collectionName));
+            using (var session = Configuration.TestServer.GetSession())
+            {
+                var database = session.GetDatabase(Configuration.TestDatabaseName);
+                var collectionName = "testcreatecollection";
+                Assert.IsFalse(database.CollectionExists(collectionName));
 
-            _database.CreateCollection(collectionName);
-            Assert.IsTrue(_database.CollectionExists(collectionName));
+                database.CreateCollection(collectionName);
+                Assert.IsTrue(database.CollectionExists(collectionName));
+            }
         }
 
         [Test]
         public void TestDropCollection()
         {
-            var collectionName = "testdropcollection";
-            Assert.IsFalse(_database.CollectionExists(collectionName));
+            using (var session = Configuration.TestServer.GetSession())
+            {
+                var database = session.GetDatabase(Configuration.TestDatabaseName);
+                var collectionName = "testdropcollection";
+                Assert.IsFalse(database.CollectionExists(collectionName));
 
-            _database[collectionName].Insert(new BsonDocument());
-            Assert.IsTrue(_database.CollectionExists(collectionName));
+                database.GetCollection(collectionName).Insert(new BsonDocument());
+                Assert.IsTrue(database.CollectionExists(collectionName));
 
-            _database.DropCollection(collectionName);
-            Assert.IsFalse(_database.CollectionExists(collectionName));
+                database.DropCollection(collectionName);
+                Assert.IsFalse(database.CollectionExists(collectionName));
+            }
         }
 
         [Test]
         public void TestEvalNoArgs()
         {
-            var code = "function() { return 1; }";
-            var result = _database.Eval(code);
-            Assert.AreEqual(1, result.ToInt32());
+            using (var session = Configuration.TestServer.GetSession())
+            {
+                var database = session.GetDatabase(Configuration.TestDatabaseName);
+                var code = "function() { return 1; }";
+                var result = database.Eval(code);
+                Assert.AreEqual(1, result.ToInt32());
+            }
         }
 
         [Test]
         public void TestEvalNoArgsNoLock()
         {
-            var code = "function() { return 1; }";
-            var result = _database.Eval(EvalFlags.NoLock, code);
-            Assert.AreEqual(1, result.ToInt32());
+            using (var session = Configuration.TestServer.GetSession())
+            {
+                var database = session.GetDatabase(Configuration.TestDatabaseName);
+                var code = "function() { return 1; }";
+                var result = database.Eval(EvalFlags.NoLock, code);
+                Assert.AreEqual(1, result.ToInt32());
+            }
         }
 
         [Test]
         public void TestEvalWithArgs()
         {
-            var code = "function(x, y) { return x / y; }";
-            var result = _database.Eval(code, 6, 2);
-            Assert.AreEqual(3, result.ToInt32());
+            using (var session = Configuration.TestServer.GetSession())
+            {
+                var database = session.GetDatabase(Configuration.TestDatabaseName);
+                var code = "function(x, y) { return x / y; }";
+                var result = database.Eval(code, 6, 2);
+                Assert.AreEqual(3, result.ToInt32());
+            }
         }
 
         [Test]
         public void TestEvalWithArgsNoLock()
         {
-            var code = "function(x, y) { return x / y; }";
-            var result = _database.Eval(EvalFlags.NoLock, code, 6, 2);
-            Assert.AreEqual(3, result.ToInt32());
+            using (var session = Configuration.TestServer.GetSession())
+            {
+                var database = session.GetDatabase(Configuration.TestDatabaseName);
+                var code = "function(x, y) { return x / y; }";
+                var result = database.Eval(EvalFlags.NoLock, code, 6, 2);
+                Assert.AreEqual(3, result.ToInt32());
+            }
         }
 
         [Test]
         public void TestFetchDBRef()
         {
-            var collectionName = "testdbref";
-            var collection = _database.GetCollection(collectionName);
-            var document = new BsonDocument { { "_id", ObjectId.GenerateNewId() }, { "P", "x" } };
-            collection.Insert(document);
+            using (var session = Configuration.TestServer.GetSession())
+            {
+                var database = session.GetDatabase(Configuration.TestDatabaseName);
+                var collectionName = "testdbref";
+                var collection = database.GetCollection(collectionName);
+                var document = new BsonDocument { { "_id", ObjectId.GenerateNewId() }, { "P", "x" } };
+                collection.Insert(document);
 
-            var dbRef = new MongoDBRef(collectionName, document["_id"].AsObjectId);
-            var fetched = _database.FetchDBRef(dbRef);
-            Assert.AreEqual(document, fetched);
-            Assert.AreEqual(document.ToJson(), fetched.ToJson());
+                var dbRef = new MongoDBRef(collectionName, document["_id"].AsObjectId);
+                var fetched = database.FetchDBRef(dbRef);
+                Assert.AreEqual(document, fetched);
+                Assert.AreEqual(document.ToJson(), fetched.ToJson());
 
-            var dbRefWithDatabaseName = new MongoDBRef(_database.Name, collectionName, document["_id"].AsObjectId);
-            fetched = _server.FetchDBRef(dbRefWithDatabaseName);
-            Assert.AreEqual(document, fetched);
-            Assert.AreEqual(document.ToJson(), fetched.ToJson());
-            Assert.Throws<ArgumentException>(() => { _server.FetchDBRef(dbRef); });
+                var dbRefWithDatabaseName = new MongoDBRef(database.Name, collectionName, document["_id"].AsObjectId);
+                fetched = session.FetchDBRef(dbRefWithDatabaseName);
+                Assert.AreEqual(document, fetched);
+                Assert.AreEqual(document.ToJson(), fetched.ToJson());
+                Assert.Throws<ArgumentException>(() => { session.FetchDBRef(dbRef); });
+            }
         }
 
         [Test]
         public void TestGetCollection()
         {
-            var collectionName = Configuration.TestCollection.Name;
-            var collection = _database.GetCollection(typeof(BsonDocument), collectionName);
-            Assert.AreSame(_database, collection.Database);
-            Assert.AreEqual(_database.Name + "." + collectionName, collection.FullName);
-            Assert.AreEqual(collectionName, collection.Name);
-            Assert.AreEqual(_database.Settings.SafeMode, collection.Settings.SafeMode);
+            using (var session = Configuration.TestServer.GetSession())
+            {
+                var database = session.GetDatabase(Configuration.TestDatabaseName);
+                var collectionName = Configuration.TestCollectionName;
+                var collection = database.GetCollection(typeof(BsonDocument), collectionName);
+                Assert.AreSame(database, collection.Database);
+                Assert.AreEqual(database.Name + "." + collectionName, collection.FullName);
+                Assert.AreEqual(collectionName, collection.Name);
+                Assert.AreEqual(database.Settings.SafeMode, collection.Settings.SafeMode);
+            }
         }
 
         [Test]
         public void TestGetCollectionGeneric()
         {
-            var collectionName = Configuration.TestCollection.Name;
-            var collection = _database.GetCollection(collectionName);
-            Assert.AreSame(_database, collection.Database);
-            Assert.AreEqual(_database.Name + "." + collectionName, collection.FullName);
-            Assert.AreEqual(collectionName, collection.Name);
-            Assert.AreEqual(_database.Settings.SafeMode, collection.Settings.SafeMode);
+            using (var session = Configuration.TestServer.GetSession())
+            {
+                var database = session.GetDatabase(Configuration.TestDatabaseName);
+                var collectionName = Configuration.TestCollectionName;
+                var collection = database.GetCollection(collectionName);
+                Assert.AreSame(database, collection.Database);
+                Assert.AreEqual(database.Name + "." + collectionName, collection.FullName);
+                Assert.AreEqual(collectionName, collection.Name);
+                Assert.AreEqual(database.Settings.SafeMode, collection.Settings.SafeMode);
+            }
         }
 
         [Test]
         public void TestGetCollectionNames()
         {
-            _database.Drop();
-            _database["a"].Insert(new BsonDocument("a", 1));
-            _database["b"].Insert(new BsonDocument("b", 1));
-            _database["c"].Insert(new BsonDocument("c", 1));
-            var collectionNames = _database.GetCollectionNames();
-            Assert.AreEqual(new[] { "a", "b", "c", "system.indexes" }, collectionNames);
+            using (var session = Configuration.TestServer.GetSession())
+            {
+                var database = session.GetDatabase(Configuration.TestDatabaseName);
+                database.Drop();
+                database.GetCollection("a").Insert(new BsonDocument("a", 1));
+                database.GetCollection("b").Insert(new BsonDocument("b", 1));
+                database.GetCollection("c").Insert(new BsonDocument("c", 1));
+                var collectionNames = database.GetCollectionNames();
+                Assert.AreEqual(new[] { "a", "b", "c", "system.indexes" }, collectionNames);
+            }
         }
 
         [Test]
         public void TestGetProfilingInfo()
         {
-            using (_database.RequestStart())
+            using (var session = Configuration.TestServer.GetSession())
             {
-                var instance = _server.RequestConnection.ServerInstance;
+                var database = session.GetDatabase(Configuration.TestDatabaseName);
+                var instance = session.ServerInstance;
                 if (instance.InstanceType != MongoServerInstanceType.ShardRouter)
                 {
-                    var collection = Configuration.TestCollection;
+                    var collection = database.GetCollection(Configuration.TestCollectionName);
                     if (collection.Exists()) { collection.Drop(); }
                     collection.Insert(new BsonDocument("x", 1));
-                    _database.SetProfilingLevel(ProfilingLevel.All);
+                    database.SetProfilingLevel(ProfilingLevel.All);
                     var count = collection.Count();
-                    _database.SetProfilingLevel(ProfilingLevel.None);
-                    var info = _database.GetProfilingInfo(Query.Null).SetSortOrder(SortBy.Descending("$natural")).SetLimit(1).First();
+                    database.SetProfilingLevel(ProfilingLevel.None);
+                    var info = database.GetProfilingInfo(Query.Null).SetSortOrder(SortBy.Descending("$natural")).SetLimit(1).First();
                     Assert.IsTrue(info.Timestamp >= new DateTime(2011, 10, 6, 0, 0, 0, DateTimeKind.Utc));
                     Assert.IsTrue(info.Duration >= TimeSpan.Zero);
                 }
@@ -193,92 +230,109 @@ namespace MongoDB.DriverUnitTests
         [Test]
         public void TestIsCollectionNameValid()
         {
-            string message;
-            Assert.Throws<ArgumentNullException>(() => { _database.IsCollectionNameValid(null, out message); });
-            Assert.IsFalse(_database.IsCollectionNameValid("", out message));
-            Assert.IsFalse(_database.IsCollectionNameValid("a\0b", out message));
-            Assert.IsFalse(_database.IsCollectionNameValid(new string('x', 128), out message));
+            using (var session = Configuration.TestServer.GetSession())
+            {
+                var database = session.GetDatabase(Configuration.TestDatabaseName);
+                string message;
+                Assert.Throws<ArgumentNullException>(() => { database.IsCollectionNameValid(null, out message); });
+                Assert.IsFalse(database.IsCollectionNameValid("", out message));
+                Assert.IsFalse(database.IsCollectionNameValid("a\0b", out message));
+                Assert.IsFalse(database.IsCollectionNameValid(new string('x', 128), out message));
+            }
         }
 
         [Test]
         public void TestRenameCollection()
         {
-            var collectionName1 = "testrenamecollection1";
-            var collectionName2 = "testrenamecollection2";
-            Assert.IsFalse(_database.CollectionExists(collectionName1));
-            Assert.IsFalse(_database.CollectionExists(collectionName2));
+            using (var session = Configuration.TestServer.GetSession())
+            {
+                var database = session.GetDatabase(Configuration.TestDatabaseName);
+                var collectionName1 = "testrenamecollection1";
+                var collectionName2 = "testrenamecollection2";
+                Assert.IsFalse(database.CollectionExists(collectionName1));
+                Assert.IsFalse(database.CollectionExists(collectionName2));
 
-            _database[collectionName1].Insert(new BsonDocument());
-            Assert.IsTrue(_database.CollectionExists(collectionName1));
-            Assert.IsFalse(_database.CollectionExists(collectionName2));
+                database.GetCollection(collectionName1).Insert(new BsonDocument());
+                Assert.IsTrue(database.CollectionExists(collectionName1));
+                Assert.IsFalse(database.CollectionExists(collectionName2));
 
-            _database.RenameCollection(collectionName1, collectionName2);
-            Assert.IsFalse(_database.CollectionExists(collectionName1));
-            Assert.IsTrue(_database.CollectionExists(collectionName2));
+                database.RenameCollection(collectionName1, collectionName2);
+                Assert.IsFalse(database.CollectionExists(collectionName1));
+                Assert.IsTrue(database.CollectionExists(collectionName2));
+            }
         }
 
         [Test]
         public void TestRenameCollectionArgumentChecking()
         {
-            Assert.Throws<ArgumentNullException>(() => { _database.RenameCollection(null, "new"); });
-            Assert.Throws<ArgumentNullException>(() => { _database.RenameCollection("old", null); });
-            Assert.Throws<ArgumentOutOfRangeException>(() => { _database.RenameCollection("old", ""); });
+            using (var session = Configuration.TestServer.GetSession())
+            {
+                var database = session.GetDatabase(Configuration.TestDatabaseName);
+                Assert.Throws<ArgumentNullException>(() => { database.RenameCollection(null, "new"); });
+                Assert.Throws<ArgumentNullException>(() => { database.RenameCollection("old", null); });
+                Assert.Throws<ArgumentOutOfRangeException>(() => { database.RenameCollection("old", ""); });
+            }
         }
 
         [Test]
         public void TestRenameCollectionDropTarget()
         {
-            const string collectionName1 = "testrenamecollectiondroptarget1";
-            const string collectionName2 = "testrenamecollectiondroptarget2";
-            Assert.IsFalse(_database.CollectionExists(collectionName1));
-            Assert.IsFalse(_database.CollectionExists(collectionName2));
+            using (var session = Configuration.TestServer.GetSession())
+            {
+                var database = session.GetDatabase(Configuration.TestDatabaseName);
+                const string collectionName1 = "testrenamecollectiondroptarget1";
+                const string collectionName2 = "testrenamecollectiondroptarget2";
+                Assert.IsFalse(database.CollectionExists(collectionName1));
+                Assert.IsFalse(database.CollectionExists(collectionName2));
 
-            _database[collectionName1].Insert(new BsonDocument());
-            _database[collectionName2].Insert(new BsonDocument());
-            Assert.IsTrue(_database.CollectionExists(collectionName1));
-            Assert.IsTrue(_database.CollectionExists(collectionName2));
+                database.GetCollection(collectionName1).Insert(new BsonDocument());
+                database.GetCollection(collectionName2).Insert(new BsonDocument());
+                Assert.IsTrue(database.CollectionExists(collectionName1));
+                Assert.IsTrue(database.CollectionExists(collectionName2));
 
-            Assert.Throws<MongoCommandException>(() => _database.RenameCollection(collectionName1, collectionName2));
-            _database.RenameCollection(collectionName1, collectionName2, true);
-            Assert.IsFalse(_database.CollectionExists(collectionName1));
-            Assert.IsTrue(_database.CollectionExists(collectionName2));
+                Assert.Throws<MongoCommandException>(() => database.RenameCollection(collectionName1, collectionName2));
+                database.RenameCollection(collectionName1, collectionName2, true);
+                Assert.IsFalse(database.CollectionExists(collectionName1));
+                Assert.IsTrue(database.CollectionExists(collectionName2));
+            }
         }
 
         [Test]
         public void TestSetProfilingLevel()
         {
-            using (_database.RequestStart())
+            using (var session = Configuration.TestServer.GetSession())
             {
-                var instance = _server.RequestConnection.ServerInstance;
+                var database = session.GetDatabase(Configuration.TestDatabaseName);
+                var instance = session.ServerInstance;
                 if (instance.InstanceType != MongoServerInstanceType.ShardRouter)
                 {
-                    _database.SetProfilingLevel(ProfilingLevel.None, TimeSpan.FromMilliseconds(100));
-                    var result = _database.GetProfilingLevel();
+                    database.SetProfilingLevel(ProfilingLevel.None, TimeSpan.FromMilliseconds(100));
+                    var result = database.GetProfilingLevel();
                     Assert.AreEqual(ProfilingLevel.None, result.Level);
                     Assert.AreEqual(TimeSpan.FromMilliseconds(100), result.Slow);
 
-                    _database.SetProfilingLevel(ProfilingLevel.Slow);
-                    result = _database.GetProfilingLevel();
+                    database.SetProfilingLevel(ProfilingLevel.Slow);
+                    result = database.GetProfilingLevel();
                     Assert.AreEqual(ProfilingLevel.Slow, result.Level);
                     Assert.AreEqual(TimeSpan.FromMilliseconds(100), result.Slow);
 
-                    _database.SetProfilingLevel(ProfilingLevel.Slow, TimeSpan.FromMilliseconds(200));
-                    result = _database.GetProfilingLevel();
+                    database.SetProfilingLevel(ProfilingLevel.Slow, TimeSpan.FromMilliseconds(200));
+                    result = database.GetProfilingLevel();
                     Assert.AreEqual(ProfilingLevel.Slow, result.Level);
                     Assert.AreEqual(TimeSpan.FromMilliseconds(200), result.Slow);
 
-                    _database.SetProfilingLevel(ProfilingLevel.Slow, TimeSpan.FromMilliseconds(100));
-                    result = _database.GetProfilingLevel();
+                    database.SetProfilingLevel(ProfilingLevel.Slow, TimeSpan.FromMilliseconds(100));
+                    result = database.GetProfilingLevel();
                     Assert.AreEqual(ProfilingLevel.Slow, result.Level);
                     Assert.AreEqual(TimeSpan.FromMilliseconds(100), result.Slow);
 
-                    _database.SetProfilingLevel(ProfilingLevel.All);
-                    result = _database.GetProfilingLevel();
+                    database.SetProfilingLevel(ProfilingLevel.All);
+                    result = database.GetProfilingLevel();
                     Assert.AreEqual(ProfilingLevel.All, result.Level);
                     Assert.AreEqual(TimeSpan.FromMilliseconds(100), result.Slow);
 
-                    _database.SetProfilingLevel(ProfilingLevel.None);
-                    result = _database.GetProfilingLevel();
+                    database.SetProfilingLevel(ProfilingLevel.None);
+                    result = database.GetProfilingLevel();
                     Assert.AreEqual(ProfilingLevel.None, result.Level);
                     Assert.AreEqual(TimeSpan.FromMilliseconds(100), result.Slow);
                 }
@@ -288,24 +342,28 @@ namespace MongoDB.DriverUnitTests
         [Test]
         public void TestUserMethods()
         {
-            var collection = _database["system.users"];
-            collection.RemoveAll();
-            _database.AddUser(new MongoCredentials("username", "password"), true);
-            Assert.AreEqual(1, collection.Count());
+            using (var session = Configuration.TestServer.GetSession())
+            {
+                var database = session.GetDatabase(Configuration.TestDatabaseName);
+                var collection = database.GetCollection("system.users");
+                collection.RemoveAll();
+                database.AddUser(new MongoCredentials("username", "password"), true);
+                Assert.AreEqual(1, collection.Count());
 
-            var user = _database.FindUser("username");
-            Assert.AreEqual("username", user.Username);
-            Assert.AreEqual(MongoUtils.Hash("username:mongo:password"), user.PasswordHash);
-            Assert.AreEqual(true, user.IsReadOnly);
+                var user = database.FindUser("username");
+                Assert.AreEqual("username", user.Username);
+                Assert.AreEqual(MongoUtils.Hash("username:mongo:password"), user.PasswordHash);
+                Assert.AreEqual(true, user.IsReadOnly);
 
-            var users = _database.FindAllUsers();
-            Assert.AreEqual(1, users.Length);
-            Assert.AreEqual("username", users[0].Username);
-            Assert.AreEqual(MongoUtils.Hash("username:mongo:password"), users[0].PasswordHash);
-            Assert.AreEqual(true, users[0].IsReadOnly);
+                var users = database.FindAllUsers();
+                Assert.AreEqual(1, users.Length);
+                Assert.AreEqual("username", users[0].Username);
+                Assert.AreEqual(MongoUtils.Hash("username:mongo:password"), users[0].PasswordHash);
+                Assert.AreEqual(true, users[0].IsReadOnly);
 
-            _database.RemoveUser(user);
-            Assert.AreEqual(0, collection.Count());
+                database.RemoveUser(user);
+                Assert.AreEqual(0, collection.Count());
+            }
         }
     }
 }
