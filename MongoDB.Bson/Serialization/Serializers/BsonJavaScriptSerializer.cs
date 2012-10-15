@@ -29,24 +29,13 @@ namespace MongoDB.Bson.Serialization.Serializers
     /// </summary>
     public class BsonJavaScriptSerializer : BsonBaseSerializer
     {
-        // private static fields
-        private static BsonJavaScriptSerializer __instance = new BsonJavaScriptSerializer();
-
         // constructors
         /// <summary>
         /// Initializes a new instance of the BsonJavaScriptSerializer class.
         /// </summary>
-        public BsonJavaScriptSerializer()
+        public BsonJavaScriptSerializer(SerializationContext serializationContext)
+            : base(serializationContext)
         {
-        }
-
-        // public static properties
-        /// <summary>
-        /// Gets an instance of the BsonJavaScriptSerializer class.
-        /// </summary>
-        public static BsonJavaScriptSerializer Instance
-        {
-            get { return __instance; }
         }
 
         // public methods

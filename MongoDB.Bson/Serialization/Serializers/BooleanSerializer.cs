@@ -30,25 +30,13 @@ namespace MongoDB.Bson.Serialization.Serializers
     /// </summary>
     public class BooleanSerializer : BsonBaseSerializer
     {
-        // private static fields
-        private static BooleanSerializer __instance = new BooleanSerializer();
-
         // constructors
         /// <summary>
         /// Initializes a new instance of the BooleanSerializer class.
         /// </summary>
-        public BooleanSerializer()
-            : base(new RepresentationSerializationOptions(BsonType.Boolean))
+        public BooleanSerializer(SerializationContext serializationContext)
+            : base(serializationContext, new RepresentationSerializationOptions(BsonType.Boolean))
         {
-        }
-
-        // public static properties
-        /// <summary>
-        /// Gets an instance of the BooleanSerializer class.
-        /// </summary>
-        public static BooleanSerializer Instance
-        {
-            get { return __instance; }
         }
 
         // public methods

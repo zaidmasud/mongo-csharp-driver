@@ -30,25 +30,13 @@ namespace MongoDB.Bson.Serialization.Serializers
     /// </summary>
     public class UInt32Serializer : BsonBaseSerializer
     {
-        // private static fields
-        private static UInt32Serializer __instance = new UInt32Serializer();
-
         // constructors
         /// <summary>
         /// Initializes a new instance of the UInt32Serializer class.
         /// </summary>
-        public UInt32Serializer()
-            : base(new RepresentationSerializationOptions(BsonType.Int32))
+        public UInt32Serializer(SerializationContext serializationContext)
+            : base(serializationContext, new RepresentationSerializationOptions(BsonType.Int32))
         {
-        }
-
-        // public static properties
-        /// <summary>
-        /// Gets an instance of the UInt32Serializer class.
-        /// </summary>
-        public static UInt32Serializer Instance
-        {
-            get { return __instance; }
         }
 
         // public methods

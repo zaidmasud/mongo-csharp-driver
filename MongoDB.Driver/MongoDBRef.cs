@@ -196,6 +196,16 @@ namespace MongoDB.Driver
     /// </summary>
     public class MongoDBRefSerializer : BsonBaseSerializer, IBsonDocumentSerializer
     {
+        // constructors
+        /// <summary>
+        /// Initializes a new instance of the MongoDBRef class.
+        /// </summary>
+        /// <param name="serializationContext">The serialization context.</param>
+        public MongoDBRefSerializer(SerializationContext serializationContext)
+            : base(serializationContext)
+        {
+        }
+
         // public methods
         /// <summary>
         /// Deserializes an object from a BsonReader.
@@ -235,7 +245,7 @@ namespace MongoDB.Driver
                             collectionName = bsonReader.ReadString();
                             break;
                         case "$id":
-                            id = (BsonValue)BsonValueSerializer.Instance.Deserialize(bsonReader, typeof(BsonValue), null);
+                            id = (BsonValue)SerializationContext.LookupSerializer(typeof(BsonValue)).Deserialize(bsonReader, typeof(BsonValue), null);
                             break;
                         case "$db":
                             databaseName = bsonReader.ReadString();
@@ -267,17 +277,17 @@ namespace MongoDB.Driver
             {
                 case "DatabaseName":
                     elementName = "$db";
-                    serializer = StringSerializer.Instance;
+                    serializer = SerializationContext.LookupSerializer(typeof(string));
                     nominalType = typeof(string);
                     break;
                 case "CollectionName":
                     elementName = "$ref";
-                    serializer = StringSerializer.Instance;
+                    serializer = SerializationContext.LookupSerializer(typeof(string));
                     nominalType = typeof(string);
                     break;
                 case "Id":
                     elementName = "$id";
-                    serializer = BsonValueSerializer.Instance;
+                    serializer = SerializationContext.LookupSerializer(typeof(BsonDocument));
                     nominalType = typeof(BsonValue);
                     break;
                 default:
@@ -312,7 +322,7 @@ namespace MongoDB.Driver
                 bsonWriter.WriteStartDocument();
                 bsonWriter.WriteString("$ref", dbRef.CollectionName);
                 bsonWriter.WriteName("$id");
-                BsonValueSerializer.Instance.Serialize(bsonWriter, typeof(BsonValue), dbRef.Id, null);
+                SerializationContext.LookupSerializer(typeof(BsonValue)).Serialize(bsonWriter, typeof(BsonValue), dbRef.Id, null);
                 if (dbRef.DatabaseName != null)
                 {
                     bsonWriter.WriteString("$db", dbRef.DatabaseName);

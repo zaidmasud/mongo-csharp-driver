@@ -30,24 +30,13 @@ namespace MongoDB.Bson.Serialization.Serializers
     /// </summary>
     public class CultureInfoSerializer : BsonBaseSerializer
     {
-        // private static fields
-        private static CultureInfoSerializer __instance = new CultureInfoSerializer();
-
         // constructors
         /// <summary>
         /// Initializes a new instance of the CultureInfoSerializer class.
         /// </summary>
-        public CultureInfoSerializer()
+        public CultureInfoSerializer(SerializationContext serializationContext)
+            : base(serializationContext)
         {
-        }
-
-        // public static properties
-        /// <summary>
-        /// Gets an instance of the CultureInfoSerializer class.
-        /// </summary>
-        public static CultureInfoSerializer Instance
-        {
-            get { return __instance; }
         }
 
         // public methods

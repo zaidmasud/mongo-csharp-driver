@@ -149,7 +149,7 @@ namespace MongoDB.Bson.Serialization
             var actualType = (value == null) ? _nominalType : value.GetType();
             if (actualType != _nominalType)
             {
-                serializer = BsonSerializer.LookupSerializer(actualType);
+                serializer = _serializer.SerializationContext.LookupSerializer(actualType);
             }
             serializer.Serialize(bsonWriter, _nominalType, value, _serializationOptions);
         }

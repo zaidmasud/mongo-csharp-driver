@@ -30,14 +30,14 @@ namespace MongoDB.Bson.Serialization.Serializers
     public class BsonDocumentSerializer : BsonBaseSerializer, IBsonIdProvider
     {
         // private static fields
-        private static BsonDocumentSerializer __instance = new BsonDocumentSerializer();
+        private static BsonDocumentSerializer __instance = new BsonDocumentSerializer(SerializationContext.Default);
 
         // constructors
         /// <summary>
         /// Initializes a new instance of the BsonDocumentSerializer class.
         /// </summary>
-        public BsonDocumentSerializer()
-            : base(new DocumentSerializationOptions())
+        public BsonDocumentSerializer(SerializationContext serializationContext)
+            : base(serializationContext, new DocumentSerializationOptions())
         {
         }
 
@@ -45,6 +45,7 @@ namespace MongoDB.Bson.Serialization.Serializers
         /// <summary>
         /// Gets an instance of the BsonDocumentSerializer class.
         /// </summary>
+        [Obsolete]
         public static BsonDocumentSerializer Instance
         {
             get { return __instance; }
@@ -84,10 +85,11 @@ namespace MongoDB.Bson.Serialization.Serializers
 
                     bsonReader.ReadStartDocument();
                     var document = new BsonDocument(documentSerializationOptions.AllowDuplicateNames);
+                    var bsonValueSerializer = SerializationContext.LookupSerializer(typeof(BsonValue));
                     while (bsonReader.ReadBsonType() != BsonType.EndOfDocument)
                     {
                         var name = bsonReader.ReadName();
-                        var value = (BsonValue)BsonValueSerializer.Instance.Deserialize(bsonReader, typeof(BsonValue), options);
+                        var value = (BsonValue)bsonValueSerializer.Deserialize(bsonReader, typeof(BsonValue), options);
                         document.Add(name, value);
                     }
                     bsonReader.ReadEndDocument();
@@ -119,7 +121,7 @@ namespace MongoDB.Bson.Serialization.Serializers
             if (bsonDocument.TryGetElement("_id", out idElement))
             {
                 id = idElement.Value;
-                idGenerator = BsonSerializer.LookupIdGenerator(id.GetType());
+                idGenerator = SerializationContext.LookupIdGenerator(id.GetType());
 
                 if (idGenerator == null)
                 {
@@ -162,7 +164,7 @@ namespace MongoDB.Bson.Serialization.Serializers
             var wrapper = value as BsonDocumentWrapper;
             if (wrapper != null)
             {
-                BsonDocumentWrapperSerializer.Instance.Serialize(bsonWriter, nominalType, value, options);
+                SerializationContext.LookupSerializer(typeof(BsonDocumentWrapper)).Serialize(bsonWriter, nominalType, value, options);
                 return;
             }
 
@@ -179,10 +181,11 @@ namespace MongoDB.Bson.Serialization.Serializers
 
             bsonWriter.WriteStartDocument();
             BsonElement idElement = null;
+            var bsonValueSerializer = SerializationContext.LookupSerializer(typeof(BsonValue));
             if (documentSerializationOptions.SerializeIdFirst && bsonDocument.TryGetElement("_id", out idElement))
             {
                 bsonWriter.WriteName(idElement.Name);
-                BsonValueSerializer.Instance.Serialize(bsonWriter, typeof(BsonValue), idElement.Value, options);
+                bsonValueSerializer.Serialize(bsonWriter, typeof(BsonValue), idElement.Value, options);
             }
 
             foreach (var element in bsonDocument)
@@ -191,7 +194,7 @@ namespace MongoDB.Bson.Serialization.Serializers
                 if (!object.ReferenceEquals(element, idElement))
                 {
                     bsonWriter.WriteName(element.Name);
-                    BsonValueSerializer.Instance.Serialize(bsonWriter, typeof(BsonValue), element.Value, options);
+                    bsonValueSerializer.Serialize(bsonWriter, typeof(BsonValue), element.Value, options);
                 }
             }
 

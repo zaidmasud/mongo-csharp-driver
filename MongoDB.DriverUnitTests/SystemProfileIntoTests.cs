@@ -32,7 +32,7 @@ namespace MongoDB.DriverUnitTests
         [Test]
         public void TestMinimal()
         {
-            var info = new SystemProfileInfo
+            var info = new SystemProfileInfo(SerializationContext.Default)
             {
                 Timestamp = new DateTime(2011, 10, 7, 0, 0, 0, DateTimeKind.Utc),
                 Duration = TimeSpan.FromMilliseconds(123)
@@ -44,7 +44,7 @@ namespace MongoDB.DriverUnitTests
         [Test]
         public void TestAll()
         {
-            var info = new SystemProfileInfo
+            var info = new SystemProfileInfo(SerializationContext.Default)
             {
                 Abbreviated = "abbreviated",
                 Client = "client",
@@ -60,14 +60,14 @@ namespace MongoDB.DriverUnitTests
                 IdHack = true,
                 Info = "info",
                 KeyUpdates = 4,
-                LockStatistics = new SystemProfileLockStatistics
+                LockStatistics = new SystemProfileLockStatistics(SerializationContext.Default)
                 {
-                    TimeAcquiring = new SystemProfileReadWriteLockStatistics
+                    TimeAcquiring = new SystemProfileReadWriteLockStatistics(SerializationContext.Default)
                     {
                         Read = TimeSpan.FromMilliseconds(10),
                         Write = TimeSpan.FromMilliseconds(20)
                     },
-                    TimeLocked = new SystemProfileReadWriteLockStatistics
+                    TimeLocked = new SystemProfileReadWriteLockStatistics(SerializationContext.Default)
                     {
                         Read = TimeSpan.FromMilliseconds(5),
                         Write = TimeSpan.FromMilliseconds(30)

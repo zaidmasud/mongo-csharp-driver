@@ -23,39 +23,43 @@ namespace MongoDB.Bson.Serialization.Conventions
     /// <summary>
     /// Represents a registry of conventions.
     /// </summary>
-    public static class ConventionRegistry
+    public class ConventionRegistry
     {
-        // private static fields
-        private readonly static List<ConventionPackContainer> __conventionPacks = new List<ConventionPackContainer>();
-        private readonly static object __lock = new object();
+        // private fields
+        private readonly List<ConventionPackContainer> _conventionPacks = new List<ConventionPackContainer>();
+        private readonly object _lock = new object();
 
-        // static constructors
-        static ConventionRegistry()
+        // constructors
+        /// <summary>
+        /// Intializes a new instance of the ConventionRegistry class.
+        /// </summary>
+        /// <param name="serializationContext">The serialization context.</param>
+        public ConventionRegistry(SerializationContext serializationContext)
         {
-            Register("__defaults__", DefaultConventionPack.Instance, t => true);
-            Register("__attributes__", AttributeConventionPack.Instance, t => true);
+            Register("__defaults__", new DefaultConventionPack(serializationContext), t => true);
+            Register("__attributes__", new AttributeConventionPack(), t => true);
         }
 
-        // public static methods
+        // public methods
         /// <summary>
         /// Looks up the effective set of conventions that apply to a type.
         /// </summary>
         /// <param name="type">The type.</param>
         /// <returns>The conventions for that type.</returns>
-        public static IConventionPack LookupConventions(Type type)
+        public IConventionPack LookupConventions(Type type)
         {
             if (type == null)
             {
                 throw new ArgumentNullException("type");
             }
 
-            lock (__lock)
+            lock (_lock)
             {
                 var pack = new ConventionPack();
 
                 // append any attribute packs (usually just one) at the end so attributes are processed last
                 var attributePacks = new List<IConventionPack>();
-                foreach (var container in __conventionPacks)
+                foreach (var container in _conventionPacks)
                 {
                     if (container.Filter(type))
                     {
@@ -84,7 +88,7 @@ namespace MongoDB.Bson.Serialization.Conventions
         /// <param name="name">The name.</param>
         /// <param name="conventions">The conventions.</param>
         /// <param name="filter">The filter.</param>
-        public static void Register(string name, IConventionPack conventions, Func<Type, bool> filter)
+        public void Register(string name, IConventionPack conventions, Func<Type, bool> filter)
         {
             if (name == null)
             {
@@ -99,7 +103,7 @@ namespace MongoDB.Bson.Serialization.Conventions
                 throw new ArgumentNullException("filter");
             }
 
-            lock (__lock)
+            lock (_lock)
             {
                 var container = new ConventionPackContainer
                 {
@@ -108,7 +112,7 @@ namespace MongoDB.Bson.Serialization.Conventions
                     Pack = conventions
                 };
 
-                __conventionPacks.Add(container);
+                _conventionPacks.Add(container);
             }
         }
 
@@ -119,16 +123,16 @@ namespace MongoDB.Bson.Serialization.Conventions
         /// <remarks>Removing a convention allows the removal of the special __defaults__ conventions 
         /// and the __attributes__ conventions for those who want to completely customize the 
         /// experience.</remarks>
-        public static void Remove(string name)
+        public void Remove(string name)
         {
             if (name == null)
             {
                 throw new ArgumentNullException("name");
             }
 
-            lock (__lock)
+            lock (_lock)
             {
-                __conventionPacks.RemoveAll(x => x.Name == name);
+                _conventionPacks.RemoveAll(x => x.Name == name);
             }
         }
 

@@ -26,9 +26,6 @@ namespace MongoDB.Bson.Serialization.Conventions
     /// </summary>
     public class DefaultConventionPack : IConventionPack
     {
-        // private static fields
-        private static readonly IConventionPack __defaultConventionPack = new DefaultConventionPack();
-
         // private fields
         private readonly IEnumerable<IConvention> _conventions;
 
@@ -36,7 +33,7 @@ namespace MongoDB.Bson.Serialization.Conventions
         /// <summary>
         /// Initializes a new instance of the <see cref="DefaultConventionPack" /> class.
         /// </summary>
-        private DefaultConventionPack()
+        public DefaultConventionPack(SerializationContext serializationContext)
         {
             _conventions = new List<IConvention>
             {
@@ -45,17 +42,8 @@ namespace MongoDB.Bson.Serialization.Conventions
                 new NamedExtraElementsMemberConvention(new [] { "ExtraElements" }),
                 new IgnoreExtraElementsConvention(false),
                 new StringObjectIdIdGeneratorConvention(), // should be before LookupIdGeneratorConvention
-                new LookupIdGeneratorConvention()
+                new LookupIdGeneratorConvention(serializationContext)
             };
-        }
-
-        // public static properties
-        /// <summary>
-        /// Gets the instance.
-        /// </summary>
-        public static IConventionPack Instance
-        {
-            get { return __defaultConventionPack; }
         }
 
         // public properties

@@ -29,25 +29,13 @@ namespace MongoDB.Bson.Serialization.Serializers
     /// </summary>
     public class GuidSerializer : BsonBaseSerializer
     {
-        // private static fields
-        private static GuidSerializer __instance = new GuidSerializer();
-
         // constructors
         /// <summary>
         /// Initializes a new instance of the GuidSerializer class.
         /// </summary>
-        public GuidSerializer()
-            : base(new RepresentationSerializationOptions(BsonType.Binary))
+        public GuidSerializer(SerializationContext serializationContext)
+            : base(serializationContext, new RepresentationSerializationOptions(BsonType.Binary))
         {
-        }
-
-        // public static properties
-        /// <summary>
-        /// Gets an instance of the GuidSerializer class.
-        /// </summary>
-        public static GuidSerializer Instance
-        {
-            get { return __instance; }
         }
 
         // public methods

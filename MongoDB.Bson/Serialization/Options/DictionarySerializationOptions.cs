@@ -210,7 +210,7 @@ namespace MongoDB.Bson.Serialization
             {
                 valueType = serializer.GetType().GetGenericArguments()[1]; // TValue
             }
-            var valueSerializer = BsonSerializer.LookupSerializer(valueType);
+            var valueSerializer = serializer.SerializationContext.LookupSerializer(valueType);
 
             var valueSerializationOptions = _keyValuePairSerializationOptions.ValueSerializationOptions;
             if (valueSerializationOptions == null)

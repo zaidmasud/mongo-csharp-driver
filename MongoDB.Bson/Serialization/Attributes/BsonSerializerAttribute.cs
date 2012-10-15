@@ -63,30 +63,51 @@ namespace MongoDB.Bson.Serialization
         /// <param name="memberMap">The member map.</param>
         public void Apply(BsonMemberMap memberMap)
         {
-            var serializer = CreateSerializer(memberMap.MemberType);
+            var serializer = CreateSerializer(memberMap.ClassMap.SerializationContext, memberMap.MemberType);
             memberMap.SetSerializer(serializer);
         }
 
         /// <summary>
         /// Creates a serializer for a type based on the serializer type specified by the attribute.
         /// </summary>
+        /// <param name="serializationContext">The serialization context.</param>
         /// <param name="type">The type that a serializer should be created for.</param>
         /// <returns>A serializer for the type.</returns>
-        internal IBsonSerializer CreateSerializer(Type type)
+        internal IBsonSerializer CreateSerializer(SerializationContext serializationContext, Type type)
         {
+            string message;
+
             if (type.ContainsGenericParameters)
             {
-                var message = "Cannot create a serializer because the type to serialize is an open generic type.";
-                throw new InvalidOperationException(message);
+                message = "Cannot create a serializer because the type to serialize is an open generic type.";
+                throw new ArgumentException(message);
             }
 
             if (_serializerType.ContainsGenericParameters)
             {
-                var message = "Cannot create a serializer because the serializer type is an open generic type.";
-                throw new InvalidOperationException(message);
+                message = "Cannot create a serializer because the serializer type is an open generic type.";
+                throw new ArgumentException(message);
             }
 
-            return (IBsonSerializer)Activator.CreateInstance(_serializerType);
+            var constructorInfo = _serializerType.GetConstructor(new[] { typeof(SerializationContext) });
+            if (constructorInfo != null)
+            {
+                return (IBsonSerializer)constructorInfo.Invoke(new[] { serializationContext });
+            }
+
+            constructorInfo = _serializerType.GetConstructor(new Type[0]);
+            if (constructorInfo != null)
+            {
+                if (serializationContext != SerializationContext.Default)
+                {
+                    message = string.Format("Serializer type {0} no-argument constructor can only be used with the default serialization context.", _serializerType.FullName);
+                    throw new ArgumentException(message);
+                }
+                return (IBsonSerializer)constructorInfo.Invoke(new object[0]);
+            }
+
+            message = string.Format("No suitable constructor found for serializer type {0}.", _serializerType.FullName);
+            throw new ArgumentException(message);
         }
     }
 }

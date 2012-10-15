@@ -30,25 +30,13 @@ namespace MongoDB.Bson.Serialization.Serializers
     /// </summary>
     public class BitArraySerializer : BsonBaseSerializer
     {
-        // private static fields
-        private static BitArraySerializer __instance = new BitArraySerializer();
-
         // constructors
         /// <summary>
         /// Initializes a new instance of the BitArraySerializer class.
         /// </summary>
-        public BitArraySerializer()
-            : base(new RepresentationSerializationOptions(BsonType.Binary))
+        public BitArraySerializer(SerializationContext serializationContext)
+            : base(serializationContext, new RepresentationSerializationOptions(BsonType.Binary))
         {
-        }
-
-        // public static properties
-        /// <summary>
-        /// Gets an instance of the BitArraySerializer class.
-        /// </summary>
-        public static BitArraySerializer Instance
-        {
-            get { return __instance; }
         }
 
         // public methods

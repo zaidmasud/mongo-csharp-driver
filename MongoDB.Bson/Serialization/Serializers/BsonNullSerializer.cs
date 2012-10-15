@@ -29,24 +29,13 @@ namespace MongoDB.Bson.Serialization.Serializers
     /// </summary>
     public class BsonNullSerializer : BsonBaseSerializer
     {
-        // private static fields
-        private static BsonNullSerializer __instance = new BsonNullSerializer();
-
         // constructors
         /// <summary>
         /// Initializes a new instance of the BsonNullSerializer class.
         /// </summary>
-        public BsonNullSerializer()
+        public BsonNullSerializer(SerializationContext serializationContext)
+            : base(serializationContext)
         {
-        }
-
-        // public static properties
-        /// <summary>
-        /// Gets an instance of the BsonNullSerializer class.
-        /// </summary>
-        public static BsonNullSerializer Instance
-        {
-            get { return __instance; }
         }
 
         // public methods

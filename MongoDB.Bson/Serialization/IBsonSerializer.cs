@@ -24,6 +24,13 @@ namespace MongoDB.Bson.Serialization
     /// </summary>
     public interface IBsonSerializer
     {
+        // properties
+        /// <summary>
+        /// Gets the serialization context.
+        /// </summary>
+        SerializationContext SerializationContext { get; }
+
+        // methods
         /// <summary>
         /// Deserializes an object from a BsonReader.
         /// </summary>

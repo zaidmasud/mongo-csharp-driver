@@ -32,9 +32,10 @@ namespace MongoDB.Bson.Serialization.Conventions
         /// <summary>
         /// Initializes a new instance of the ScalarDiscriminatorConvention class.
         /// </summary>
+        /// <param name="serializationContext">The serialization context.</param>
         /// <param name="elementName">The element name.</param>
-        public ScalarDiscriminatorConvention(string elementName)
-            : base(elementName)
+        public ScalarDiscriminatorConvention(SerializationContext serializationContext, string elementName)
+            : base(serializationContext, elementName)
         {
         }
 
@@ -47,7 +48,7 @@ namespace MongoDB.Bson.Serialization.Conventions
         /// <returns>The discriminator value.</returns>
         public override BsonValue GetDiscriminator(Type nominalType, Type actualType)
         {
-            var classMap = BsonClassMap.LookupClassMap(actualType);
+            var classMap = SerializationContext.LookupClassMap(actualType);
             return classMap.Discriminator;
         }
     }

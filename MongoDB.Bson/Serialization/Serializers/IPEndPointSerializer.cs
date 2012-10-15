@@ -32,24 +32,13 @@ namespace MongoDB.Bson.Serialization.Serializers
     /// </summary>
     public class IPEndPointSerializer : BsonBaseSerializer
     {
-        // private static fields
-        private static IPEndPointSerializer __instance = new IPEndPointSerializer();
-
         // constructors
         /// <summary>
         /// Initializes a new instance of the IPEndPointSerializer class.
         /// </summary>
-        public IPEndPointSerializer()
+        public IPEndPointSerializer(SerializationContext serializationContext)
+            : base(serializationContext)
         {
-        }
-
-        // public static properties
-        /// <summary>
-        /// Gets an instance of the IPEndPointSerializer class.
-        /// </summary>
-        public static IPEndPointSerializer Instance
-        {
-            get { return __instance; }
         }
 
         // public methods

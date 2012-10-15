@@ -30,25 +30,13 @@ namespace MongoDB.Bson.Serialization.Serializers
     /// </summary>
     public class DecimalSerializer : BsonBaseSerializer
     {
-        // private static fields
-        private static DecimalSerializer __instance = new DecimalSerializer();
-
         // constructors
         /// <summary>
         /// Initializes a new instance of the DecimalSerializer class.
         /// </summary>
-        public DecimalSerializer()
-            : base(new RepresentationSerializationOptions(BsonType.String))
+        public DecimalSerializer(SerializationContext serializationContext)
+            : base(serializationContext, new RepresentationSerializationOptions(BsonType.String))
         {
-        }
-
-        // public static properties
-        /// <summary>
-        /// Gets an instance of the DecimalSerializer class.
-        /// </summary>
-        public static DecimalSerializer Instance
-        {
-            get { return __instance; }
         }
 
         // public methods
@@ -73,7 +61,7 @@ namespace MongoDB.Bson.Serialization.Serializers
             switch (bsonType)
             {
                 case BsonType.Array:
-                    var array = (BsonArray)BsonArraySerializer.Instance.Deserialize(bsonReader, typeof(BsonArray), null);
+                    var array = (BsonArray)SerializationContext.LookupSerializer(typeof(BsonArray)).Deserialize(bsonReader, typeof(BsonArray), null);
                     var bits = new int[4];
                     bits[0] = array[0].AsInt32;
                     bits[1] = array[1].AsInt32;

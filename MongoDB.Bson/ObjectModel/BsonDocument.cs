@@ -295,7 +295,7 @@ namespace MongoDB.Bson
         {
             using (var bsonReader = BsonReader.Create(json))
             {
-                return (BsonDocument)BsonDocumentSerializer.Instance.Deserialize(bsonReader, typeof(BsonDocument), null);
+                return (BsonDocument)SerializationContext.Default.LookupSerializer(typeof(BsonDocument)).Deserialize(bsonReader, typeof(BsonDocument), null);
             }
         }
 

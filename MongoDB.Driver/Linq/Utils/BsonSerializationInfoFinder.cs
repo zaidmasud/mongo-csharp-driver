@@ -181,7 +181,7 @@ namespace MongoDB.Driver.Linq.Utils
         /// <returns>BsonSerializationInfo for the expression.</returns>
         protected override BsonSerializationInfo VisitParameter(ParameterExpression node)
         {
-            var serializer = BsonSerializer.LookupSerializer(node.Type);
+            var serializer = SerializationContext.Default.LookupSerializer(node.Type);
             var serializationInfo = CreateSerializationInfo(node, serializer);
             _serializationInfoCache.Add(node, serializationInfo);
             return serializationInfo;
@@ -208,7 +208,7 @@ namespace MongoDB.Driver.Linq.Utils
             // if the target conversion type cannot be assigned from the operand, than we are downcasting and we need to get the more specific serializer
             if (!node.Type.IsAssignableFrom(node.Operand.Type))
             {
-                var conversionSerializer = BsonSerializer.LookupSerializer(node.Type);
+                var conversionSerializer = SerializationContext.Default.LookupSerializer(node.Type);
                 var conversionSerializationInfo = CreateSerializationInfo(node, conversionSerializer);
                 return CombineSerializationInfo(serializationInfo, conversionSerializationInfo);
             }

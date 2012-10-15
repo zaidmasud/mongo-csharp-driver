@@ -30,25 +30,13 @@ namespace MongoDB.Bson.Serialization.Serializers
     /// </summary>
     public class SByteSerializer : BsonBaseSerializer
     {
-        // private static fields
-        private static SByteSerializer __instance = new SByteSerializer();
-
         // constructors
         /// <summary>
         /// Initializes a new instance of the SByteSerializer class.
         /// </summary>
-        public SByteSerializer()
-            : base(new RepresentationSerializationOptions(BsonType.Int32))
+        public SByteSerializer(SerializationContext serializationContext)
+            : base(serializationContext, new RepresentationSerializationOptions(BsonType.Int32))
         {
-        }
-
-        // public static properties
-        /// <summary>
-        /// Gets an instance of the SByteSerializer class.
-        /// </summary>
-        public static SByteSerializer Instance
-        {
-            get { return __instance; }
         }
 
         // public methods

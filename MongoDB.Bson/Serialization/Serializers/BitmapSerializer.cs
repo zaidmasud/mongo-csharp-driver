@@ -32,30 +32,14 @@ namespace MongoDB.Bson.Serialization.Serializers
     /// </summary>
     public class BitmapSerializer : BsonBaseSerializer
     {
-        // private static fields
-        private static BitmapSerializer __instance = new BitmapSerializer();
-
-        // static constructor
-        static BitmapSerializer()
-        {
-            BsonSerializer.RegisterDiscriminator(typeof(Bitmap), "Bitmap");
-        }
-
         // constructors
         /// <summary>
         /// Initializes a new instance of the BitmapSerializer class.
         /// </summary>
-        public BitmapSerializer()
+        public BitmapSerializer(SerializationContext serializationContext)
+            : base(serializationContext)
         {
-        }
-
-        // public static properties
-        /// <summary>
-        /// Gets an instance of the BitmapSerializer class.
-        /// </summary>
-        public static BitmapSerializer Instance
-        {
-            get { return __instance; }
+            serializationContext.RegisterDiscriminator(typeof(Bitmap), "Bitmap");
         }
 
         // public methods

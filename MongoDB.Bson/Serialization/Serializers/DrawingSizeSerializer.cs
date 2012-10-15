@@ -29,24 +29,13 @@ namespace MongoDB.Bson.Serialization.Serializers
     /// </summary>
     public class DrawingSizeSerializer : BsonBaseSerializer
     {
-        // private static fields
-        private static DrawingSizeSerializer __instance = new DrawingSizeSerializer();
-
         // constructors
         /// <summary>
         /// Initializes a new instance of the DrawingSizeSerializer class.
         /// </summary>
-        public DrawingSizeSerializer()
+        public DrawingSizeSerializer(SerializationContext serializationContext)
+            : base(serializationContext)
         {
-        }
-
-        // public static properties
-        /// <summary>
-        /// Gets an instance of the DrawingSizeSerializer class.
-        /// </summary>
-        public static DrawingSizeSerializer Instance
-        {
-            get { return __instance; }
         }
 
         // public methods

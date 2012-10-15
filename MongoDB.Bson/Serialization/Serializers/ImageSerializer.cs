@@ -32,24 +32,13 @@ namespace MongoDB.Bson.Serialization.Serializers
     /// </summary>
     public class ImageSerializer : BsonBaseSerializer
     {
-        // private static fields
-        private static ImageSerializer __instance = new ImageSerializer();
-
         // constructors
         /// <summary>
         /// Initializes a new instance of the ImageSerializer class.
         /// </summary>
-        public ImageSerializer()
+        public ImageSerializer(SerializationContext serializationContext)
+            : base(serializationContext)
         {
-        }
-
-        // public static properties
-        /// <summary>
-        /// Gets an instance of the ImageSerializer class.
-        /// </summary>
-        public static ImageSerializer Instance
-        {
-            get { return __instance; }
         }
 
         // public methods
@@ -71,7 +60,7 @@ namespace MongoDB.Bson.Serialization.Serializers
                 throw new ArgumentException(message, "nominalType");
             }
 
-            var discriminatorConvention = BsonSerializer.LookupDiscriminatorConvention(typeof(Image));
+            var discriminatorConvention = SerializationContext.LookupDiscriminatorConvention(typeof(Image));
             var actualType = discriminatorConvention.GetActualType(bsonReader, typeof(Image));
             if (actualType == typeof(Image))
             {
@@ -79,7 +68,7 @@ namespace MongoDB.Bson.Serialization.Serializers
                 throw new FileFormatException(message);
             }
 
-            var serializer = BsonSerializer.LookupSerializer(actualType);
+            var serializer = SerializationContext.LookupSerializer(actualType);
             return serializer.Deserialize(bsonReader, nominalType, actualType, options);
         }
 

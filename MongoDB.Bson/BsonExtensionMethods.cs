@@ -121,7 +121,7 @@ namespace MongoDB.Bson
             {
                 using (var bsonWriter = BsonWriter.Create(buffer, settings))
                 {
-                    BsonSerializer.Serialize(bsonWriter, nominalType, obj, options);
+                    SerializationContext.Default.Serialize(bsonWriter, nominalType, obj, options);
                 }
                 return buffer.ToByteArray();
             }
@@ -208,7 +208,7 @@ namespace MongoDB.Bson
             var document = new BsonDocument();
             using (var writer = BsonWriter.Create(document))
             {
-                BsonSerializer.Serialize(writer, nominalType, obj, options);
+                SerializationContext.Default.Serialize(writer, nominalType, obj, options);
             }
             return document;
         }
@@ -305,7 +305,7 @@ namespace MongoDB.Bson
             {
                 using (var bsonWriter = BsonWriter.Create(stringWriter, settings))
                 {
-                    BsonSerializer.Serialize(bsonWriter, nominalType, obj, options);
+                    SerializationContext.Default.Serialize(bsonWriter, nominalType, obj, options);
                 }
                 return stringWriter.ToString();
             }

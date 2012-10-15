@@ -29,24 +29,13 @@ namespace MongoDB.Bson.Serialization.Serializers
     /// </summary>
     public class BsonMaxKeySerializer : BsonBaseSerializer
     {
-        // private static fields
-        private static BsonMaxKeySerializer __instance = new BsonMaxKeySerializer();
-
         // constructors
         /// <summary>
         /// Initializes a new instance of the BsonMaxKeySerializer class.
         /// </summary>
-        public BsonMaxKeySerializer()
+        public BsonMaxKeySerializer(SerializationContext serializationContext)
+            : base(serializationContext)
         {
-        }
-
-        // public static properties
-        /// <summary>
-        /// Gets an instance of the BsonMaxKeySerializer class.
-        /// </summary>
-        public static BsonMaxKeySerializer Instance
-        {
-            get { return __instance; }
         }
 
         // public methods
