@@ -29,24 +29,13 @@ namespace MongoDB.Bson.Serialization.Serializers
     /// </summary>
     public class BsonJavaScriptWithScopeSerializer : BsonBaseSerializer
     {
-        // private static fields
-        private static BsonJavaScriptWithScopeSerializer __instance = new BsonJavaScriptWithScopeSerializer();
-
         // constructors
         /// <summary>
         /// Initializes a new instance of the BsonJavaScriptWithScopeSerializer class.
         /// </summary>
-        public BsonJavaScriptWithScopeSerializer()
+        public BsonJavaScriptWithScopeSerializer(SerializationContext serializationContext)
+            : base(serializationContext)
         {
-        }
-
-        // public static properties
-        /// <summary>
-        /// Gets an instance of the BsonJavaScriptWithScopeSerializer class.
-        /// </summary>
-        public static BsonJavaScriptWithScopeSerializer Instance
-        {
-            get { return __instance; }
         }
 
         // public methods
@@ -71,7 +60,7 @@ namespace MongoDB.Bson.Serialization.Serializers
             {
                 case BsonType.JavaScriptWithScope:
                     var code = bsonReader.ReadJavaScriptWithScope();
-                    var scope = (BsonDocument)BsonDocumentSerializer.Instance.Deserialize(bsonReader, typeof(BsonDocument), null);
+                    var scope = (BsonDocument)SerializationContext.LookupSerializer(typeof(BsonDocument)).Deserialize(bsonReader, typeof(BsonDocument), null);
                     return new BsonJavaScriptWithScope(code, scope);
                 default:
                     var message = string.Format("Cannot deserialize BsonJavaScriptWithScope from BsonType {0}.", bsonType);
@@ -99,7 +88,7 @@ namespace MongoDB.Bson.Serialization.Serializers
 
             var script = (BsonJavaScriptWithScope)value;
             bsonWriter.WriteJavaScriptWithScope(script.Code);
-            BsonDocumentSerializer.Instance.Serialize(bsonWriter, typeof(BsonDocument), script.Scope, null);
+            SerializationContext.LookupSerializer(typeof(BsonDocument)).Serialize(bsonWriter, typeof(BsonDocument), script.Scope, null);
         }
     }
 }

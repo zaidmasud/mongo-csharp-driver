@@ -30,24 +30,25 @@ namespace MongoDB.Bson.Serialization.Serializers
     /// </summary>
     public class ObjectSerializer : IBsonSerializer
     {
-        // private static fields
-        private static ObjectSerializer __instance = new ObjectSerializer();
+        // private fields
+        private readonly SerializationContext _serializationContext;
 
         // constructors
         /// <summary>
         /// Initializes a new instance of the ObjectSerializer class.
         /// </summary>
-        public ObjectSerializer()
+        public ObjectSerializer(SerializationContext serializationContext)
         {
+            _serializationContext = serializationContext;
         }
 
-        // public static properties
+        // public properties
         /// <summary>
-        /// Gets an instance of the ObjectSerializer class.
+        /// Gets the serialization context.
         /// </summary>
-        public static ObjectSerializer Instance
+        public SerializationContext SerializationContext
         {
-            get { return __instance; }
+            get { return _serializationContext; }
         }
 
         // public methods
@@ -87,7 +88,7 @@ namespace MongoDB.Bson.Serialization.Serializers
                 }
             }
 
-            var discriminatorConvention = BsonSerializer.LookupDiscriminatorConvention(typeof(object));
+            var discriminatorConvention = _serializationContext.LookupDiscriminatorConvention(typeof(object));
             var actualType = discriminatorConvention.GetActualType(bsonReader, typeof(object));
             if (actualType == typeof(object))
             {
@@ -95,7 +96,7 @@ namespace MongoDB.Bson.Serialization.Serializers
                 throw new FileFormatException(message);
             }
 
-            var serializer = BsonSerializer.LookupSerializer(actualType);
+            var serializer = _serializationContext.LookupSerializer(actualType);
             return serializer.Deserialize(bsonReader, nominalType, actualType, options);
         }
 

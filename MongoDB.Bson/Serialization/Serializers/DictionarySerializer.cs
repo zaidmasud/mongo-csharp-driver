@@ -31,9 +31,6 @@ namespace MongoDB.Bson.Serialization.Serializers
     /// </summary>
     public class DictionarySerializer : BsonBaseSerializer
     {
-        // private static fields
-        private static DictionarySerializer __instance = new DictionarySerializer();
-
         // private fields
         private readonly KeyValuePairSerializer<object, object> _keyValuePairSerializer;
 
@@ -41,19 +38,10 @@ namespace MongoDB.Bson.Serialization.Serializers
         /// <summary>
         /// Initializes a new instance of the DictionarySerializer class.
         /// </summary>
-        public DictionarySerializer()
-            : base(DictionarySerializationOptions.Defaults)
+        public DictionarySerializer(SerializationContext serializationContext)
+            : base(serializationContext, DictionarySerializationOptions.Defaults)
         {
-            _keyValuePairSerializer = new KeyValuePairSerializer<object, object>();
-        }
-
-        // public static properties
-        /// <summary>
-        /// Gets an instance of the DictionarySerializer class.
-        /// </summary>
-        public static DictionarySerializer Instance
-        {
-            get { return __instance; }
+            _keyValuePairSerializer = new KeyValuePairSerializer<object, object>(SerializationContext);
         }
 
         // public methods
@@ -94,14 +82,14 @@ namespace MongoDB.Bson.Serialization.Serializers
                 }
 
                 var dictionary = CreateInstance(actualType);
-                var valueDiscriminatorConvention = BsonSerializer.LookupDiscriminatorConvention(typeof(object));
+                var valueDiscriminatorConvention = SerializationContext.LookupDiscriminatorConvention(typeof(object));
 
                 bsonReader.ReadStartDocument();
                 while (bsonReader.ReadBsonType() != BsonType.EndOfDocument)
                 {
                     var key = bsonReader.ReadName();
                     var valueType = valueDiscriminatorConvention.GetActualType(bsonReader, typeof(object));
-                    var valueSerializer = BsonSerializer.LookupSerializer(valueType);
+                    var valueSerializer = SerializationContext.LookupSerializer(valueType);
                     var value = valueSerializer.Deserialize(bsonReader, typeof(object), valueType, keyValuePairSerializationOptions.ValueSerializationOptions);
                     dictionary.Add(key, value);
                 }
@@ -189,7 +177,7 @@ namespace MongoDB.Bson.Serialization.Serializers
                         foreach (DictionaryEntry dictionaryEntry in dictionary)
                         {
                             bsonWriter.WriteName((string)dictionaryEntry.Key);
-                            BsonSerializer.Serialize(bsonWriter, typeof(object), dictionaryEntry.Value, keyValuePairSerializationOptions.ValueSerializationOptions);
+                            SerializationContext.Serialize(bsonWriter, typeof(object), dictionaryEntry.Value, keyValuePairSerializationOptions.ValueSerializationOptions);
                         }
                         bsonWriter.WriteEndDocument();
                         break;

@@ -30,25 +30,13 @@ namespace MongoDB.Bson.Serialization.Serializers
     /// </summary>
     public class StackSerializer : BsonBaseSerializer, IBsonArraySerializer
     {
-        // private static fields
-        private static StackSerializer __instance = new StackSerializer();
-
         // constructors
         /// <summary>
         /// Initializes a new instance of the StackSerializer class.
         /// </summary>
-        public StackSerializer()
-            : base(new ArraySerializationOptions())
+        public StackSerializer(SerializationContext serializationContext)
+            : base(serializationContext, new ArraySerializationOptions())
         {
-        }
-
-        // public static properties
-        /// <summary>
-        /// Gets an instance of the StackSerializer class.
-        /// </summary>
-        public static StackSerializer Instance
-        {
-            get { return __instance; }
         }
 
         // public methods
@@ -78,11 +66,11 @@ namespace MongoDB.Bson.Serialization.Serializers
                 case BsonType.Array:
                     bsonReader.ReadStartArray();
                     var stack = new Stack();
-                    var discriminatorConvention = BsonSerializer.LookupDiscriminatorConvention(typeof(object));
+                    var discriminatorConvention = SerializationContext.LookupDiscriminatorConvention(typeof(object));
                     while (bsonReader.ReadBsonType() != BsonType.EndOfDocument)
                     {
                         var elementType = discriminatorConvention.GetActualType(bsonReader, typeof(object));
-                        var serializer = BsonSerializer.LookupSerializer(elementType);
+                        var serializer = SerializationContext.LookupSerializer(elementType);
                         var element = serializer.Deserialize(bsonReader, typeof(object), elementType, itemSerializationOptions);
                         stack.Push(element);
                     }
@@ -108,7 +96,7 @@ namespace MongoDB.Bson.Serialization.Serializers
         public BsonSerializationInfo GetItemSerializationInfo()
         {
             string elementName = null;
-            var serializer = BsonSerializer.LookupSerializer(typeof(object));
+            var serializer = SerializationContext.LookupSerializer(typeof(object));
             var nominalType = typeof(object);
             IBsonSerializationOptions serializationOptions = null;
             return new BsonSerializationInfo(elementName, serializer, nominalType, serializationOptions);
@@ -152,7 +140,7 @@ namespace MongoDB.Bson.Serialization.Serializers
                 bsonWriter.WriteStartArray();
                 for (var i = items.Length - 1; i >= 0; i--)
                 {
-                    BsonSerializer.Serialize(bsonWriter, typeof(object), items[i], itemSerializationOptions);
+                    SerializationContext.Serialize(bsonWriter, typeof(object), items[i], itemSerializationOptions);
                 }
                 bsonWriter.WriteEndArray();
             }
@@ -169,8 +157,8 @@ namespace MongoDB.Bson.Serialization.Serializers
         /// <summary>
         /// Initializes a new instance of the StackSerializer class.
         /// </summary>
-        public StackSerializer()
-            : base(new ArraySerializationOptions())
+        public StackSerializer(SerializationContext serializationContext)
+            : base(serializationContext, new ArraySerializationOptions())
         {
         }
 
@@ -201,11 +189,11 @@ namespace MongoDB.Bson.Serialization.Serializers
                 case BsonType.Array:
                     bsonReader.ReadStartArray();
                     var stack = new Stack<T>();
-                    var discriminatorConvention = BsonSerializer.LookupDiscriminatorConvention(typeof(T));
+                    var discriminatorConvention = SerializationContext.LookupDiscriminatorConvention(typeof(T));
                     while (bsonReader.ReadBsonType() != BsonType.EndOfDocument)
                     {
                         var elementType = discriminatorConvention.GetActualType(bsonReader, typeof(T));
-                        var serializer = BsonSerializer.LookupSerializer(elementType);
+                        var serializer = SerializationContext.LookupSerializer(elementType);
                         var element = (T)serializer.Deserialize(bsonReader, typeof(T), elementType, itemSerializationOptions);
                         stack.Push(element);
                     }
@@ -231,7 +219,7 @@ namespace MongoDB.Bson.Serialization.Serializers
         public BsonSerializationInfo GetItemSerializationInfo()
         {
             string elementName = null;
-            var serializer = BsonSerializer.LookupSerializer(typeof(T));
+            var serializer = SerializationContext.LookupSerializer(typeof(T));
             var nominalType = typeof(T);
             IBsonSerializationOptions serializationOptions = null;
             return new BsonSerializationInfo(elementName, serializer, nominalType, serializationOptions);
@@ -275,7 +263,7 @@ namespace MongoDB.Bson.Serialization.Serializers
                 bsonWriter.WriteStartArray();
                 for (var i = items.Length - 1; i >= 0; i--)
                 {
-                    BsonSerializer.Serialize(bsonWriter, typeof(T), items[i], itemSerializationOptions);
+                    SerializationContext.Serialize(bsonWriter, typeof(T), items[i], itemSerializationOptions);
                 }
                 bsonWriter.WriteEndArray();
             }

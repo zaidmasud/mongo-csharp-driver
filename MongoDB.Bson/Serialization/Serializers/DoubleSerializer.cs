@@ -31,25 +31,13 @@ namespace MongoDB.Bson.Serialization.Serializers
     /// </summary>
     public class DoubleSerializer : BsonBaseSerializer
     {
-        // private static fields
-        private static DoubleSerializer __instance = new DoubleSerializer();
-
         // constructors
         /// <summary>
         /// Initializes a new instance of the DoubleSerializer class.
         /// </summary>
-        public DoubleSerializer()
-            : base(new RepresentationSerializationOptions(BsonType.Double))
+        public DoubleSerializer(SerializationContext serializationContext)
+            : base(serializationContext, new RepresentationSerializationOptions(BsonType.Double))
         {
-        }
-
-        // public static properties
-        /// <summary>
-        /// Gets an instance of the DoubleSerializer class.
-        /// </summary>
-        public static DoubleSerializer Instance
-        {
-            get { return __instance; }
         }
 
         // public methods

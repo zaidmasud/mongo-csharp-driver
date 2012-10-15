@@ -31,13 +31,16 @@ namespace MongoDB.Bson.Serialization.Serializers
     public abstract class BsonBaseSerializer : IBsonSerializer
     {
         // private fields
-        private IBsonSerializationOptions _defaultSerializationOptions;
+        private readonly SerializationContext _serializationContext;
+        private readonly IBsonSerializationOptions _defaultSerializationOptions;
 
         // constructors
         /// <summary>
         /// Initializes a new instance of the BsonBaseSerializer class.
         /// </summary>
+        [Obsolete]
         protected BsonBaseSerializer()
+            : this(SerializationContext.Default)
         {
         }
 
@@ -45,12 +48,34 @@ namespace MongoDB.Bson.Serialization.Serializers
         /// Initializes a new instance of the BsonBaseSerializer class.
         /// </summary>
         /// <param name="defaultSerializationOptions">The default serialization options for this serializer.</param>
+        [Obsolete]
         protected BsonBaseSerializer(IBsonSerializationOptions defaultSerializationOptions)
+            : this(SerializationContext.Default, defaultSerializationOptions)
         {
-            if (defaultSerializationOptions != null)
+        }
+
+        /// <summary>
+        /// Initializes a new instance of the BsonBaseSerializer class.
+        /// </summary>
+        /// <param name="serializationContext">The serialization context.</param>
+        protected BsonBaseSerializer(SerializationContext serializationContext)
+            : this(serializationContext, null)
+        {
+        }
+
+        /// <summary>
+        /// Initializes a new instance of the BsonBaseSerializer class.
+        /// </summary>
+        /// <param name="serializationContext">The serialization context.</param>
+        /// <param name="defaultSerializationOptions">The default serialization options for this serializer.</param>
+        protected BsonBaseSerializer(SerializationContext serializationContext, IBsonSerializationOptions defaultSerializationOptions)
+        {
+            if (serializationContext == null)
             {
-                _defaultSerializationOptions = defaultSerializationOptions.Clone().Freeze();
+                throw new ArgumentNullException("serializationContext");
             }
+            _serializationContext = serializationContext;
+            _defaultSerializationOptions = (defaultSerializationOptions == null) ? null : defaultSerializationOptions.Clone().Freeze();
         }
 
         // public properties
@@ -60,6 +85,14 @@ namespace MongoDB.Bson.Serialization.Serializers
         public IBsonSerializationOptions DefaultSerializationOptions
         {
             get { return _defaultSerializationOptions; }
+        }
+
+        /// <summary>
+        /// Gets the serialization context.
+        /// </summary>
+        public SerializationContext SerializationContext
+        {
+            get { return _serializationContext; }
         }
 
         // public methods

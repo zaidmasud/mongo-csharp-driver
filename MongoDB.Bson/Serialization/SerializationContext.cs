@@ -33,18 +33,21 @@ namespace MongoDB.Bson.Serialization
     public class SerializationContext
     {
         // private static fields
-        private static readonly SerializationContext __default = new SerializationContext();
+        private static readonly SerializationContext __default;
 
         // private fields
-        private ReaderWriterLockSlim _configLock = new ReaderWriterLockSlim(LockRecursionPolicy.SupportsRecursion);
-        private Dictionary<Type, IIdGenerator> _idGenerators = new Dictionary<Type, IIdGenerator>();
-        private Dictionary<Type, IBsonSerializer> _serializers = new Dictionary<Type, IBsonSerializer>();
-        private Dictionary<Type, Type> _genericSerializerDefinitions = new Dictionary<Type, Type>();
-        private List<IBsonSerializationProvider> _serializationProviders = new List<IBsonSerializationProvider>();
-        private Dictionary<Type, IDiscriminatorConvention> _discriminatorConventions = new Dictionary<Type, IDiscriminatorConvention>();
-        private Dictionary<BsonValue, HashSet<Type>> _discriminators = new Dictionary<BsonValue, HashSet<Type>>();
-        private HashSet<Type> _discriminatedTypes = new HashSet<Type>();
-        private HashSet<Type> _typesWithRegisteredKnownTypes = new HashSet<Type>();
+        private readonly string _name;
+        private readonly ReaderWriterLockSlim _configLock = new ReaderWriterLockSlim(LockRecursionPolicy.SupportsRecursion);
+        private readonly Dictionary<Type, IIdGenerator> _idGenerators = new Dictionary<Type, IIdGenerator>();
+        private readonly Dictionary<Type, IBsonSerializer> _serializers = new Dictionary<Type, IBsonSerializer>();
+        private readonly Dictionary<Type, Type> _genericSerializerDefinitions = new Dictionary<Type, Type>();
+        private readonly List<IBsonSerializationProvider> _serializationProviders = new List<IBsonSerializationProvider>();
+        private readonly Dictionary<Type, IDiscriminatorConvention> _discriminatorConventions = new Dictionary<Type, IDiscriminatorConvention>();
+        private readonly Dictionary<BsonValue, HashSet<Type>> _discriminators = new Dictionary<BsonValue, HashSet<Type>>();
+        private readonly HashSet<Type> _discriminatedTypes = new HashSet<Type>();
+        private readonly HashSet<Type> _typesWithRegisteredKnownTypes = new HashSet<Type>();
+        private readonly Dictionary<Type, BsonClassMap> _classMaps = new Dictionary<Type, BsonClassMap>();
+        private readonly ConventionRegistry _conventionRegistry;
 
         private bool _useNullIdChecker = false;
         private bool _useZeroIdChecker = false;
@@ -52,18 +55,48 @@ namespace MongoDB.Bson.Serialization
         // static constructor
         static SerializationContext()
         {
-            __default = new SerializationContext();
-            RegisterDefaultSerializationProviders();
-            RegisterIdGenerators();
+            __default = new SerializationContext("default");
+            __default.RegisterDefaultSerializationProviders();
+            __default.RegisterIdGenerators();
+        }
+
+        // constructors
+        /// <summary>
+        /// Initializes a new instance of the SerializationContext class.
+        /// </summary>
+        /// <param name="name">The name of the serialization context.</param>
+        public SerializationContext(string name)
+        {
+            _name = name;
+            _conventionRegistry = new ConventionRegistry(this);
         }
 
         // public static properties
+        /// <summary>
+        /// Gets the default serialization context.
+        /// </summary>
         public static SerializationContext Default
         {
             get { return __default; }
         }
 
         // public properties
+        /// <summary>
+        /// Gets the convention registry.
+        /// </summary>
+        public ConventionRegistry ConventionRegistry
+        {
+            get { return _conventionRegistry; }
+        }
+
+        /// <summary>
+        /// Gets the name of the serialization context.
+        /// </summary>
+        public string Name
+        {
+            get { return _name; }
+        }
+
         /// <summary>
         /// Gets or sets whether to use the NullIdChecker on reference Id types that don't have an IdGenerator registered.
         /// </summary>
@@ -214,11 +247,6 @@ namespace MongoDB.Bson.Serialization
         /// <returns>An object.</returns>
         public object Deserialize(BsonReader bsonReader, Type nominalType, IBsonSerializationOptions options)
         {
-            if (nominalType == typeof(BsonDocument))
-            {
-                return BsonDocumentSerializer.Instance.Deserialize(bsonReader, nominalType, options);
-            }
-
             // if nominalType is an interface find out the actualType and use it instead
             if (nominalType.IsInterface)
             {
@@ -292,6 +320,29 @@ namespace MongoDB.Bson.Serialization
             using (var bsonReader = BsonReader.Create(textReader))
             {
                 return Deserialize(bsonReader, nominalType);
+            }
+        }
+
+        /// <summary>
+        /// Checks whether a class map is registered for a type.
+        /// </summary>
+        /// <param name="type">The type to check.</param>
+        /// <returns>True if there is a class map registered for the type.</returns>
+        public bool IsClassMapRegistered(Type type)
+        {
+            if (type == null)
+            {
+                throw new ArgumentNullException("type");
+            }
+
+            _configLock.EnterReadLock();
+            try
+            {
+                return _classMaps.ContainsKey(type);
+            }
+            finally
+            {
+                _configLock.ExitReadLock();
             }
         }
 
@@ -374,6 +425,56 @@ namespace MongoDB.Bson.Serialization
         }
 
         /// <summary>
+        /// Looks up a class map (will AutoMap the class if no class map is registered).
+        /// </summary>
+        /// <param name="classType">The class type.</param>
+        /// <returns>The class map.</returns>
+        public BsonClassMap LookupClassMap(Type classType)
+        {
+            if (classType == null)
+            {
+                throw new ArgumentNullException("classType");
+            }
+
+            _configLock.EnterReadLock();
+            try
+            {
+                BsonClassMap classMap;
+                if (_classMaps.TryGetValue(classType, out classMap))
+                {
+                    if (classMap.IsFrozen)
+                    {
+                        return classMap;
+                    }
+                }
+            }
+            finally
+            {
+                _configLock.ExitReadLock();
+            }
+
+            _configLock.EnterWriteLock();
+            try
+            {
+                BsonClassMap classMap;
+                if (!_classMaps.TryGetValue(classType, out classMap))
+                {
+                    // automatically create a classMap for classType and register it
+                    var classMapDefinition = typeof(BsonClassMap<>);
+                    var classMapType = classMapDefinition.MakeGenericType(classType);
+                    classMap = (BsonClassMap)Activator.CreateInstance(classMapType, this);
+                    classMap.AutoMap();
+                    RegisterClassMap(classMap);
+                }
+                return classMap.Freeze();
+            }
+            finally
+            {
+                _configLock.ExitWriteLock();
+            }
+        }
+
+        /// <summary>
         /// Looks up the discriminator convention for a type.
         /// </summary>
         /// <param name="type">The type.</param>
@@ -403,7 +504,7 @@ namespace MongoDB.Bson.Serialization
                     // if there is no convention registered for object register the default one
                     if (!_discriminatorConventions.ContainsKey(typeof(object)))
                     {
-                        var defaultDiscriminatorConvention = StandardDiscriminatorConvention.Hierarchical;
+                        var defaultDiscriminatorConvention = new HierarchicalDiscriminatorConvention(this, "_t");
                         _discriminatorConventions.Add(typeof(object), defaultDiscriminatorConvention);
                         if (type == typeof(object))
                         {
@@ -537,18 +638,6 @@ namespace MongoDB.Bson.Serialization
         /// <returns>A serializer for the Type.</returns>
         public IBsonSerializer LookupSerializer(Type type)
         {
-            // since we don't allow registering serializers for BsonDocument no lookup is needed
-            if (type == typeof(BsonDocument))
-            {
-                return BsonDocumentSerializer.Instance;
-            }
-
-            // since we don't allow registering serializers for classes that implement IBsonSerializable no lookup is needed
-            if (typeof(IBsonSerializable).IsAssignableFrom(type))
-            {
-                return Serializers.BsonIBsonSerializableSerializer.Instance;
-            }
-
             _configLock.EnterReadLock();
             try
             {
@@ -575,7 +664,7 @@ namespace MongoDB.Bson.Serialization
                         if (serializerAttributes.Length == 1)
                         {
                             var serializerAttribute = (BsonSerializerAttribute)serializerAttributes[0];
-                            serializer = serializerAttribute.CreateSerializer(type);
+                            serializer = serializerAttribute.CreateSerializer(this, type);
                         }
                     }
 
@@ -586,7 +675,7 @@ namespace MongoDB.Bson.Serialization
                         if (genericSerializerDefinition != null)
                         {
                             var genericSerializerType = genericSerializerDefinition.MakeGenericType(type.GetGenericArguments());
-                            serializer = (IBsonSerializer)Activator.CreateInstance(genericSerializerType);
+                            serializer = (IBsonSerializer)Activator.CreateInstance(genericSerializerType, this);
                         }
                     }
 
@@ -612,6 +701,53 @@ namespace MongoDB.Bson.Serialization
                 }
 
                 return serializer;
+            }
+            finally
+            {
+                _configLock.ExitWriteLock();
+            }
+        }
+
+        /// <summary>
+        /// Creates and registers a class map.
+        /// </summary>
+        /// <typeparam name="TClass">The class.</typeparam>
+        /// <returns>The class map.</returns>
+        public BsonClassMap<TClass> RegisterClassMap<TClass>()
+        {
+            return RegisterClassMap<TClass>(cm => { cm.AutoMap(); });
+        }
+
+        /// <summary>
+        /// Creates and registers a class map.
+        /// </summary>
+        /// <typeparam name="TClass">The class.</typeparam>
+        /// <param name="classMapInitializer">The class map initializer.</param>
+        /// <returns>The class map.</returns>
+        public BsonClassMap<TClass> RegisterClassMap<TClass>(Action<BsonClassMap<TClass>> classMapInitializer)
+        {
+            var classMap = new BsonClassMap<TClass>(this, classMapInitializer);
+            RegisterClassMap(classMap);
+            return classMap;
+        }
+
+        /// <summary>
+        /// Registers a class map.
+        /// </summary>
+        /// <param name="classMap">The class map.</param>
+        public void RegisterClassMap(BsonClassMap classMap)
+        {
+            if (classMap == null)
+            {
+                throw new ArgumentNullException("classMap");
+            }
+
+            _configLock.EnterWriteLock();
+            try
+            {
+                // note: class maps can NOT be replaced (because derived classes refer to existing instance)
+                _classMaps.Add(classMap.ClassType, classMap);
+                RegisterDiscriminator(classMap.ClassType, classMap.Discriminator);
             }
             finally
             {
@@ -827,24 +963,18 @@ namespace MongoDB.Bson.Serialization
             object value,
             IBsonSerializationOptions options)
         {
-            // since we don't allow registering serializers for BsonDocument no lookup is needed
-            if (nominalType == typeof(BsonDocument))
-            {
-                BsonDocumentSerializer.Instance.Serialize(bsonWriter, nominalType, value, options);
-                return;
-            }
-
-            // since we don't allow registering serializers for classes that implement IBsonSerializable no lookup is needed
-            var bsonSerializable = value as IBsonSerializable;
-            if (bsonSerializable != null)
-            {
-                bsonSerializable.Serialize(bsonWriter, nominalType, options);
-                return;
-            }
-
             var actualType = (value == null) ? nominalType : value.GetType();
             var serializer = LookupSerializer(actualType);
             serializer.Serialize(bsonWriter, nominalType, value, options);
+        }
+
+        /// <summary>
+        /// Returns a string that represents the current object.
+        /// </summary>
+        /// <returns>A string that represents the current object.</returns>
+        public override string ToString()
+        {
+            return _name;
         }
 
         // internal methods
@@ -885,19 +1015,19 @@ namespace MongoDB.Bson.Serialization
             }
         }
 
-        // private static methods
-        private static void RegisterDefaultSerializationProviders()
+        // private methods
+        private void RegisterDefaultSerializationProviders()
         {
             // last one registered gets first chance at providing the serializer
-            __default.RegisterSerializationProvider(new BsonClassMapSerializationProvider());
-            __default.RegisterSerializationProvider(new BsonDefaultSerializationProvider());
+            RegisterSerializationProvider(new BsonClassMapSerializationProvider(this));
+            RegisterSerializationProvider(new BsonDefaultSerializationProvider(this));
         }
 
-        private static void RegisterIdGenerators()
+        private void RegisterIdGenerators()
         {
-            __default.RegisterIdGenerator(typeof(BsonObjectId), BsonObjectIdGenerator.Instance);
-            __default.RegisterIdGenerator(typeof(Guid), GuidGenerator.Instance);
-            __default.RegisterIdGenerator(typeof(ObjectId), ObjectIdGenerator.Instance);
+            RegisterIdGenerator(typeof(BsonObjectId), BsonObjectIdGenerator.Instance);
+            RegisterIdGenerator(typeof(Guid), GuidGenerator.Instance);
+            RegisterIdGenerator(typeof(ObjectId), ObjectIdGenerator.Instance);
         }
     }
 }

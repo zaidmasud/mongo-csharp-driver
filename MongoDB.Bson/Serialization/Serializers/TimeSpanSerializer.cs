@@ -29,25 +29,13 @@ namespace MongoDB.Bson.Serialization.Serializers
     /// </summary>
     public class TimeSpanSerializer : BsonBaseSerializer
     {
-        // private static fields
-        private static TimeSpanSerializer __instance = new TimeSpanSerializer();
-
         // constructors
         /// <summary>
         /// Initializes a new instance of the TimeSpanSerializer class.
         /// </summary>
-        public TimeSpanSerializer()
-            : base(new TimeSpanSerializationOptions(BsonType.String))
+        public TimeSpanSerializer(SerializationContext serializationContext)
+            : base(serializationContext, new TimeSpanSerializationOptions(BsonType.String))
         {
-        }
-
-        // public static properties
-        /// <summary>
-        /// Gets an instance of the TimeSpanSerializer class.
-        /// </summary>
-        public static TimeSpanSerializer Instance
-        {
-            get { return __instance; }
         }
 
         // public methods

@@ -30,25 +30,13 @@ namespace MongoDB.Bson.Serialization.Serializers
     /// </summary>
     public class EnumSerializer : BsonBaseSerializer
     {
-        // private static fields
-        private static EnumSerializer __instance = new EnumSerializer();
-
         // constructors
         /// <summary>
         /// Initializes a new instance of the EnumSerializer class.
         /// </summary>
-        public EnumSerializer()
-            : base(new RepresentationSerializationOptions((BsonType)0)) // 0 means use underlying type
+        public EnumSerializer(SerializationContext serializationContext)
+            : base(serializationContext, new RepresentationSerializationOptions((BsonType)0)) // 0 means use underlying type
         {
-        }
-
-        // public static properties
-        /// <summary>
-        /// Gets an instance of the EnumSerializer class.
-        /// </summary>
-        public static EnumSerializer Instance
-        {
-            get { return __instance; }
         }
 
         // public methods

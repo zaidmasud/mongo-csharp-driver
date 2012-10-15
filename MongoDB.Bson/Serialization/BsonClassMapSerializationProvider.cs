@@ -27,6 +27,15 @@ namespace MongoDB.Bson.Serialization
     /// </summary>
     internal class BsonClassMapSerializationProvider : IBsonSerializationProvider
     {
+        // private fields
+        private readonly SerializationContext _serializationContext;
+
+        // constructors
+        public BsonClassMapSerializationProvider(SerializationContext serializationContext)
+        {
+            _serializationContext = serializationContext;
+        }
+
         /// <summary>
         /// Gets the serializer for a type.
         /// </summary>
@@ -38,8 +47,8 @@ namespace MongoDB.Bson.Serialization
                 !typeof(Array).IsAssignableFrom(type) &&
                 !typeof(Enum).IsAssignableFrom(type))
             {
-                var classMap = BsonClassMap.LookupClassMap(type);
-                return new BsonClassMapSerializer(classMap);
+                var classMap = _serializationContext.LookupClassMap(type);
+                return new BsonClassMapSerializer(_serializationContext, classMap);
             }
 
             return null;

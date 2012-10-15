@@ -29,24 +29,13 @@ namespace MongoDB.Bson.Serialization.Serializers
     /// </summary>
     public class UriSerializer : BsonBaseSerializer
     {
-        // private static fields
-        private static UriSerializer __instance = new UriSerializer();
-
         // constructors
         /// <summary>
         /// Initializes a new instance of the UriSerializer class.
         /// </summary>
-        public UriSerializer()
+        public UriSerializer(SerializationContext serializationContext)
+            : base(serializationContext)
         {
-        }
-
-        // public static properties
-        /// <summary>
-        /// Gets an instance of the UriSerializer class.
-        /// </summary>
-        public static UriSerializer Instance
-        {
-            get { return __instance; }
         }
 
         // public methods

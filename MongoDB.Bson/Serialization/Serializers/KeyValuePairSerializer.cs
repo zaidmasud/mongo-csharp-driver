@@ -44,17 +44,18 @@ namespace MongoDB.Bson.Serialization.Serializers
         /// <summary>
         /// Initializes a new instance of the KeyValuePairSerializer class.
         /// </summary>
-        public KeyValuePairSerializer()
-            : base(new KeyValuePairSerializationOptions { Representation = BsonType.Document })
+        public KeyValuePairSerializer(SerializationContext serializationContext)
+            : base(serializationContext, new KeyValuePairSerializationOptions { Representation = BsonType.Document })
         {
         }
 
         /// <summary>
         /// Initializes a new instance of the KeyValuePairSerializer class.
         /// </summary>
+        /// <param name="serializationContext">The serialization context.</param>
         /// <param name="defaultSerializationOptions">The default serialization options for this serializer.</param>
-        public KeyValuePairSerializer(IBsonSerializationOptions defaultSerializationOptions)
-            : base(defaultSerializationOptions)
+        public KeyValuePairSerializer(SerializationContext serializationContext, IBsonSerializationOptions defaultSerializationOptions)
+            : base(serializationContext, defaultSerializationOptions)
         {
         }
 
@@ -220,7 +221,7 @@ namespace MongoDB.Bson.Serialization.Serializers
             if (discriminatorConvention == null)
             {
                 // it's possible but harmless for multiple threads to do the initial lookup at the same time
-                discriminatorConvention = BsonSerializer.LookupDiscriminatorConvention(typeof(TKey));
+                discriminatorConvention = SerializationContext.LookupDiscriminatorConvention(typeof(TKey));
                 _cachedKeyDiscriminatorConvention = discriminatorConvention;
             }
             return discriminatorConvention;
@@ -240,14 +241,14 @@ namespace MongoDB.Bson.Serialization.Serializers
                 if (serializer == null)
                 {
                     // it's possible but harmless for multiple threads to do the initial lookup at the same time
-                    serializer = BsonSerializer.LookupSerializer(typeof(TKey));
+                    serializer = SerializationContext.LookupSerializer(typeof(TKey));
                     _cachedKeySerializer = serializer;
                 }
                 return serializer;
             }
             else
             {
-                return BsonSerializer.LookupSerializer(actualType);
+                return SerializationContext.LookupSerializer(actualType);
             }
         }
 
@@ -262,7 +263,7 @@ namespace MongoDB.Bson.Serialization.Serializers
             if (discriminatorConvention == null)
             {
                 // it's possible but harmless for multiple threads to do the initial lookup at the same time
-                discriminatorConvention = BsonSerializer.LookupDiscriminatorConvention(typeof(TValue));
+                discriminatorConvention = SerializationContext.LookupDiscriminatorConvention(typeof(TValue));
                 _cachedValueDiscriminatorConvention = discriminatorConvention;
             }
             return discriminatorConvention;
@@ -282,14 +283,14 @@ namespace MongoDB.Bson.Serialization.Serializers
                 if (serializer == null)
                 {
                     // it's possible but harmless for multiple threads to do the initial lookup at the same time
-                    serializer = BsonSerializer.LookupSerializer(typeof(TValue));
+                    serializer = SerializationContext.LookupSerializer(typeof(TValue));
                     _cachedValueSerializer = serializer;
                 }
                 return serializer;
             }
             else
             {
-                return BsonSerializer.LookupSerializer(actualType);
+                return SerializationContext.LookupSerializer(actualType);
             }
         }
     }

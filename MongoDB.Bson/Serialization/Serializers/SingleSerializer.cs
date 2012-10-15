@@ -31,25 +31,13 @@ namespace MongoDB.Bson.Serialization.Serializers
     /// </summary>
     public class SingleSerializer : BsonBaseSerializer
     {
-        // private static fields
-        private static SingleSerializer __instance = new SingleSerializer();
-
         // constructors
         /// <summary>
         /// Initializes a new instance of the SingleSerializer class.
         /// </summary>
-        public SingleSerializer()
-            : base(new RepresentationSerializationOptions(BsonType.Double))
+        public SingleSerializer(SerializationContext serializationContext)
+            : base(serializationContext, new RepresentationSerializationOptions(BsonType.Double))
         {
-        }
-
-        // public static properties
-        /// <summary>
-        /// Gets an instance of the SingleSerializer class.
-        /// </summary>
-        public static SingleSerializer Instance
-        {
-            get { return __instance; }
         }
 
         // public methods

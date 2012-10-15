@@ -31,24 +31,13 @@ namespace MongoDB.Bson.Serialization.Serializers
     /// </summary>
     public class IPAddressSerializer : BsonBaseSerializer
     {
-        // private static fields
-        private static IPAddressSerializer __instance = new IPAddressSerializer();
-
         // constructors
         /// <summary>
         /// Initializes a new instance of the IPAddressSerializer class.
         /// </summary>
-        public IPAddressSerializer()
+        public IPAddressSerializer(SerializationContext serializationContext)
+            : base(serializationContext)
         {
-        }
-
-        // public static properties
-        /// <summary>
-        /// Gets an instance of the IPAddressSerializer class.
-        /// </summary>
-        public static IPAddressSerializer Instance
-        {
-            get { return __instance; }
         }
 
         // public methods

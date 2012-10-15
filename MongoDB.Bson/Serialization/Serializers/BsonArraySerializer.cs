@@ -29,25 +29,13 @@ namespace MongoDB.Bson.Serialization.Serializers
     /// </summary>
     public class BsonArraySerializer : BsonBaseSerializer
     {
-        // private static fields
-        private static BsonArraySerializer __instance = new BsonArraySerializer();
-
         // constructors
         /// <summary>
         /// Initializes a new instance of the BsonArraySerializer class.
         /// </summary>
-        public BsonArraySerializer()
-            : base(new RepresentationSerializationOptions(BsonType.Array))
+        public BsonArraySerializer(SerializationContext serializationContext)
+            : base(serializationContext, new RepresentationSerializationOptions(BsonType.Array))
         {
-        }
-
-        // public static properties
-        /// <summary>
-        /// Gets an instance of the BsonArraySerializer class.
-        /// </summary>
-        public static BsonArraySerializer Instance
-        {
-            get { return __instance; }
         }
 
         // public methods
@@ -73,9 +61,10 @@ namespace MongoDB.Bson.Serialization.Serializers
                 case BsonType.Array:
                     bsonReader.ReadStartArray();
                     var array = new BsonArray();
+                    var bsonValueSerializer = SerializationContext.LookupSerializer(typeof(BsonValue));
                     while (bsonReader.ReadBsonType() != BsonType.EndOfDocument)
                     {
-                        var value = (BsonValue)BsonValueSerializer.Instance.Deserialize(bsonReader, typeof(BsonValue), options);
+                        var value = (BsonValue)bsonValueSerializer.Deserialize(bsonReader, typeof(BsonValue), options);
                         array.Add(value);
                     }
                     bsonReader.ReadEndArray();
@@ -105,10 +94,11 @@ namespace MongoDB.Bson.Serialization.Serializers
             }
 
             var array = (BsonArray)value;
+            var bsonValueSerializer = SerializationContext.LookupSerializer(typeof(BsonValue));
             bsonWriter.WriteStartArray();
             for (int i = 0; i < array.Count; i++)
             {
-                BsonValueSerializer.Instance.Serialize(bsonWriter, typeof(BsonValue), array[i], options);
+                bsonValueSerializer.Serialize(bsonWriter, typeof(BsonValue), array[i], options);
             }
             bsonWriter.WriteEndArray();
         }

@@ -28,24 +28,13 @@ namespace MongoDB.Bson.Serialization.Serializers
     /// </summary>
     public class BsonDocumentWrapperSerializer : BsonBaseSerializer
     {
-        // private static fields
-        private static BsonDocumentWrapperSerializer __instance = new BsonDocumentWrapperSerializer();
-
         // constructors
         /// <summary>
         /// Initializes a new instance of the BsonDocumentWrapperSerializer class.
         /// </summary>
-        public BsonDocumentWrapperSerializer()
+        public BsonDocumentWrapperSerializer(SerializationContext serializationContext)
+            : base(serializationContext)
         {
-        }
-
-        // public static properties
-        /// <summary>
-        /// Gets an instance of the BsonDocumentWrapperSerializer class.
-        /// </summary>
-        public static BsonDocumentWrapperSerializer Instance
-        {
-            get { return __instance; }
         }
 
         // public methods
@@ -93,7 +82,7 @@ namespace MongoDB.Bson.Serialization.Serializers
                 {
                     bsonWriter.CheckElementNames = false;
                     bsonWriter.CheckUpdateDocument = true;
-                    BsonSerializer.Serialize(bsonWriter, wrapper.WrappedNominalType, wrapper.WrappedObject, null); // TODO: wrap options also?
+                    SerializationContext.Serialize(bsonWriter, wrapper.WrappedNominalType, wrapper.WrappedObject, null); // TODO: wrap options also?
                 }
                 finally
                 {
@@ -103,7 +92,7 @@ namespace MongoDB.Bson.Serialization.Serializers
             }
             else
             {
-                BsonSerializer.Serialize(bsonWriter, wrapper.WrappedNominalType, wrapper.WrappedObject, null); // TODO: wrap options also?
+                SerializationContext.Serialize(bsonWriter, wrapper.WrappedNominalType, wrapper.WrappedObject, null); // TODO: wrap options also?
             }
         }
     }

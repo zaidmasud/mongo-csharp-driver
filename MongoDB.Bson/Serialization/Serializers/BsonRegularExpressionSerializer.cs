@@ -29,25 +29,13 @@ namespace MongoDB.Bson.Serialization.Serializers
     /// </summary>
     public class BsonRegularExpressionSerializer : BsonBaseSerializer
     {
-        // private static fields
-        private static BsonRegularExpressionSerializer __instance = new BsonRegularExpressionSerializer();
-
         // constructors
         /// <summary>
         /// Initializes a new instance of the BsonRegularExpressionSerializer class.
         /// </summary>
-        public BsonRegularExpressionSerializer()
-            : base(new RepresentationSerializationOptions(BsonType.RegularExpression))
+        public BsonRegularExpressionSerializer(SerializationContext serializationContext)
+            : base(serializationContext, new RepresentationSerializationOptions(BsonType.RegularExpression))
         {
-        }
-
-        // public static properties
-        /// <summary>
-        /// Gets an instance of the BsonRegularExpressionSerializer class.
-        /// </summary>
-        public static BsonRegularExpressionSerializer Instance
-        {
-            get { return __instance; }
         }
 
         // public methods

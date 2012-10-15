@@ -30,25 +30,13 @@ namespace MongoDB.Bson.Serialization.Serializers
     /// </summary>
     public class EnumerableSerializer : BsonBaseSerializer, IBsonArraySerializer
     {
-        // private static fields
-        private static EnumerableSerializer __instance = new EnumerableSerializer();
-
         // constructors
         /// <summary>
         /// Initializes a new instance of the EnumerableSerializer class.
         /// </summary>
-        public EnumerableSerializer()
-            : base(new ArraySerializationOptions())
+        public EnumerableSerializer(SerializationContext serializationContext)
+            : base(serializationContext, new ArraySerializationOptions())
         {
-        }
-
-        // public static properties
-        /// <summary>
-        /// Gets an instance of the EnumerableSerializer class.
-        /// </summary>
-        public static EnumerableSerializer Instance
-        {
-            get { return __instance; }
         }
 
         // public methods
@@ -78,11 +66,11 @@ namespace MongoDB.Bson.Serialization.Serializers
                 case BsonType.Array:
                     bsonReader.ReadStartArray();
                     var collection = CreateInstance(actualType);
-                    var discriminatorConvention = BsonSerializer.LookupDiscriminatorConvention(typeof(object));
+                    var discriminatorConvention = SerializationContext.LookupDiscriminatorConvention(typeof(object));
                     while (bsonReader.ReadBsonType() != BsonType.EndOfDocument)
                     {
                         var elementType = discriminatorConvention.GetActualType(bsonReader, typeof(object));
-                        var serializer = BsonSerializer.LookupSerializer(elementType);
+                        var serializer = SerializationContext.LookupSerializer(elementType);
                         var element = serializer.Deserialize(bsonReader, typeof(object), elementType, itemSerializationOptions);
                         collection.Add(element);
                     }
@@ -108,7 +96,7 @@ namespace MongoDB.Bson.Serialization.Serializers
         public BsonSerializationInfo GetItemSerializationInfo()
         {
             string elementName = null;
-            var serializer = BsonSerializer.LookupSerializer(typeof(object));
+            var serializer = SerializationContext.LookupSerializer(typeof(object));
             var nominalType = typeof(object);
             IBsonSerializationOptions serializationOptions = null;
             return new BsonSerializationInfo(elementName, serializer, nominalType, serializationOptions);
@@ -151,7 +139,7 @@ namespace MongoDB.Bson.Serialization.Serializers
                 bsonWriter.WriteStartArray();
                 foreach (var item in items)
                 {
-                    BsonSerializer.Serialize(bsonWriter, typeof(object), item, itemSerializationOptions);
+                    SerializationContext.Serialize(bsonWriter, typeof(object), item, itemSerializationOptions);
                 }
                 bsonWriter.WriteEndArray();
             }
@@ -204,8 +192,8 @@ namespace MongoDB.Bson.Serialization.Serializers
         /// <summary>
         /// Initializes a new instance of the EnumerableSerializer class.
         /// </summary>
-        public EnumerableSerializer()
-            : base(new ArraySerializationOptions())
+        public EnumerableSerializer(SerializationContext serializationContext)
+            : base(serializationContext, new ArraySerializationOptions())
         {
         }
 
@@ -236,11 +224,11 @@ namespace MongoDB.Bson.Serialization.Serializers
                 case BsonType.Array:
                     bsonReader.ReadStartArray();
                     var collection = CreateInstance(actualType);
-                    var discriminatorConvention = BsonSerializer.LookupDiscriminatorConvention(typeof(T));
+                    var discriminatorConvention = SerializationContext.LookupDiscriminatorConvention(typeof(T));
                     while (bsonReader.ReadBsonType() != BsonType.EndOfDocument)
                     {
                         var elementType = discriminatorConvention.GetActualType(bsonReader, typeof(T));
-                        var serializer = BsonSerializer.LookupSerializer(elementType);
+                        var serializer = SerializationContext.LookupSerializer(elementType);
                         var element = (T)serializer.Deserialize(bsonReader, typeof(T), elementType, itemSerializationOptions);
                         collection.Add(element);
                     }
@@ -266,7 +254,7 @@ namespace MongoDB.Bson.Serialization.Serializers
         public BsonSerializationInfo GetItemSerializationInfo()
         {
             string elementName = null;
-            var serializer = BsonSerializer.LookupSerializer(typeof(T));
+            var serializer = SerializationContext.LookupSerializer(typeof(T));
             var nominalType = typeof(T);
             IBsonSerializationOptions serializationOptions = null;
             return new BsonSerializationInfo(elementName, serializer, nominalType, serializationOptions);
@@ -309,7 +297,7 @@ namespace MongoDB.Bson.Serialization.Serializers
                 bsonWriter.WriteStartArray();
                 foreach (var item in items)
                 {
-                    BsonSerializer.Serialize(bsonWriter, typeof(T), item, itemSerializationOptions);
+                    SerializationContext.Serialize(bsonWriter, typeof(T), item, itemSerializationOptions);
                 }
                 bsonWriter.WriteEndArray();
             }

@@ -30,24 +30,25 @@ namespace MongoDB.Bson.Serialization.Serializers
     /// </summary>
     public class BsonIBsonSerializableSerializer : IBsonSerializer, IBsonIdProvider
     {
-        // private static fields
-        private static BsonIBsonSerializableSerializer __instance = new BsonIBsonSerializableSerializer();
+        // private fields
+        private readonly SerializationContext _serializationContext;
 
         // constructors
         /// <summary>
         /// Initializes a new instance of the BsonIBsonSerializableSerializer class.
         /// </summary>
-        public BsonIBsonSerializableSerializer()
+        public BsonIBsonSerializableSerializer(SerializationContext serializationContext)
         {
+            _serializationContext = serializationContext;
         }
 
-        // public static properties
+        // public properties
         /// <summary>
-        /// Gets an instance of the BsonIBsonSerializableSerializer class.
+        /// Gets the serialization context.
         /// </summary>
-        public static BsonIBsonSerializableSerializer Instance
+        public SerializationContext SerializationContext
         {
-            get { return __instance; }
+            get { return _serializationContext; }
         }
 
         // public methods

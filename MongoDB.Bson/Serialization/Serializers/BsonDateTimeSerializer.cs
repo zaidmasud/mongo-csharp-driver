@@ -30,25 +30,13 @@ namespace MongoDB.Bson.Serialization.Serializers
     /// </summary>
     public class BsonDateTimeSerializer : BsonBaseSerializer
     {
-        // private static fields
-        private static BsonDateTimeSerializer __instance = new BsonDateTimeSerializer();
-
         // constructors
         /// <summary>
         /// Initializes a new instance of the BsonDateTimeSerializer class.
         /// </summary>
-        public BsonDateTimeSerializer()
-            : base(DateTimeSerializationOptions.Defaults)
+        public BsonDateTimeSerializer(SerializationContext serializationContext)
+            : base(serializationContext, DateTimeSerializationOptions.Defaults)
         {
-        }
-
-        // public static properties
-        /// <summary>
-        /// Gets an instance of the BsonDateTimeSerializer class.
-        /// </summary>
-        public static BsonDateTimeSerializer Instance
-        {
-            get { return __instance; }
         }
 
         // public methods

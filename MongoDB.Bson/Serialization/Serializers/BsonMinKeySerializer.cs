@@ -29,24 +29,13 @@ namespace MongoDB.Bson.Serialization.Serializers
     /// </summary>
     public class BsonMinKeySerializer : BsonBaseSerializer
     {
-        // private static fields
-        private static BsonMinKeySerializer __instance = new BsonMinKeySerializer();
-
         // constructors
         /// <summary>
         /// Initializes a new instance of the BsonMinKeySerializer class.
         /// </summary>
-        public BsonMinKeySerializer()
+        public BsonMinKeySerializer(SerializationContext serializationContext)
+            : base(serializationContext)
         {
-        }
-
-        // public static properties
-        /// <summary>
-        /// Gets an instance of the BsonMinKeySerializer class.
-        /// </summary>
-        public static BsonMinKeySerializer Instance
-        {
-            get { return __instance; }
         }
 
         // public methods

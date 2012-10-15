@@ -45,7 +45,7 @@ namespace MongoDB.BsonUnitTests.DefaultSerializer
         {
             var pack = new ConventionPack();
             pack.Add(new MemberDefaultValueConvention(typeof(int), 1));
-            ConventionRegistry.Register("test", pack, t => t == typeof(A));
+            SerializationContext.Default.ConventionRegistry.Register("test", pack, t => t == typeof(A));
 
             var classMap = new BsonClassMap<A>(cm => cm.AutoMap());
 
@@ -59,7 +59,7 @@ namespace MongoDB.BsonUnitTests.DefaultSerializer
         {
             var pack = new ConventionPack();
             pack.Add(new MemberDefaultValueConvention(typeof(int), 1));
-            ConventionRegistry.Register("test", pack, t => t == typeof(A));
+            SerializationContext.Default.ConventionRegistry.Register("test", pack, t => t == typeof(A));
 
             var classMap = new BsonClassMap<A>(cm => cm.AutoMap());
 
@@ -72,7 +72,7 @@ namespace MongoDB.BsonUnitTests.DefaultSerializer
         {
             var pack = new ConventionPack();
             pack.Add(new MemberDefaultValueConvention(typeof(int), 1));
-            ConventionRegistry.Register("test", pack, t => t == typeof(B));
+            SerializationContext.Default.ConventionRegistry.Register("test", pack, t => t == typeof(B));
 
             var classMap = new BsonClassMap<B>(cm => cm.AutoMap());
 

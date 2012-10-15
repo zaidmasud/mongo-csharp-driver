@@ -29,25 +29,13 @@ namespace MongoDB.Bson.Serialization.Serializers
     /// </summary>
     public class BsonBinaryDataSerializer : BsonBaseSerializer
     {
-        // private static fields
-        private static BsonBinaryDataSerializer __instance = new BsonBinaryDataSerializer();
-
         // constructors
         /// <summary>
         /// Initializes a new instance of the BsonBinaryDataSerializer class.
         /// </summary>
-        public BsonBinaryDataSerializer()
-            : base(new RepresentationSerializationOptions(BsonType.Binary))
+        public BsonBinaryDataSerializer(SerializationContext serializationContext)
+            : base(serializationContext, new RepresentationSerializationOptions(BsonType.Binary))
         {
-        }
-
-        // public static properties
-        /// <summary>
-        /// Gets an instance of the BsonBinaryDataSerializer class.
-        /// </summary>
-        public static BsonBinaryDataSerializer Instance
-        {
-            get { return __instance; }
         }
 
         // public methods

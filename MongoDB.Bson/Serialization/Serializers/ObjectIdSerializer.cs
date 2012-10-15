@@ -29,25 +29,13 @@ namespace MongoDB.Bson.Serialization.Serializers
     /// </summary>
     public class ObjectIdSerializer : BsonBaseSerializer
     {
-        // private static fields
-        private static ObjectIdSerializer __instance = new ObjectIdSerializer();
-
         // constructors
         /// <summary>
         /// Initializes a new instance of the ObjectIdSerializer class.
         /// </summary>
-        public ObjectIdSerializer()
-            : base(new RepresentationSerializationOptions(BsonType.ObjectId))
+        public ObjectIdSerializer(SerializationContext serializationContext)
+            : base(serializationContext, new RepresentationSerializationOptions(BsonType.ObjectId))
         {
-        }
-
-        // public static properties
-        /// <summary>
-        /// Gets an instance of the ObjectIdSerializer class.
-        /// </summary>
-        public static ObjectIdSerializer Instance
-        {
-            get { return __instance; }
         }
 
         // public methods

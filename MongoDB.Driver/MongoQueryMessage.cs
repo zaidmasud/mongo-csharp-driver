@@ -84,11 +84,11 @@ namespace MongoDB.Driver
                 }
                 else
                 {
-                    BsonSerializer.Serialize(bsonWriter, _query.GetType(), _query, DocumentSerializationOptions.SerializeIdFirstInstance);
+                    SerializationContext.Default.Serialize(bsonWriter, _query.GetType(), _query, DocumentSerializationOptions.SerializeIdFirstInstance);
                 }
                 if (_fields != null)
                 {
-                    BsonSerializer.Serialize(bsonWriter, _fields);
+                    SerializationContext.Default.Serialize(bsonWriter, _fields);
                 }
             }
         }
