@@ -30,14 +30,14 @@ namespace MongoDB.Bson.Serialization.Serializers
     public class BsonDocumentSerializer : BsonBaseSerializer, IBsonIdProvider
     {
         // private static fields
-        private static BsonDocumentSerializer __instance = new BsonDocumentSerializer(SerializationContext.Default);
+        private static BsonDocumentSerializer __instance = new BsonDocumentSerializer(SerializationConfig.Default);
 
         // constructors
         /// <summary>
         /// Initializes a new instance of the BsonDocumentSerializer class.
         /// </summary>
-        public BsonDocumentSerializer(SerializationContext serializationContext)
-            : base(serializationContext, new DocumentSerializationOptions())
+        public BsonDocumentSerializer(SerializationConfig serializationConfig)
+            : base(serializationConfig, new DocumentSerializationOptions())
         {
         }
 
@@ -85,7 +85,7 @@ namespace MongoDB.Bson.Serialization.Serializers
 
                     bsonReader.ReadStartDocument();
                     var document = new BsonDocument(documentSerializationOptions.AllowDuplicateNames);
-                    var bsonValueSerializer = SerializationContext.LookupSerializer(typeof(BsonValue));
+                    var bsonValueSerializer = SerializationConfig.LookupSerializer(typeof(BsonValue));
                     while (bsonReader.ReadBsonType() != BsonType.EndOfDocument)
                     {
                         var name = bsonReader.ReadName();
@@ -121,7 +121,7 @@ namespace MongoDB.Bson.Serialization.Serializers
             if (bsonDocument.TryGetElement("_id", out idElement))
             {
                 id = idElement.Value;
-                idGenerator = SerializationContext.LookupIdGenerator(id.GetType());
+                idGenerator = SerializationConfig.LookupIdGenerator(id.GetType());
 
                 if (idGenerator == null)
                 {
@@ -164,7 +164,7 @@ namespace MongoDB.Bson.Serialization.Serializers
             var wrapper = value as BsonDocumentWrapper;
             if (wrapper != null)
             {
-                SerializationContext.LookupSerializer(typeof(BsonDocumentWrapper)).Serialize(bsonWriter, nominalType, value, options);
+                SerializationConfig.LookupSerializer(typeof(BsonDocumentWrapper)).Serialize(bsonWriter, nominalType, value, options);
                 return;
             }
 
@@ -181,7 +181,7 @@ namespace MongoDB.Bson.Serialization.Serializers
 
             bsonWriter.WriteStartDocument();
             BsonElement idElement = null;
-            var bsonValueSerializer = SerializationContext.LookupSerializer(typeof(BsonValue));
+            var bsonValueSerializer = SerializationConfig.LookupSerializer(typeof(BsonValue));
             if (documentSerializationOptions.SerializeIdFirst && bsonDocument.TryGetElement("_id", out idElement))
             {
                 bsonWriter.WriteName(idElement.Name);

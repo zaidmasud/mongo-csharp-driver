@@ -36,8 +36,8 @@ namespace MongoDB.Bson.Serialization.Serializers
         /// <summary>
         /// Initializes a new instance of the IPEndPointSerializer class.
         /// </summary>
-        public IPEndPointSerializer(SerializationContext serializationContext)
-            : base(serializationContext)
+        public IPEndPointSerializer(SerializationConfig serializationConfig)
+            : base(serializationConfig)
         {
         }
 

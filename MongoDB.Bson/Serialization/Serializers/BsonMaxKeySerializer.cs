@@ -33,8 +33,8 @@ namespace MongoDB.Bson.Serialization.Serializers
         /// <summary>
         /// Initializes a new instance of the BsonMaxKeySerializer class.
         /// </summary>
-        public BsonMaxKeySerializer(SerializationContext serializationContext)
-            : base(serializationContext)
+        public BsonMaxKeySerializer(SerializationConfig serializationConfig)
+            : base(serializationConfig)
         {
         }
 

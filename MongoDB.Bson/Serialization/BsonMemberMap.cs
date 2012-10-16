@@ -281,14 +281,14 @@ namespace MongoDB.Bson.Serialization
                     if (serializer == null)
                     {
                         // it's possible but harmless for multiple threads to do the initial lookup at the same time
-                        serializer = _classMap.SerializationContext.LookupSerializer(_memberType);
+                        serializer = _classMap.SerializationConfig.LookupSerializer(_memberType);
                         _cachedSerializer = serializer;
                     }
                     return serializer;
                 }
                 else
                 {
-                    return _classMap.SerializationContext.LookupSerializer(actualType);
+                    return _classMap.SerializationConfig.LookupSerializer(actualType);
                 }
             }
         }
@@ -494,7 +494,7 @@ namespace MongoDB.Bson.Serialization
             if (discriminatorConvention == null)
             {
                 // it's possible but harmless for multiple threads to do the initial lookup at the same time
-                discriminatorConvention = _classMap.SerializationContext.LookupDiscriminatorConvention(_memberType);
+                discriminatorConvention = _classMap.SerializationConfig.LookupDiscriminatorConvention(_memberType);
                 _cachedDiscriminatorConvention = discriminatorConvention;
             }
             return discriminatorConvention;

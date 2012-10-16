@@ -30,18 +30,18 @@ namespace MongoDB.Bson.Serialization.Conventions
     public abstract class StandardDiscriminatorConvention : IDiscriminatorConvention
     {
         // private fields
-        private readonly SerializationContext _serializationContext;
+        private readonly SerializationConfig _serializationConfig;
         private readonly string _elementName;
 
         // constructors
         /// <summary>
         /// Initializes a new instance of the StandardDiscriminatorConvention class.
         /// </summary>
-        /// <param name="serializationContext">The serialization context.</param>
+        /// <param name="serializationConfig">The serialization config.</param>
         /// <param name="elementName">The element name.</param>
-        protected StandardDiscriminatorConvention(SerializationContext serializationContext, string elementName)
+        protected StandardDiscriminatorConvention(SerializationConfig serializationConfig, string elementName)
         {
-            _serializationContext = serializationContext;
+            _serializationConfig = serializationConfig;
             _elementName = elementName;
         }
 
@@ -56,11 +56,11 @@ namespace MongoDB.Bson.Serialization.Conventions
 
         // protected properties
         /// <summary>
-        /// Gets the serialization context.
+        /// Gets the serialization config.
         /// </summary>
-        protected SerializationContext SerializationContext
+        protected SerializationConfig SerializationConfig
         {
-            get { return _serializationContext; }
+            get { return _serializationConfig; }
         }
 
         // public methods
@@ -108,22 +108,22 @@ namespace MongoDB.Bson.Serialization.Conventions
             if (bsonType == BsonType.Document)
             {
                 // ensure KnownTypes of nominalType are registered (so IsTypeDiscriminated returns correct answer)
-                _serializationContext.EnsureKnownTypesAreRegistered(nominalType);
+                _serializationConfig.EnsureKnownTypesAreRegistered(nominalType);
 
                 // we can skip looking for a discriminator if nominalType has no discriminated sub types
-                if (_serializationContext.IsTypeDiscriminated(nominalType))
+                if (_serializationConfig.IsTypeDiscriminated(nominalType))
                 {
                     var bookmark = bsonReader.GetBookmark();
                     bsonReader.ReadStartDocument();
                     var actualType = nominalType;
                     if (bsonReader.FindElement(_elementName))
                     {
-                        var discriminator = (BsonValue)_serializationContext.LookupSerializer(typeof(BsonValue)).Deserialize(bsonReader, typeof(BsonValue), null);
+                        var discriminator = (BsonValue)_serializationConfig.LookupSerializer(typeof(BsonValue)).Deserialize(bsonReader, typeof(BsonValue), null);
                         if (discriminator.IsBsonArray)
                         {
                             discriminator = discriminator.AsBsonArray.Last(); // last item is leaf class discriminator
                         }
-                        actualType = _serializationContext.LookupActualType(nominalType, discriminator);
+                        actualType = _serializationConfig.LookupActualType(nominalType, discriminator);
                     }
                     bsonReader.ReturnToBookmark(bookmark);
                     return actualType;

@@ -722,7 +722,7 @@ namespace MongoDB.Driver.Linq
                 throw new NotSupportedException("OfType after a projection is not supported.");
             }
 
-            var discriminatorConvention = SerializationContext.Default.LookupDiscriminatorConvention(nominalType);
+            var discriminatorConvention = SerializationConfig.Default.LookupDiscriminatorConvention(nominalType);
             var discriminator = discriminatorConvention.GetDiscriminator(nominalType, actualType);
             if (discriminator == null)
             {

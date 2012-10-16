@@ -63,17 +63,17 @@ namespace MongoDB.Bson.Serialization
         /// <param name="memberMap">The member map.</param>
         public void Apply(BsonMemberMap memberMap)
         {
-            var serializer = CreateSerializer(memberMap.ClassMap.SerializationContext, memberMap.MemberType);
+            var serializer = CreateSerializer(memberMap.ClassMap.SerializationConfig, memberMap.MemberType);
             memberMap.SetSerializer(serializer);
         }
 
         /// <summary>
         /// Creates a serializer for a type based on the serializer type specified by the attribute.
         /// </summary>
-        /// <param name="serializationContext">The serialization context.</param>
+        /// <param name="serializationConfig">The serialization config.</param>
         /// <param name="type">The type that a serializer should be created for.</param>
         /// <returns>A serializer for the type.</returns>
-        internal IBsonSerializer CreateSerializer(SerializationContext serializationContext, Type type)
+        internal IBsonSerializer CreateSerializer(SerializationConfig serializationConfig, Type type)
         {
             string message;
 
@@ -89,18 +89,18 @@ namespace MongoDB.Bson.Serialization
                 throw new ArgumentException(message);
             }
 
-            var constructorInfo = _serializerType.GetConstructor(new[] { typeof(SerializationContext) });
+            var constructorInfo = _serializerType.GetConstructor(new[] { typeof(SerializationConfig) });
             if (constructorInfo != null)
             {
-                return (IBsonSerializer)constructorInfo.Invoke(new[] { serializationContext });
+                return (IBsonSerializer)constructorInfo.Invoke(new[] { serializationConfig });
             }
 
             constructorInfo = _serializerType.GetConstructor(new Type[0]);
             if (constructorInfo != null)
             {
-                if (serializationContext != SerializationContext.Default)
+                if (serializationConfig != SerializationConfig.Default)
                 {
-                    message = string.Format("Serializer type {0} no-argument constructor can only be used with the default serialization context.", _serializerType.FullName);
+                    message = string.Format("Serializer type {0} no-argument constructor can only be used with the default serialization config.", _serializerType.FullName);
                     throw new ArgumentException(message);
                 }
                 return (IBsonSerializer)constructorInfo.Invoke(new object[0]);

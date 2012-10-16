@@ -33,8 +33,8 @@ namespace MongoDB.Bson.Serialization.Serializers
         /// <summary>
         /// Initializes a new instance of the BsonJavaScriptSerializer class.
         /// </summary>
-        public BsonJavaScriptSerializer(SerializationContext serializationContext)
-            : base(serializationContext)
+        public BsonJavaScriptSerializer(SerializationConfig serializationConfig)
+            : base(serializationConfig)
         {
         }
 

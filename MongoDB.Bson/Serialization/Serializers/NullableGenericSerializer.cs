@@ -38,10 +38,10 @@ namespace MongoDB.Bson.Serialization.Serializers
         /// <summary>
         /// Initializes a new instance of the NullableSerializer class.
         /// </summary>
-        public NullableSerializer(SerializationContext serializationContext)
-            : base(serializationContext)
+        public NullableSerializer(SerializationConfig serializationConfig)
+            : base(serializationConfig)
         {
-            _serializer = serializationContext.LookupSerializer(typeof(T));
+            _serializer = serializationConfig.LookupSerializer(typeof(T));
         }
 
         // public methods

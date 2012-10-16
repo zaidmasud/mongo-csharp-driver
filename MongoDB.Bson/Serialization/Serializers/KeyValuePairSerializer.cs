@@ -44,18 +44,18 @@ namespace MongoDB.Bson.Serialization.Serializers
         /// <summary>
         /// Initializes a new instance of the KeyValuePairSerializer class.
         /// </summary>
-        public KeyValuePairSerializer(SerializationContext serializationContext)
-            : base(serializationContext, new KeyValuePairSerializationOptions { Representation = BsonType.Document })
+        public KeyValuePairSerializer(SerializationConfig serializationConfig)
+            : base(serializationConfig, new KeyValuePairSerializationOptions { Representation = BsonType.Document })
         {
         }
 
         /// <summary>
         /// Initializes a new instance of the KeyValuePairSerializer class.
         /// </summary>
-        /// <param name="serializationContext">The serialization context.</param>
+        /// <param name="serializationConfig">The serialization config.</param>
         /// <param name="defaultSerializationOptions">The default serialization options for this serializer.</param>
-        public KeyValuePairSerializer(SerializationContext serializationContext, IBsonSerializationOptions defaultSerializationOptions)
-            : base(serializationContext, defaultSerializationOptions)
+        public KeyValuePairSerializer(SerializationConfig serializationConfig, IBsonSerializationOptions defaultSerializationOptions)
+            : base(serializationConfig, defaultSerializationOptions)
         {
         }
 
@@ -221,7 +221,7 @@ namespace MongoDB.Bson.Serialization.Serializers
             if (discriminatorConvention == null)
             {
                 // it's possible but harmless for multiple threads to do the initial lookup at the same time
-                discriminatorConvention = SerializationContext.LookupDiscriminatorConvention(typeof(TKey));
+                discriminatorConvention = SerializationConfig.LookupDiscriminatorConvention(typeof(TKey));
                 _cachedKeyDiscriminatorConvention = discriminatorConvention;
             }
             return discriminatorConvention;
@@ -241,14 +241,14 @@ namespace MongoDB.Bson.Serialization.Serializers
                 if (serializer == null)
                 {
                     // it's possible but harmless for multiple threads to do the initial lookup at the same time
-                    serializer = SerializationContext.LookupSerializer(typeof(TKey));
+                    serializer = SerializationConfig.LookupSerializer(typeof(TKey));
                     _cachedKeySerializer = serializer;
                 }
                 return serializer;
             }
             else
             {
-                return SerializationContext.LookupSerializer(actualType);
+                return SerializationConfig.LookupSerializer(actualType);
             }
         }
 
@@ -263,7 +263,7 @@ namespace MongoDB.Bson.Serialization.Serializers
             if (discriminatorConvention == null)
             {
                 // it's possible but harmless for multiple threads to do the initial lookup at the same time
-                discriminatorConvention = SerializationContext.LookupDiscriminatorConvention(typeof(TValue));
+                discriminatorConvention = SerializationConfig.LookupDiscriminatorConvention(typeof(TValue));
                 _cachedValueDiscriminatorConvention = discriminatorConvention;
             }
             return discriminatorConvention;
@@ -283,14 +283,14 @@ namespace MongoDB.Bson.Serialization.Serializers
                 if (serializer == null)
                 {
                     // it's possible but harmless for multiple threads to do the initial lookup at the same time
-                    serializer = SerializationContext.LookupSerializer(typeof(TValue));
+                    serializer = SerializationConfig.LookupSerializer(typeof(TValue));
                     _cachedValueSerializer = serializer;
                 }
                 return serializer;
             }
             else
             {
-                return SerializationContext.LookupSerializer(actualType);
+                return SerializationConfig.LookupSerializer(actualType);
             }
         }
     }

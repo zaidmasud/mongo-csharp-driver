@@ -28,12 +28,12 @@ namespace MongoDB.Bson.Serialization
     internal class BsonClassMapSerializationProvider : IBsonSerializationProvider
     {
         // private fields
-        private readonly SerializationContext _serializationContext;
+        private readonly SerializationConfig _serializationConfig;
 
         // constructors
-        public BsonClassMapSerializationProvider(SerializationContext serializationContext)
+        public BsonClassMapSerializationProvider(SerializationConfig serializationConfig)
         {
-            _serializationContext = serializationContext;
+            _serializationConfig = serializationConfig;
         }
 
         /// <summary>
@@ -47,8 +47,8 @@ namespace MongoDB.Bson.Serialization
                 !typeof(Array).IsAssignableFrom(type) &&
                 !typeof(Enum).IsAssignableFrom(type))
             {
-                var classMap = _serializationContext.LookupClassMap(type);
-                return new BsonClassMapSerializer(_serializationContext, classMap);
+                var classMap = _serializationConfig.LookupClassMap(type);
+                return new BsonClassMapSerializer(_serializationConfig, classMap);
             }
 
             return null;

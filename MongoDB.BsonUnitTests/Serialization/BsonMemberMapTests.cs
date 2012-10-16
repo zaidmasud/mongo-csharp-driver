@@ -257,7 +257,7 @@ namespace MongoDB.BsonUnitTests.Serialization
             memberMap.SetIsRequired(true);
             memberMap.SetOrder(21);
             memberMap.SetSerializationOptions(new RepresentationSerializationOptions(BsonType.Int64));
-            memberMap.SetSerializer(new BsonInt64Serializer(SerializationContext.Default));
+            memberMap.SetSerializer(new BsonInt64Serializer(SerializationConfig.Default));
             memberMap.SetShouldSerializeMethod(o => false);
 
             memberMap.Reset();

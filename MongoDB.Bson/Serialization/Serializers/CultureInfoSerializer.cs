@@ -34,8 +34,8 @@ namespace MongoDB.Bson.Serialization.Serializers
         /// <summary>
         /// Initializes a new instance of the CultureInfoSerializer class.
         /// </summary>
-        public CultureInfoSerializer(SerializationContext serializationContext)
-            : base(serializationContext)
+        public CultureInfoSerializer(SerializationConfig serializationConfig)
+            : base(serializationConfig)
         {
         }
 

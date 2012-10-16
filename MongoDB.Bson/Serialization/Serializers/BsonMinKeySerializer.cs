@@ -33,8 +33,8 @@ namespace MongoDB.Bson.Serialization.Serializers
         /// <summary>
         /// Initializes a new instance of the BsonMinKeySerializer class.
         /// </summary>
-        public BsonMinKeySerializer(SerializationContext serializationContext)
-            : base(serializationContext)
+        public BsonMinKeySerializer(SerializationConfig serializationConfig)
+            : base(serializationConfig)
         {
         }
 

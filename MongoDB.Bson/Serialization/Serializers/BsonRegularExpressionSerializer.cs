@@ -33,8 +33,8 @@ namespace MongoDB.Bson.Serialization.Serializers
         /// <summary>
         /// Initializes a new instance of the BsonRegularExpressionSerializer class.
         /// </summary>
-        public BsonRegularExpressionSerializer(SerializationContext serializationContext)
-            : base(serializationContext, new RepresentationSerializationOptions(BsonType.RegularExpression))
+        public BsonRegularExpressionSerializer(SerializationConfig serializationConfig)
+            : base(serializationConfig, new RepresentationSerializationOptions(BsonType.RegularExpression))
         {
         }
 

@@ -35,8 +35,8 @@ namespace MongoDB.Bson.Serialization.Serializers
         /// <summary>
         /// Initializes a new instance of the TwoDimensionalArraySerializer class.
         /// </summary>
-        public TwoDimensionalArraySerializer(SerializationContext serializationContext)
-            : base(serializationContext, new ArraySerializationOptions())
+        public TwoDimensionalArraySerializer(SerializationConfig serializationConfig)
+            : base(serializationConfig, new ArraySerializationOptions())
         {
         }
 
@@ -68,7 +68,7 @@ namespace MongoDB.Bson.Serialization.Serializers
                     return null;
                 case BsonType.Array:
                     bsonReader.ReadStartArray();
-                    var discriminatorConvention = SerializationContext.LookupDiscriminatorConvention(typeof(T));
+                    var discriminatorConvention = SerializationConfig.LookupDiscriminatorConvention(typeof(T));
                     var outerList = new List<List<T>>();
                     while (bsonReader.ReadBsonType() != BsonType.EndOfDocument)
                     {
@@ -77,7 +77,7 @@ namespace MongoDB.Bson.Serialization.Serializers
                         while (bsonReader.ReadBsonType() != BsonType.EndOfDocument)
                         {
                             var elementType = discriminatorConvention.GetActualType(bsonReader, typeof(T));
-                            var serializer = SerializationContext.LookupSerializer(elementType);
+                            var serializer = SerializationConfig.LookupSerializer(elementType);
                             var element = (T)serializer.Deserialize(bsonReader, typeof(T), elementType, itemSerializationOptions);
                             innerList.Add(element);
                         }
@@ -161,7 +161,7 @@ namespace MongoDB.Bson.Serialization.Serializers
                     bsonWriter.WriteStartArray();
                     for (int j = 0; j < length2; j++)
                     {
-                        SerializationContext.Serialize(bsonWriter, typeof(T), array[i, j], itemSerializationOptions);
+                        SerializationConfig.Serialize(bsonWriter, typeof(T), array[i, j], itemSerializationOptions);
                     }
                     bsonWriter.WriteEndArray();
                 }

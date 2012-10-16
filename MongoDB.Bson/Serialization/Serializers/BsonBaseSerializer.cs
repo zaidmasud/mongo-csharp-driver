@@ -31,7 +31,7 @@ namespace MongoDB.Bson.Serialization.Serializers
     public abstract class BsonBaseSerializer : IBsonSerializer
     {
         // private fields
-        private readonly SerializationContext _serializationContext;
+        private readonly SerializationConfig _serializationConfig;
         private readonly IBsonSerializationOptions _defaultSerializationOptions;
 
         // constructors
@@ -40,7 +40,7 @@ namespace MongoDB.Bson.Serialization.Serializers
         /// </summary>
         [Obsolete]
         protected BsonBaseSerializer()
-            : this(SerializationContext.Default)
+            : this(SerializationConfig.Default)
         {
         }
 
@@ -50,31 +50,31 @@ namespace MongoDB.Bson.Serialization.Serializers
         /// <param name="defaultSerializationOptions">The default serialization options for this serializer.</param>
         [Obsolete]
         protected BsonBaseSerializer(IBsonSerializationOptions defaultSerializationOptions)
-            : this(SerializationContext.Default, defaultSerializationOptions)
+            : this(SerializationConfig.Default, defaultSerializationOptions)
         {
         }
 
         /// <summary>
         /// Initializes a new instance of the BsonBaseSerializer class.
         /// </summary>
-        /// <param name="serializationContext">The serialization context.</param>
-        protected BsonBaseSerializer(SerializationContext serializationContext)
-            : this(serializationContext, null)
+        /// <param name="serializationConfig">The serialization config.</param>
+        protected BsonBaseSerializer(SerializationConfig serializationConfig)
+            : this(serializationConfig, null)
         {
         }
 
         /// <summary>
         /// Initializes a new instance of the BsonBaseSerializer class.
         /// </summary>
-        /// <param name="serializationContext">The serialization context.</param>
+        /// <param name="serializationConfig">The serialization config.</param>
         /// <param name="defaultSerializationOptions">The default serialization options for this serializer.</param>
-        protected BsonBaseSerializer(SerializationContext serializationContext, IBsonSerializationOptions defaultSerializationOptions)
+        protected BsonBaseSerializer(SerializationConfig serializationConfig, IBsonSerializationOptions defaultSerializationOptions)
         {
-            if (serializationContext == null)
+            if (serializationConfig == null)
             {
-                throw new ArgumentNullException("serializationContext");
+                throw new ArgumentNullException("serializationConfig");
             }
-            _serializationContext = serializationContext;
+            _serializationConfig = serializationConfig;
             _defaultSerializationOptions = (defaultSerializationOptions == null) ? null : defaultSerializationOptions.Clone().Freeze();
         }
 
@@ -88,11 +88,11 @@ namespace MongoDB.Bson.Serialization.Serializers
         }
 
         /// <summary>
-        /// Gets the serialization context.
+        /// Gets the serialization config.
         /// </summary>
-        public SerializationContext SerializationContext
+        public SerializationConfig SerializationConfig
         {
-            get { return _serializationContext; }
+            get { return _serializationConfig; }
         }
 
         // public methods

@@ -33,8 +33,8 @@ namespace MongoDB.Bson.Serialization.Serializers
         /// <summary>
         /// Initializes a new instance of the DrawingSizeSerializer class.
         /// </summary>
-        public DrawingSizeSerializer(SerializationContext serializationContext)
-            : base(serializationContext)
+        public DrawingSizeSerializer(SerializationConfig serializationConfig)
+            : base(serializationConfig)
         {
         }
 

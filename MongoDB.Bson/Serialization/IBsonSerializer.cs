@@ -26,9 +26,9 @@ namespace MongoDB.Bson.Serialization
     {
         // properties
         /// <summary>
-        /// Gets the serialization context.
+        /// Gets the serialization config.
         /// </summary>
-        SerializationContext SerializationContext { get; }
+        SerializationConfig SerializationConfig { get; }
 
         // methods
         /// <summary>

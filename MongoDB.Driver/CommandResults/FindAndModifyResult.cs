@@ -70,7 +70,7 @@ namespace MongoDB.Driver
         public object GetModifiedDocumentAs(Type documentType)
         {
             var document = ModifiedDocument;
-            return (document == null) ? null : SerializationContext.Default.Deserialize(document, documentType);
+            return (document == null) ? null : SerializationConfig.Default.Deserialize(document, documentType);
         }
     }
 }

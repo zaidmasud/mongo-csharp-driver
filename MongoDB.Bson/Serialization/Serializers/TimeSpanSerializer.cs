@@ -33,8 +33,8 @@ namespace MongoDB.Bson.Serialization.Serializers
         /// <summary>
         /// Initializes a new instance of the TimeSpanSerializer class.
         /// </summary>
-        public TimeSpanSerializer(SerializationContext serializationContext)
-            : base(serializationContext, new TimeSpanSerializationOptions(BsonType.String))
+        public TimeSpanSerializer(SerializationConfig serializationConfig)
+            : base(serializationConfig, new TimeSpanSerializationOptions(BsonType.String))
         {
         }
 

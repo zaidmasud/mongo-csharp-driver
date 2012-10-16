@@ -33,7 +33,7 @@ namespace MongoDB.Bson.Serialization.Conventions
         /// <summary>
         /// Initializes a new instance of the <see cref="DefaultConventionPack" /> class.
         /// </summary>
-        public DefaultConventionPack(SerializationContext serializationContext)
+        public DefaultConventionPack(SerializationConfig serializationConfig)
         {
             _conventions = new List<IConvention>
             {
@@ -42,7 +42,7 @@ namespace MongoDB.Bson.Serialization.Conventions
                 new NamedExtraElementsMemberConvention(new [] { "ExtraElements" }),
                 new IgnoreExtraElementsConvention(false),
                 new StringObjectIdIdGeneratorConvention(), // should be before LookupIdGeneratorConvention
-                new LookupIdGeneratorConvention(serializationContext)
+                new LookupIdGeneratorConvention(serializationConfig)
             };
         }
 

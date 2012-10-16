@@ -256,7 +256,7 @@
     <Compile Include="IO\BsonReader.cs" />
     <Compile Include="IO\BsonReaderState.cs" />
     <Compile Include="Serialization\BsonSerializer.cs" />
-    <Compile Include="Serialization\SerializationContext.cs" />
+    <Compile Include="Serialization\SerializationConfig.cs" />
     <Compile Include="ObjectModel\ObjectId.cs" />
     <Compile Include="ObjectModel\BsonTypeMapper.cs" />
     <Compile Include="BsonUtils.cs" />

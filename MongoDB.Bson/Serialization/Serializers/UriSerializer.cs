@@ -33,8 +33,8 @@ namespace MongoDB.Bson.Serialization.Serializers
         /// <summary>
         /// Initializes a new instance of the UriSerializer class.
         /// </summary>
-        public UriSerializer(SerializationContext serializationContext)
-            : base(serializationContext)
+        public UriSerializer(SerializationConfig serializationConfig)
+            : base(serializationConfig)
         {
         }
 

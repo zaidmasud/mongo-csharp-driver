@@ -32,8 +32,8 @@ namespace MongoDB.Bson.Serialization.Serializers
         /// <summary>
         /// Initializes a new instance of the BsonDocumentWrapperSerializer class.
         /// </summary>
-        public BsonDocumentWrapperSerializer(SerializationContext serializationContext)
-            : base(serializationContext)
+        public BsonDocumentWrapperSerializer(SerializationConfig serializationConfig)
+            : base(serializationConfig)
         {
         }
 
@@ -82,7 +82,7 @@ namespace MongoDB.Bson.Serialization.Serializers
                 {
                     bsonWriter.CheckElementNames = false;
                     bsonWriter.CheckUpdateDocument = true;
-                    SerializationContext.Serialize(bsonWriter, wrapper.WrappedNominalType, wrapper.WrappedObject, null); // TODO: wrap options also?
+                    SerializationConfig.Serialize(bsonWriter, wrapper.WrappedNominalType, wrapper.WrappedObject, null); // TODO: wrap options also?
                 }
                 finally
                 {
@@ -92,7 +92,7 @@ namespace MongoDB.Bson.Serialization.Serializers
             }
             else
             {
-                SerializationContext.Serialize(bsonWriter, wrapper.WrappedNominalType, wrapper.WrappedObject, null); // TODO: wrap options also?
+                SerializationConfig.Serialize(bsonWriter, wrapper.WrappedNominalType, wrapper.WrappedObject, null); // TODO: wrap options also?
             }
         }
     }
