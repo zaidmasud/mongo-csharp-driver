@@ -34,8 +34,8 @@ namespace MongoDB.Bson.Serialization.Serializers
         /// <summary>
         /// Initializes a new instance of the EnumSerializer class.
         /// </summary>
-        public EnumSerializer(SerializationContext serializationContext)
-            : base(serializationContext, new RepresentationSerializationOptions((BsonType)0)) // 0 means use underlying type
+        public EnumSerializer(SerializationConfig serializationConfig)
+            : base(serializationConfig, new RepresentationSerializationOptions((BsonType)0)) // 0 means use underlying type
         {
         }
 

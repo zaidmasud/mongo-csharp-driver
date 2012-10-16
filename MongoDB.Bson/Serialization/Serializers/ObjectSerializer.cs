@@ -31,24 +31,24 @@ namespace MongoDB.Bson.Serialization.Serializers
     public class ObjectSerializer : IBsonSerializer
     {
         // private fields
-        private readonly SerializationContext _serializationContext;
+        private readonly SerializationConfig _serializationConfig;
 
         // constructors
         /// <summary>
         /// Initializes a new instance of the ObjectSerializer class.
         /// </summary>
-        public ObjectSerializer(SerializationContext serializationContext)
+        public ObjectSerializer(SerializationConfig serializationConfig)
         {
-            _serializationContext = serializationContext;
+            _serializationConfig = serializationConfig;
         }
 
         // public properties
         /// <summary>
-        /// Gets the serialization context.
+        /// Gets the serialization config.
         /// </summary>
-        public SerializationContext SerializationContext
+        public SerializationConfig SerializationConfig
         {
-            get { return _serializationContext; }
+            get { return _serializationConfig; }
         }
 
         // public methods
@@ -88,7 +88,7 @@ namespace MongoDB.Bson.Serialization.Serializers
                 }
             }
 
-            var discriminatorConvention = _serializationContext.LookupDiscriminatorConvention(typeof(object));
+            var discriminatorConvention = _serializationConfig.LookupDiscriminatorConvention(typeof(object));
             var actualType = discriminatorConvention.GetActualType(bsonReader, typeof(object));
             if (actualType == typeof(object))
             {
@@ -96,7 +96,7 @@ namespace MongoDB.Bson.Serialization.Serializers
                 throw new FileFormatException(message);
             }
 
-            var serializer = _serializationContext.LookupSerializer(actualType);
+            var serializer = _serializationConfig.LookupSerializer(actualType);
             return serializer.Deserialize(bsonReader, nominalType, actualType, options);
         }
 

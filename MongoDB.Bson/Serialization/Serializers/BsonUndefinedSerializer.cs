@@ -33,8 +33,8 @@ namespace MongoDB.Bson.Serialization.Serializers
         /// <summary>
         /// Initializes a new instance of the BsonUndefinedSerializer class.
         /// </summary>
-        public BsonUndefinedSerializer(SerializationContext serializationContext)
-            : base(serializationContext)
+        public BsonUndefinedSerializer(SerializationConfig serializationConfig)
+            : base(serializationConfig)
         {
         }
 

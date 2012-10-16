@@ -36,10 +36,10 @@ namespace MongoDB.Bson.Serialization.Serializers
         /// <summary>
         /// Initializes a new instance of the BitmapSerializer class.
         /// </summary>
-        public BitmapSerializer(SerializationContext serializationContext)
-            : base(serializationContext)
+        public BitmapSerializer(SerializationConfig serializationConfig)
+            : base(serializationConfig)
         {
-            serializationContext.RegisterDiscriminator(typeof(Bitmap), "Bitmap");
+            serializationConfig.RegisterDiscriminator(typeof(Bitmap), "Bitmap");
         }
 
         // public methods

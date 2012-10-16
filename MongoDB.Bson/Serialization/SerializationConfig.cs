@@ -28,12 +28,12 @@ using MongoDB.Bson.Serialization.Serializers;
 namespace MongoDB.Bson.Serialization
 {
     /// <summary>
-    /// A class that represents a BSON serialization context and its settings.
+    /// A class that represents a BSON serialization config and its settings.
     /// </summary>
-    public class SerializationContext
+    public class SerializationConfig
     {
         // private static fields
-        private static readonly SerializationContext __default;
+        private static readonly SerializationConfig __default;
 
         // private fields
         private readonly string _name;
@@ -53,19 +53,19 @@ namespace MongoDB.Bson.Serialization
         private bool _useZeroIdChecker = false;
 
         // static constructor
-        static SerializationContext()
+        static SerializationConfig()
         {
-            __default = new SerializationContext("default");
+            __default = new SerializationConfig("default");
             __default.RegisterDefaultSerializationProviders();
             __default.RegisterIdGenerators();
         }
 
         // constructors
         /// <summary>
-        /// Initializes a new instance of the SerializationContext class.
+        /// Initializes a new instance of the SerializationConfig class.
         /// </summary>
-        /// <param name="name">The name of the serialization context.</param>
-        public SerializationContext(string name)
+        /// <param name="name">The name of the serialization config.</param>
+        public SerializationConfig(string name)
         {
             _name = name;
             _conventionRegistry = new ConventionRegistry(this);
@@ -73,24 +73,16 @@ namespace MongoDB.Bson.Serialization
 
         // public static properties
         /// <summary>
-        /// Gets the default serialization context.
+        /// Gets the default serialization config.
         /// </summary>
-        public static SerializationContext Default
+        public static SerializationConfig Default
         {
             get { return __default; }
         }
 
         // public properties
         /// <summary>
-        /// Gets the convention registry.
-        /// </summary>
-        public ConventionRegistry ConventionRegistry
-        {
-            get { return _conventionRegistry; }
-        }
-
-        /// <summary>
-        /// Gets the name of the serialization context.
+        /// Gets the name of the serialization config.
         /// </summary>
         public string Name
         {
@@ -474,6 +466,17 @@ namespace MongoDB.Bson.Serialization
             }
         }
 
+        // public methods
+        /// <summary>
+        /// Looks up the effective set of conventions that apply to a type.
+        /// </summary>
+        /// <param name="type">The type.</param>
+        /// <returns>The conventions for that type.</returns>
+        public IConventionPack LookupConventions(Type type)
+        {
+            return _conventionRegistry.LookupConventions(type);
+        }
+
         /// <summary>
         /// Looks up the discriminator convention for a type.
         /// </summary>
@@ -756,6 +759,17 @@ namespace MongoDB.Bson.Serialization
         }
 
         /// <summary>
+        /// Registers the conventions.
+        /// </summary>
+        /// <param name="name">The name.</param>
+        /// <param name="conventions">The conventions.</param>
+        /// <param name="filter">The filter.</param>
+        public void RegisterConventions(string name, IConventionPack conventions, Func<Type, bool> filter)
+        {
+            _conventionRegistry.RegisterConventions(name, conventions, filter);
+        }
+
+        /// <summary>
         /// Registers the discriminator for a type.
         /// </summary>
         /// <param name="type">The type.</param>
@@ -911,6 +925,18 @@ namespace MongoDB.Bson.Serialization
             {
                 _configLock.ExitWriteLock();
             }
+        }
+
+        /// <summary>
+        /// Removes the conventions specified by the given name.
+        /// </summary>
+        /// <param name="name">The name.</param>
+        /// <remarks>Removing a convention allows the removal of the special __defaults__ conventions 
+        /// and the __attributes__ conventions for those who want to completely customize the 
+        /// experience.</remarks>
+        public void RemoveConventions(string name)
+        {
+            _conventionRegistry.RemoveConventions(name);
         }
 
         /// <summary>

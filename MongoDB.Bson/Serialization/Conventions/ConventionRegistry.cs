@@ -33,11 +33,11 @@ namespace MongoDB.Bson.Serialization.Conventions
         /// <summary>
         /// Intializes a new instance of the ConventionRegistry class.
         /// </summary>
-        /// <param name="serializationContext">The serialization context.</param>
-        public ConventionRegistry(SerializationContext serializationContext)
+        /// <param name="serializationConfig">The serialization config.</param>
+        public ConventionRegistry(SerializationConfig serializationConfig)
         {
-            Register("__defaults__", new DefaultConventionPack(serializationContext), t => true);
-            Register("__attributes__", new AttributeConventionPack(), t => true);
+            RegisterConventions("__defaults__", new DefaultConventionPack(serializationConfig), t => true);
+            RegisterConventions("__attributes__", new AttributeConventionPack(), t => true);
         }
 
         // public methods
@@ -88,7 +88,7 @@ namespace MongoDB.Bson.Serialization.Conventions
         /// <param name="name">The name.</param>
         /// <param name="conventions">The conventions.</param>
         /// <param name="filter">The filter.</param>
-        public void Register(string name, IConventionPack conventions, Func<Type, bool> filter)
+        public void RegisterConventions(string name, IConventionPack conventions, Func<Type, bool> filter)
         {
             if (name == null)
             {
@@ -123,7 +123,7 @@ namespace MongoDB.Bson.Serialization.Conventions
         /// <remarks>Removing a convention allows the removal of the special __defaults__ conventions 
         /// and the __attributes__ conventions for those who want to completely customize the 
         /// experience.</remarks>
-        public void Remove(string name)
+        public void RemoveConventions(string name)
         {
             if (name == null)
             {

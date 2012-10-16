@@ -34,8 +34,8 @@ namespace MongoDB.Bson.Serialization.Serializers
         /// <summary>
         /// Initializes a new instance of the UInt64Serializer class.
         /// </summary>
-        public UInt64Serializer(SerializationContext serializationContext)
-            : base(serializationContext, new RepresentationSerializationOptions(BsonType.Int64))
+        public UInt64Serializer(SerializationConfig serializationConfig)
+            : base(serializationConfig, new RepresentationSerializationOptions(BsonType.Int64))
         {
         }
 

@@ -35,8 +35,8 @@ namespace MongoDB.Bson.Serialization.Serializers
         /// <summary>
         /// Initializes a new instance of the DoubleSerializer class.
         /// </summary>
-        public DoubleSerializer(SerializationContext serializationContext)
-            : base(serializationContext, new RepresentationSerializationOptions(BsonType.Double))
+        public DoubleSerializer(SerializationConfig serializationConfig)
+            : base(serializationConfig, new RepresentationSerializationOptions(BsonType.Double))
         {
         }
 

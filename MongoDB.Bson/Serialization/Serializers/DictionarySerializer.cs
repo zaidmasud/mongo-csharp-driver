@@ -38,10 +38,10 @@ namespace MongoDB.Bson.Serialization.Serializers
         /// <summary>
         /// Initializes a new instance of the DictionarySerializer class.
         /// </summary>
-        public DictionarySerializer(SerializationContext serializationContext)
-            : base(serializationContext, DictionarySerializationOptions.Defaults)
+        public DictionarySerializer(SerializationConfig serializationConfig)
+            : base(serializationConfig, DictionarySerializationOptions.Defaults)
         {
-            _keyValuePairSerializer = new KeyValuePairSerializer<object, object>(SerializationContext);
+            _keyValuePairSerializer = new KeyValuePairSerializer<object, object>(SerializationConfig);
         }
 
         // public methods
@@ -82,14 +82,14 @@ namespace MongoDB.Bson.Serialization.Serializers
                 }
 
                 var dictionary = CreateInstance(actualType);
-                var valueDiscriminatorConvention = SerializationContext.LookupDiscriminatorConvention(typeof(object));
+                var valueDiscriminatorConvention = SerializationConfig.LookupDiscriminatorConvention(typeof(object));
 
                 bsonReader.ReadStartDocument();
                 while (bsonReader.ReadBsonType() != BsonType.EndOfDocument)
                 {
                     var key = bsonReader.ReadName();
                     var valueType = valueDiscriminatorConvention.GetActualType(bsonReader, typeof(object));
-                    var valueSerializer = SerializationContext.LookupSerializer(valueType);
+                    var valueSerializer = SerializationConfig.LookupSerializer(valueType);
                     var value = valueSerializer.Deserialize(bsonReader, typeof(object), valueType, keyValuePairSerializationOptions.ValueSerializationOptions);
                     dictionary.Add(key, value);
                 }
@@ -177,7 +177,7 @@ namespace MongoDB.Bson.Serialization.Serializers
                         foreach (DictionaryEntry dictionaryEntry in dictionary)
                         {
                             bsonWriter.WriteName((string)dictionaryEntry.Key);
-                            SerializationContext.Serialize(bsonWriter, typeof(object), dictionaryEntry.Value, keyValuePairSerializationOptions.ValueSerializationOptions);
+                            SerializationConfig.Serialize(bsonWriter, typeof(object), dictionaryEntry.Value, keyValuePairSerializationOptions.ValueSerializationOptions);
                         }
                         bsonWriter.WriteEndDocument();
                         break;

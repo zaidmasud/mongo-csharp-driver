@@ -34,8 +34,8 @@ namespace MongoDB.Bson.Serialization.Serializers
         /// <summary>
         /// Initializes a new instance of the Int16Serializer class.
         /// </summary>
-        public Int16Serializer(SerializationContext serializationContext)
-            : base(serializationContext, new RepresentationSerializationOptions(BsonType.Int32))
+        public Int16Serializer(SerializationConfig serializationConfig)
+            : base(serializationConfig, new RepresentationSerializationOptions(BsonType.Int32))
         {
         }
 

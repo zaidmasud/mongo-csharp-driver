@@ -34,8 +34,8 @@ namespace MongoDB.Bson.Serialization.Serializers
         /// <summary>
         /// Initializes a new instance of the UInt32Serializer class.
         /// </summary>
-        public UInt32Serializer(SerializationContext serializationContext)
-            : base(serializationContext, new RepresentationSerializationOptions(BsonType.Int32))
+        public UInt32Serializer(SerializationConfig serializationConfig)
+            : base(serializationConfig, new RepresentationSerializationOptions(BsonType.Int32))
         {
         }
 

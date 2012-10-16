@@ -35,8 +35,8 @@ namespace MongoDB.Bson.Serialization.Serializers
         /// <summary>
         /// Initializes a new instance of the ArraySerializer class.
         /// </summary>
-        public ArraySerializer(SerializationContext serializationContext)
-            : base(serializationContext, new ArraySerializationOptions())
+        public ArraySerializer(SerializationConfig serializationConfig)
+            : base(serializationConfig, new ArraySerializationOptions())
         {
         }
 
@@ -67,12 +67,12 @@ namespace MongoDB.Bson.Serialization.Serializers
                     return null;
                 case BsonType.Array:
                     bsonReader.ReadStartArray();
-                    var discriminatorConvention = SerializationContext.LookupDiscriminatorConvention(typeof(T));
+                    var discriminatorConvention = SerializationConfig.LookupDiscriminatorConvention(typeof(T));
                     var list = new List<T>();
                     while (bsonReader.ReadBsonType() != BsonType.EndOfDocument)
                     {
                         var elementType = discriminatorConvention.GetActualType(bsonReader, typeof(T));
-                        var serializer = SerializationContext.LookupSerializer(elementType);
+                        var serializer = SerializationConfig.LookupSerializer(elementType);
                         var element = (T)serializer.Deserialize(bsonReader, typeof(T), elementType, itemSerializationOptions);
                         list.Add(element);
                     }
@@ -98,7 +98,7 @@ namespace MongoDB.Bson.Serialization.Serializers
         public BsonSerializationInfo GetItemSerializationInfo()
         {
             string elementName = null;
-            var serializer = SerializationContext.LookupSerializer(typeof(T));
+            var serializer = SerializationConfig.LookupSerializer(typeof(T));
             var nominalType = typeof(T);
             IBsonSerializationOptions serializationOptions = null;
             return new BsonSerializationInfo(elementName, serializer, nominalType, serializationOptions);
@@ -143,7 +143,7 @@ namespace MongoDB.Bson.Serialization.Serializers
                 bsonWriter.WriteStartArray();
                 for (int index = 0; index < array.Length; index++)
                 {
-                    SerializationContext.Serialize(bsonWriter, typeof(T), array[index], itemSerializationOptions);
+                    SerializationConfig.Serialize(bsonWriter, typeof(T), array[index], itemSerializationOptions);
                 }
                 bsonWriter.WriteEndArray();
             }

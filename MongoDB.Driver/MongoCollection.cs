@@ -1156,7 +1156,7 @@ namespace MongoDB.Driver
 
                         if (_settings.AssignIdOnInsert.Value)
                         {
-                            var serializer = SerializationContext.Default.LookupSerializer(document.GetType());
+                            var serializer = SerializationConfig.Default.LookupSerializer(document.GetType());
                             var idProvider = serializer as IBsonIdProvider;
                             if (idProvider != null)
                             {
@@ -1433,7 +1433,7 @@ namespace MongoDB.Driver
             {
                 throw new ArgumentNullException("document");
             }
-            var serializer = SerializationContext.Default.LookupSerializer(document.GetType());
+            var serializer = SerializationConfig.Default.LookupSerializer(document.GetType());
             var idProvider = serializer as IBsonIdProvider;
             object id;
             Type idNominalType;
@@ -1455,9 +1455,9 @@ namespace MongoDB.Driver
                 {
                     BsonValue idBsonValue;
                     var documentType = document.GetType();
-                    if (SerializationContext.Default.IsClassMapRegistered(documentType))
+                    if (SerializationConfig.Default.IsClassMapRegistered(documentType))
                     {
-                        var classMap = SerializationContext.Default.LookupClassMap(documentType);
+                        var classMap = SerializationConfig.Default.LookupClassMap(documentType);
                         var idMemberMap = classMap.IdMemberMap;
                         var idSerializer = idMemberMap.GetSerializer(id.GetType());
                         // we only care about the serialized _id value but we need a dummy document to serialize it into

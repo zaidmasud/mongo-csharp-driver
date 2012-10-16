@@ -31,24 +31,24 @@ namespace MongoDB.Bson.Serialization.Serializers
     public class BsonIBsonSerializableSerializer : IBsonSerializer, IBsonIdProvider
     {
         // private fields
-        private readonly SerializationContext _serializationContext;
+        private readonly SerializationConfig _serializationConfig;
 
         // constructors
         /// <summary>
         /// Initializes a new instance of the BsonIBsonSerializableSerializer class.
         /// </summary>
-        public BsonIBsonSerializableSerializer(SerializationContext serializationContext)
+        public BsonIBsonSerializableSerializer(SerializationConfig serializationConfig)
         {
-            _serializationContext = serializationContext;
+            _serializationConfig = serializationConfig;
         }
 
         // public properties
         /// <summary>
-        /// Gets the serialization context.
+        /// Gets the serialization config.
         /// </summary>
-        public SerializationContext SerializationContext
+        public SerializationConfig SerializationConfig
         {
-            get { return _serializationContext; }
+            get { return _serializationConfig; }
         }
 
         // public methods

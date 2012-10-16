@@ -41,7 +41,7 @@ namespace MongoDB.Bson.Serialization
         private static int __freezeNestingLevel = 0;
 
         // private fields
-        private readonly SerializationContext _serializationContext;
+        private readonly SerializationConfig _serializationConfig;
 
         private bool _frozen; // once a class map has been frozen no further changes are allowed
         private BsonClassMap _baseClassMap; // null for class object and interfaces
@@ -69,13 +69,13 @@ namespace MongoDB.Bson.Serialization
         /// <summary>
         /// Initializes a new instance of the BsonClassMap class.
         /// </summary>
-        /// <param name="serializationContext">The serialization context.</param>
+        /// <param name="serializationConfig">The serialization config.</param>
         /// <param name="classType">The class type.</param>
-        protected BsonClassMap(SerializationContext serializationContext, Type classType)
+        protected BsonClassMap(SerializationConfig serializationConfig, Type classType)
         {
-            _serializationContext = serializationContext;
+            _serializationConfig = serializationConfig;
             _classType = classType;
-            _conventions = serializationContext.ConventionRegistry.LookupConventions(classType);
+            _conventions = serializationConfig.LookupConventions(classType);
             _isAnonymous = IsAnonymousType(classType);
             _allMemberMaps = new List<BsonMemberMap>();
             _allMemberMapsReadonly = _allMemberMaps.AsReadOnly();
@@ -215,11 +215,11 @@ namespace MongoDB.Bson.Serialization
         }
 
         /// <summary>
-        /// Gets the serialization context.
+        /// Gets the serialization config.
         /// </summary>
-        public SerializationContext SerializationContext
+        public SerializationConfig SerializationConfig
         {
-            get { return _serializationContext; }
+            get { return _serializationConfig; }
         }
 
         // internal properties
@@ -272,7 +272,7 @@ namespace MongoDB.Bson.Serialization
         [Obsolete]
         public static bool IsClassMapRegistered(Type type)
         {
-            return SerializationContext.Default.IsClassMapRegistered(type);
+            return SerializationConfig.Default.IsClassMapRegistered(type);
         }
 
         /// <summary>
@@ -283,7 +283,7 @@ namespace MongoDB.Bson.Serialization
         [Obsolete]
         public static BsonClassMap LookupClassMap(Type classType)
         {
-            return SerializationContext.Default.LookupClassMap(classType);
+            return SerializationConfig.Default.LookupClassMap(classType);
         }
 
         /// <summary>
@@ -294,7 +294,7 @@ namespace MongoDB.Bson.Serialization
         [Obsolete]
         public static BsonClassMap<TClass> RegisterClassMap<TClass>()
         {
-            return SerializationContext.Default.RegisterClassMap<TClass>();
+            return SerializationConfig.Default.RegisterClassMap<TClass>();
         }
 
         /// <summary>
@@ -306,7 +306,7 @@ namespace MongoDB.Bson.Serialization
         [Obsolete]
         public static BsonClassMap<TClass> RegisterClassMap<TClass>(Action<BsonClassMap<TClass>> classMapInitializer)
         {
-            return SerializationContext.Default.RegisterClassMap<TClass>(classMapInitializer);
+            return SerializationConfig.Default.RegisterClassMap<TClass>(classMapInitializer);
         }
 
         /// <summary>
@@ -316,7 +316,7 @@ namespace MongoDB.Bson.Serialization
         [Obsolete]
         public static void RegisterClassMap(BsonClassMap classMap)
         {
-            SerializationContext.Default.RegisterClassMap(classMap);
+            SerializationConfig.Default.RegisterClassMap(classMap);
         }
 
         // public methods
@@ -346,7 +346,7 @@ namespace MongoDB.Bson.Serialization
         /// <returns>The frozen class map.</returns>
         public BsonClassMap Freeze()
         {
-            _serializationContext.ConfigLock.EnterReadLock();
+            _serializationConfig.ConfigLock.EnterReadLock();
             try
             {
                 if (_frozen)
@@ -356,10 +356,10 @@ namespace MongoDB.Bson.Serialization
             }
             finally
             {
-                _serializationContext.ConfigLock.ExitReadLock();
+                _serializationConfig.ConfigLock.ExitReadLock();
             }
 
-            _serializationContext.ConfigLock.EnterWriteLock();
+            _serializationConfig.ConfigLock.EnterWriteLock();
             try
             {
                 if (!_frozen)
@@ -370,7 +370,7 @@ namespace MongoDB.Bson.Serialization
                         var baseType = _classType.BaseType;
                         if (baseType != null)
                         {
-                            _baseClassMap = _serializationContext.LookupClassMap(baseType);
+                            _baseClassMap = _serializationConfig.LookupClassMap(baseType);
                             _discriminatorIsRequired |= _baseClassMap._discriminatorIsRequired;
                             _hasRootClass |= (_isRootClass || _baseClassMap.HasRootClass);
                             _allMemberMaps.AddRange(_baseClassMap.AllMemberMaps);
@@ -459,7 +459,7 @@ namespace MongoDB.Bson.Serialization
                             while (__knownTypesQueue.Count != 0)
                             {
                                 var knownType = __knownTypesQueue.Dequeue();
-                                _serializationContext.LookupClassMap(knownType); // will AutoMap and/or Freeze knownType if necessary
+                                _serializationConfig.LookupClassMap(knownType); // will AutoMap and/or Freeze knownType if necessary
                             }
                         }
                     }
@@ -471,7 +471,7 @@ namespace MongoDB.Bson.Serialization
             }
             finally
             {
-                _serializationContext.ConfigLock.ExitWriteLock();
+                _serializationConfig.ConfigLock.ExitWriteLock();
             }
             return this;
         }
@@ -911,7 +911,7 @@ namespace MongoDB.Bson.Serialization
             if (discriminatorConvention == null)
             {
                 // it's possible but harmless for multiple threads to do the initial lookup at the same time
-                discriminatorConvention = _serializationContext.LookupDiscriminatorConvention(_classType);
+                discriminatorConvention = _serializationConfig.LookupDiscriminatorConvention(_classType);
                 _cachedDiscriminatorConvention = discriminatorConvention;
             }
             return discriminatorConvention;
@@ -1074,7 +1074,7 @@ namespace MongoDB.Bson.Serialization
         /// </summary>
         [Obsolete]
         public BsonClassMap()
-            : this(SerializationContext.Default)
+            : this(SerializationConfig.Default)
         {
         }
 
@@ -1084,25 +1084,25 @@ namespace MongoDB.Bson.Serialization
         /// <param name="classMapInitializer">The class map initializer.</param>
         [Obsolete]
         public BsonClassMap(Action<BsonClassMap<TClass>> classMapInitializer)
-            : this(SerializationContext.Default, classMapInitializer)
+            : this(SerializationConfig.Default, classMapInitializer)
         {
         }
 
         /// <summary>
         /// Initializes a new instance of the BsonClassMap class.
         /// </summary>
-        public BsonClassMap(SerializationContext serializationContext)
-            : base(serializationContext, typeof(TClass))
+        public BsonClassMap(SerializationConfig serializationConfig)
+            : base(serializationConfig, typeof(TClass))
         {
         }
 
         /// <summary>
         /// Initializes a new instance of the BsonClassMap class.
         /// </summary>
-        /// <param name="serializationContext">The serialization context.</param>
+        /// <param name="serializationConfig">The serialization config.</param>
         /// <param name="classMapInitializer">The class map initializer.</param>
-        public BsonClassMap(SerializationContext serializationContext, Action<BsonClassMap<TClass>> classMapInitializer)
-            : base(serializationContext, typeof(TClass))
+        public BsonClassMap(SerializationConfig serializationConfig, Action<BsonClassMap<TClass>> classMapInitializer)
+            : base(serializationConfig, typeof(TClass))
         {
             classMapInitializer(this);
         }

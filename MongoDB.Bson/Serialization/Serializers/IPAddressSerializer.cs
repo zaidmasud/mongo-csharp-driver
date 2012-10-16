@@ -35,8 +35,8 @@ namespace MongoDB.Bson.Serialization.Serializers
         /// <summary>
         /// Initializes a new instance of the IPAddressSerializer class.
         /// </summary>
-        public IPAddressSerializer(SerializationContext serializationContext)
-            : base(serializationContext)
+        public IPAddressSerializer(SerializationConfig serializationConfig)
+            : base(serializationConfig)
         {
         }
 

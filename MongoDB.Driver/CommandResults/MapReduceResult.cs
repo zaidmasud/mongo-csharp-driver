@@ -145,7 +145,7 @@ namespace MongoDB.Driver
         /// <returns>The documents.</returns>
         public IEnumerable<object> GetInlineResultsAs(Type documentType)
         {
-            return InlineResults.Select(document => SerializationContext.Default.Deserialize(document, documentType));
+            return InlineResults.Select(document => SerializationConfig.Default.Deserialize(document, documentType));
         }
 
         /// <summary>

@@ -33,8 +33,8 @@ namespace MongoDB.Bson.Serialization.Serializers
         /// <summary>
         /// Initializes a new instance of the BsonNullSerializer class.
         /// </summary>
-        public BsonNullSerializer(SerializationContext serializationContext)
-            : base(serializationContext)
+        public BsonNullSerializer(SerializationConfig serializationConfig)
+            : base(serializationConfig)
         {
         }
 

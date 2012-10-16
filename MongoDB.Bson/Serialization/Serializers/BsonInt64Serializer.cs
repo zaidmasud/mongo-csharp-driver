@@ -33,8 +33,8 @@ namespace MongoDB.Bson.Serialization.Serializers
         /// <summary>
         /// Initializes a new instance of the BsonInt64Serializer class.
         /// </summary>
-        public BsonInt64Serializer(SerializationContext serializationContext)
-            : base(serializationContext, new RepresentationSerializationOptions(BsonType.Int64))
+        public BsonInt64Serializer(SerializationConfig serializationConfig)
+            : base(serializationConfig, new RepresentationSerializationOptions(BsonType.Int64))
         {
         }
 

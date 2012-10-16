@@ -469,7 +469,7 @@ namespace MongoDB.Driver.Linq
             var dictionarySerializationOptions = (DictionarySerializationOptions)serializationInfo.SerializationOptions ?? DictionarySerializationOptions.Defaults;
 
             var keyActualType = (key != null) ? key.GetType() : keyNominalType;
-            var keySerializer = SerializationContext.Default.LookupSerializer(keyActualType);
+            var keySerializer = SerializationConfig.Default.LookupSerializer(keyActualType);
             var keySerializationInfo = new BsonSerializationInfo(
                 null, // elementName
                 keySerializer,
@@ -1299,7 +1299,7 @@ namespace MongoDB.Driver.Linq
             var serializationInfo = _serializationInfoHelper.GetSerializationInfo(parameterExpression);
             var nominalType = serializationInfo.NominalType;
 
-            var discriminatorConvention = SerializationContext.Default.LookupDiscriminatorConvention(nominalType);
+            var discriminatorConvention = SerializationConfig.Default.LookupDiscriminatorConvention(nominalType);
             var discriminator = discriminatorConvention.GetDiscriminator(nominalType, actualType);
             if (discriminator == null)
             {
@@ -1330,7 +1330,7 @@ namespace MongoDB.Driver.Linq
             var nominalType = typeBinaryExpression.Expression.Type;
             var actualType = typeBinaryExpression.TypeOperand;
 
-            var discriminatorConvention = SerializationContext.Default.LookupDiscriminatorConvention(nominalType);
+            var discriminatorConvention = SerializationConfig.Default.LookupDiscriminatorConvention(nominalType);
             var discriminator = discriminatorConvention.GetDiscriminator(nominalType, actualType);
             if (discriminator == null)
             {

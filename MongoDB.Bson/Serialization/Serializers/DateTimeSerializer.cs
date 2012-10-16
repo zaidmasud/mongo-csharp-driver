@@ -34,8 +34,8 @@ namespace MongoDB.Bson.Serialization.Serializers
         /// <summary>
         /// Initializes a new instance of the DateTimeSerializer class.
         /// </summary>
-        public DateTimeSerializer(SerializationContext serializationContext)
-            : base(serializationContext, DateTimeSerializationOptions.Defaults)
+        public DateTimeSerializer(SerializationConfig serializationConfig)
+            : base(serializationConfig, DateTimeSerializationOptions.Defaults)
         {
         }
 

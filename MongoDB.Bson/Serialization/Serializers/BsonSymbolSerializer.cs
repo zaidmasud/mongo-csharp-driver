@@ -33,8 +33,8 @@ namespace MongoDB.Bson.Serialization.Serializers
         /// <summary>
         /// Initializes a new instance of the BsonSymbolSerializer class.
         /// </summary>
-        public BsonSymbolSerializer(SerializationContext serializationContext)
-            : base(serializationContext, new RepresentationSerializationOptions(BsonType.Symbol))
+        public BsonSymbolSerializer(SerializationConfig serializationConfig)
+            : base(serializationConfig, new RepresentationSerializationOptions(BsonType.Symbol))
         {
         }
 

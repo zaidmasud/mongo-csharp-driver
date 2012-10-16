@@ -39,8 +39,8 @@ namespace MongoDB.Bson.Serialization
         [Obsolete]
         public static bool UseNullIdChecker
         {
-            get { return SerializationContext.Default.UseNullIdChecker; }
-            set { SerializationContext.Default.UseNullIdChecker = value; }
+            get { return SerializationConfig.Default.UseNullIdChecker; }
+            set { SerializationConfig.Default.UseNullIdChecker = value; }
         }
 
         /// <summary>
@@ -49,15 +49,15 @@ namespace MongoDB.Bson.Serialization
         [Obsolete]
         public static bool UseZeroIdChecker
         {
-            get { return SerializationContext.Default.UseZeroIdChecker; }
-            set { SerializationContext.Default.UseZeroIdChecker = value; }
+            get { return SerializationConfig.Default.UseZeroIdChecker; }
+            set { SerializationConfig.Default.UseZeroIdChecker = value; }
         }
 
         // internal static properties
         [Obsolete]
         internal static ReaderWriterLockSlim ConfigLock
         {
-            get { return SerializationContext.Default.ConfigLock; }
+            get { return SerializationConfig.Default.ConfigLock; }
         }
 
         // public static methods
@@ -70,7 +70,7 @@ namespace MongoDB.Bson.Serialization
         [Obsolete]
         public static TNominalType Deserialize<TNominalType>(BsonDocument document)
         {
-            return SerializationContext.Default.Deserialize<TNominalType>(document);
+            return SerializationConfig.Default.Deserialize<TNominalType>(document);
         }
 
         /// <summary>
@@ -82,7 +82,7 @@ namespace MongoDB.Bson.Serialization
         [Obsolete]
         public static TNominalType Deserialize<TNominalType>(JsonBuffer buffer)
         {
-            return SerializationContext.Default.Deserialize<TNominalType>(buffer);
+            return SerializationConfig.Default.Deserialize<TNominalType>(buffer);
         }
 
         /// <summary>
@@ -94,7 +94,7 @@ namespace MongoDB.Bson.Serialization
         [Obsolete]
         public static TNominalType Deserialize<TNominalType>(BsonReader bsonReader)
         {
-            return SerializationContext.Default.Deserialize<TNominalType>(bsonReader);
+            return SerializationConfig.Default.Deserialize<TNominalType>(bsonReader);
         }
 
         /// <summary>
@@ -106,7 +106,7 @@ namespace MongoDB.Bson.Serialization
         [Obsolete]
         public static TNominalType Deserialize<TNominalType>(byte[] bytes)
         {
-            return SerializationContext.Default.Deserialize<TNominalType>(bytes);
+            return SerializationConfig.Default.Deserialize<TNominalType>(bytes);
         }
 
         /// <summary>
@@ -118,7 +118,7 @@ namespace MongoDB.Bson.Serialization
         [Obsolete]
         public static TNominalType Deserialize<TNominalType>(Stream stream)
         {
-            return SerializationContext.Default.Deserialize<TNominalType>(stream);
+            return SerializationConfig.Default.Deserialize<TNominalType>(stream);
         }
 
         /// <summary>
@@ -130,7 +130,7 @@ namespace MongoDB.Bson.Serialization
         [Obsolete]
         public static TNominalType Deserialize<TNominalType>(string json)
         {
-            return SerializationContext.Default.Deserialize<TNominalType>(json);
+            return SerializationConfig.Default.Deserialize<TNominalType>(json);
         }
 
         /// <summary>
@@ -142,7 +142,7 @@ namespace MongoDB.Bson.Serialization
         [Obsolete]
         public static TNominalType Deserialize<TNominalType>(TextReader textReader)
         {
-            return SerializationContext.Default.Deserialize<TNominalType>(textReader);
+            return SerializationConfig.Default.Deserialize<TNominalType>(textReader);
         }
 
         /// <summary>
@@ -154,7 +154,7 @@ namespace MongoDB.Bson.Serialization
         [Obsolete]
         public static object Deserialize(BsonDocument document, Type nominalType)
         {
-            return SerializationContext.Default.Deserialize(document, nominalType);
+            return SerializationConfig.Default.Deserialize(document, nominalType);
         }
 
         /// <summary>
@@ -166,7 +166,7 @@ namespace MongoDB.Bson.Serialization
         [Obsolete]
         public static object Deserialize(JsonBuffer buffer, Type nominalType)
         {
-            return SerializationContext.Default.Deserialize(buffer, nominalType);
+            return SerializationConfig.Default.Deserialize(buffer, nominalType);
         }
 
         /// <summary>
@@ -178,7 +178,7 @@ namespace MongoDB.Bson.Serialization
         [Obsolete]
         public static object Deserialize(BsonReader bsonReader, Type nominalType)
         {
-            return SerializationContext.Default.Deserialize(bsonReader, nominalType);
+            return SerializationConfig.Default.Deserialize(bsonReader, nominalType);
         }
 
         /// <summary>
@@ -191,7 +191,7 @@ namespace MongoDB.Bson.Serialization
         [Obsolete]
         public static object Deserialize(BsonReader bsonReader, Type nominalType, IBsonSerializationOptions options)
         {
-            return SerializationContext.Default.Deserialize(bsonReader, nominalType, options);
+            return SerializationConfig.Default.Deserialize(bsonReader, nominalType, options);
         }
 
         /// <summary>
@@ -203,7 +203,7 @@ namespace MongoDB.Bson.Serialization
         [Obsolete]
         public static object Deserialize(byte[] bytes, Type nominalType)
         {
-            return SerializationContext.Default.Deserialize(bytes, nominalType);
+            return SerializationConfig.Default.Deserialize(bytes, nominalType);
         }
 
         /// <summary>
@@ -215,7 +215,7 @@ namespace MongoDB.Bson.Serialization
         [Obsolete]
         public static object Deserialize(Stream stream, Type nominalType)
         {
-            return SerializationContext.Default.Deserialize(stream, nominalType);
+            return SerializationConfig.Default.Deserialize(stream, nominalType);
         }
 
         /// <summary>
@@ -227,7 +227,7 @@ namespace MongoDB.Bson.Serialization
         [Obsolete]
         public static object Deserialize(string json, Type nominalType)
         {
-            return SerializationContext.Default.Deserialize(json, nominalType);
+            return SerializationConfig.Default.Deserialize(json, nominalType);
         }
 
         /// <summary>
@@ -239,7 +239,7 @@ namespace MongoDB.Bson.Serialization
         [Obsolete]
         public static object Deserialize(TextReader textReader, Type nominalType)
         {
-            return SerializationContext.Default.Deserialize(textReader, nominalType);
+            return SerializationConfig.Default.Deserialize(textReader, nominalType);
         }
 
         /// <summary>
@@ -250,7 +250,7 @@ namespace MongoDB.Bson.Serialization
         [Obsolete]
         public static bool IsTypeDiscriminated(Type type)
         {
-            return SerializationContext.Default.IsTypeDiscriminated(type);
+            return SerializationConfig.Default.IsTypeDiscriminated(type);
         }
 
         /// <summary>
@@ -262,7 +262,7 @@ namespace MongoDB.Bson.Serialization
         [Obsolete]
         public static Type LookupActualType(Type nominalType, BsonValue discriminator)
         {
-            return SerializationContext.Default.LookupActualType(nominalType, discriminator);
+            return SerializationConfig.Default.LookupActualType(nominalType, discriminator);
         }
 
         /// <summary>
@@ -273,7 +273,7 @@ namespace MongoDB.Bson.Serialization
         [Obsolete]
         public static IDiscriminatorConvention LookupDiscriminatorConvention(Type type)
         {
-            return SerializationContext.Default.LookupDiscriminatorConvention(type);
+            return SerializationConfig.Default.LookupDiscriminatorConvention(type);
         }
 
         /// <summary>
@@ -284,7 +284,7 @@ namespace MongoDB.Bson.Serialization
         [Obsolete]
         public static Type LookupGenericSerializerDefinition(Type genericTypeDefinition)
         {
-            return SerializationContext.Default.LookupGenericSerializerDefinition(genericTypeDefinition);
+            return SerializationConfig.Default.LookupGenericSerializerDefinition(genericTypeDefinition);
         }
 
         /// <summary>
@@ -295,7 +295,7 @@ namespace MongoDB.Bson.Serialization
         [Obsolete]
         public static IIdGenerator LookupIdGenerator(Type type)
         {
-            return SerializationContext.Default.LookupIdGenerator(type);
+            return SerializationConfig.Default.LookupIdGenerator(type);
         }
 
         /// <summary>
@@ -306,7 +306,7 @@ namespace MongoDB.Bson.Serialization
         [Obsolete]
         public static IBsonSerializer LookupSerializer(Type type)
         {
-            return SerializationContext.Default.LookupSerializer(type);
+            return SerializationConfig.Default.LookupSerializer(type);
         }
 
         /// <summary>
@@ -317,7 +317,7 @@ namespace MongoDB.Bson.Serialization
         [Obsolete]
         public static void RegisterDiscriminator(Type type, BsonValue discriminator)
         {
-            SerializationContext.Default.RegisterDiscriminator(type, discriminator);
+            SerializationConfig.Default.RegisterDiscriminator(type, discriminator);
         }
 
         /// <summary>
@@ -328,7 +328,7 @@ namespace MongoDB.Bson.Serialization
         [Obsolete]
         public static void RegisterDiscriminatorConvention(Type type, IDiscriminatorConvention convention)
         {
-            SerializationContext.Default.RegisterDiscriminatorConvention(type, convention);
+            SerializationConfig.Default.RegisterDiscriminatorConvention(type, convention);
         }
 
         /// <summary>
@@ -341,7 +341,7 @@ namespace MongoDB.Bson.Serialization
             Type genericTypeDefinition,
             Type genericSerializerDefinition)
         {
-            SerializationContext.Default.RegisterGenericSerializerDefinition(genericTypeDefinition, genericSerializerDefinition);
+            SerializationConfig.Default.RegisterGenericSerializerDefinition(genericTypeDefinition, genericSerializerDefinition);
         }
 
         /// <summary>
@@ -352,7 +352,7 @@ namespace MongoDB.Bson.Serialization
         [Obsolete]
         public static void RegisterIdGenerator(Type type, IIdGenerator idGenerator)
         {
-            SerializationContext.Default.RegisterIdGenerator(type, idGenerator);
+            SerializationConfig.Default.RegisterIdGenerator(type, idGenerator);
         }
 
         /// <summary>
@@ -362,7 +362,7 @@ namespace MongoDB.Bson.Serialization
         [Obsolete]
         public static void RegisterSerializationProvider(IBsonSerializationProvider provider)
         {
-            SerializationContext.Default.RegisterSerializationProvider(provider);
+            SerializationConfig.Default.RegisterSerializationProvider(provider);
         }
 
         /// <summary>
@@ -373,7 +373,7 @@ namespace MongoDB.Bson.Serialization
         [Obsolete]
         public static void RegisterSerializer(Type type, IBsonSerializer serializer)
         {
-            SerializationContext.Default.RegisterSerializer(type, serializer);
+            SerializationConfig.Default.RegisterSerializer(type, serializer);
         }
 
         /// <summary>
@@ -385,7 +385,7 @@ namespace MongoDB.Bson.Serialization
         [Obsolete]
         public static void Serialize<TNominalType>(BsonWriter bsonWriter, TNominalType value)
         {
-            SerializationContext.Default.Serialize<TNominalType>(bsonWriter, value);
+            SerializationConfig.Default.Serialize<TNominalType>(bsonWriter, value);
         }
 
         /// <summary>
@@ -401,7 +401,7 @@ namespace MongoDB.Bson.Serialization
             TNominalType value,
             IBsonSerializationOptions options)
         {
-            SerializationContext.Default.Serialize<TNominalType>(bsonWriter, value, options);
+            SerializationConfig.Default.Serialize<TNominalType>(bsonWriter, value, options);
         }
 
         /// <summary>
@@ -413,7 +413,7 @@ namespace MongoDB.Bson.Serialization
         [Obsolete]
         public static void Serialize(BsonWriter bsonWriter, Type nominalType, object value)
         {
-            SerializationContext.Default.Serialize(bsonWriter, nominalType, value);
+            SerializationConfig.Default.Serialize(bsonWriter, nominalType, value);
         }
 
         /// <summary>
@@ -430,7 +430,7 @@ namespace MongoDB.Bson.Serialization
             object value,
             IBsonSerializationOptions options)
         {
-            SerializationContext.Default.Serialize(bsonWriter, nominalType, value, options);
+            SerializationConfig.Default.Serialize(bsonWriter, nominalType, value, options);
         }
     }
 }

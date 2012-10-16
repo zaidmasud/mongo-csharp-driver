@@ -366,7 +366,7 @@ namespace MongoDB.Driver
                     }
                     else
                     {
-                        return SerializationContext.Default.Deserialize<TDocument>(RawDocument);
+                        return SerializationConfig.Default.Deserialize<TDocument>(RawDocument);
                     }
                 }
             }

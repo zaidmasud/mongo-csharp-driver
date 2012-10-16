@@ -93,7 +93,7 @@ namespace MongoDB.Driver
                 }
                 if ((_responseFlags & ResponseFlags.QueryFailure) != 0)
                 {
-                    var document = (BsonDocument)SerializationContext.Default.LookupSerializer(typeof(BsonDocument)).Deserialize(bsonReader, typeof(BsonDocument), null);
+                    var document = (BsonDocument)SerializationConfig.Default.LookupSerializer(typeof(BsonDocument)).Deserialize(bsonReader, typeof(BsonDocument), null);
                     var err = document.GetValue("$err", "Unknown error.");
                     var message = string.Format("QueryFailure flag was {0} (response was {1}).", err, document.ToJson());
                     throw new MongoQueryException(message, document);
@@ -102,7 +102,7 @@ namespace MongoDB.Driver
                 _documents = new List<TDocument>(_numberReturned);
                 while (buffer.Position - messageStartPosition < MessageLength)
                 {
-                    var document = (TDocument)SerializationContext.Default.Deserialize(bsonReader, typeof(TDocument), serializationOptions);
+                    var document = (TDocument)SerializationConfig.Default.Deserialize(bsonReader, typeof(TDocument), serializationOptions);
                     _documents.Add(document);
                 }
             }

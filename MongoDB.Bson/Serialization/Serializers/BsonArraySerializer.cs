@@ -33,8 +33,8 @@ namespace MongoDB.Bson.Serialization.Serializers
         /// <summary>
         /// Initializes a new instance of the BsonArraySerializer class.
         /// </summary>
-        public BsonArraySerializer(SerializationContext serializationContext)
-            : base(serializationContext, new RepresentationSerializationOptions(BsonType.Array))
+        public BsonArraySerializer(SerializationConfig serializationConfig)
+            : base(serializationConfig, new RepresentationSerializationOptions(BsonType.Array))
         {
         }
 
@@ -61,7 +61,7 @@ namespace MongoDB.Bson.Serialization.Serializers
                 case BsonType.Array:
                     bsonReader.ReadStartArray();
                     var array = new BsonArray();
-                    var bsonValueSerializer = SerializationContext.LookupSerializer(typeof(BsonValue));
+                    var bsonValueSerializer = SerializationConfig.LookupSerializer(typeof(BsonValue));
                     while (bsonReader.ReadBsonType() != BsonType.EndOfDocument)
                     {
                         var value = (BsonValue)bsonValueSerializer.Deserialize(bsonReader, typeof(BsonValue), options);
@@ -94,7 +94,7 @@ namespace MongoDB.Bson.Serialization.Serializers
             }
 
             var array = (BsonArray)value;
-            var bsonValueSerializer = SerializationContext.LookupSerializer(typeof(BsonValue));
+            var bsonValueSerializer = SerializationConfig.LookupSerializer(typeof(BsonValue));
             bsonWriter.WriteStartArray();
             for (int i = 0; i < array.Count; i++)
             {

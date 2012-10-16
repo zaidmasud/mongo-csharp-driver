@@ -89,7 +89,7 @@ namespace MongoDB.Driver
         /// <param name="options">The serialization options.</param>
         void IBsonSerializable.Serialize(BsonWriter bsonWriter, Type nominalType, IBsonSerializationOptions options)
         {
-            SerializationContext.Default.Serialize(bsonWriter, _nominalType, _obj, options); // use wrapped nominalType
+            SerializationConfig.Default.Serialize(bsonWriter, _nominalType, _obj, options); // use wrapped nominalType
         }
 
         /// <summary>

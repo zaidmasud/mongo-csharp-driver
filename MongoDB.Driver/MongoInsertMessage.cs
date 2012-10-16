@@ -54,7 +54,7 @@ namespace MongoDB.Driver
             using (var bsonWriter = BsonWriter.Create(Buffer, WriterSettings))
             {
                 bsonWriter.CheckElementNames = _checkElementNames;
-                SerializationContext.Default.Serialize(bsonWriter, nominalType, document, DocumentSerializationOptions.SerializeIdFirstInstance);
+                SerializationConfig.Default.Serialize(bsonWriter, nominalType, document, DocumentSerializationOptions.SerializeIdFirstInstance);
             }
             BackpatchMessageLength();
         }
