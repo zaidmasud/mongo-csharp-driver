@@ -36,7 +36,7 @@ namespace MongoDB.BsonUnitTests.Serialization.Serializers
             var json = "{ x : 1, x : 1 }";
             using (var reader = BsonReader.Create(json))
             {
-                var serializer = new BsonDocumentSerializer();
+                var serializer = new BsonDocumentSerializer(SerializationConfig.Default);
                 var options = new DocumentSerializationOptions { AllowDuplicateNames = true };
                 var doc = (BsonDocument)serializer.Deserialize(reader, typeof(BsonDocument), options);
                 Assert.AreEqual(2, doc.ElementCount);
@@ -58,7 +58,7 @@ namespace MongoDB.BsonUnitTests.Serialization.Serializers
             var json = "{ a : [{ x : 1, x : 1 }] }";
             using (var reader = BsonReader.Create(json))
             {
-                var serializer = new BsonDocumentSerializer();
+                var serializer = new BsonDocumentSerializer(SerializationConfig.Default);
                 var options = new DocumentSerializationOptions { AllowDuplicateNames = true };
                 var doc = (BsonDocument)serializer.Deserialize(reader, typeof(BsonDocument), options);
                 var nestedArray = doc["a"].AsBsonArray;
@@ -82,7 +82,7 @@ namespace MongoDB.BsonUnitTests.Serialization.Serializers
             var json = "{ n : { x : 1, x : 1 } }";
             using (var reader = BsonReader.Create(json))
             {
-                var serializer = new BsonDocumentSerializer();
+                var serializer = new BsonDocumentSerializer(SerializationConfig.Default);
                 var options = new DocumentSerializationOptions { AllowDuplicateNames = true };
                 var doc = (BsonDocument)serializer.Deserialize(reader, typeof(BsonDocument), options);
                 var nestedDoc = doc["n"].AsBsonDocument;

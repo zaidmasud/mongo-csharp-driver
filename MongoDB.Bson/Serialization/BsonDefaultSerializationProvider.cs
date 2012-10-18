@@ -32,16 +32,17 @@ namespace MongoDB.Bson.Serialization
     /// </summary>
     internal class BsonDefaultSerializationProvider : IBsonSerializationProvider
     {
+        // private static fields
+        private static Dictionary<Type, Type> __serializers;
+        private static Dictionary<Type, Type> __genericSerializerDefinitions;
+
         // private fields
         private readonly SerializationConfig _serializationConfig;
 
-        private Dictionary<Type, Type> _serializers;
-        private Dictionary<Type, Type> _genericSerializerDefinitions;
-
-        // TODO: move this method to the end when done with diffs
-        private void InitializeBsonDefaultSerializationProvider()
+        // static constructor
+        static BsonDefaultSerializationProvider()
         {
-            _serializers = new Dictionary<Type, Type>
+            __serializers = new Dictionary<Type, Type>
             {
                 { typeof(BitArray), typeof(BitArraySerializer) },
                 { typeof(Bitmap), typeof(BitmapSerializer) },
@@ -98,7 +99,7 @@ namespace MongoDB.Bson.Serialization
                 { typeof(Version), typeof(VersionSerializer) }
             };
 
-            _genericSerializerDefinitions = new Dictionary<Type, Type>
+            __genericSerializerDefinitions = new Dictionary<Type, Type>
             {
                 { typeof(KeyValuePair<,>), typeof(KeyValuePairSerializer<,>) },
                 { typeof(Nullable<>), typeof(NullableSerializer<>) },
@@ -114,7 +115,44 @@ namespace MongoDB.Bson.Serialization
         public BsonDefaultSerializationProvider(SerializationConfig serializationConfig)
         {
             _serializationConfig = serializationConfig;
-            InitializeBsonDefaultSerializationProvider();
+        }
+
+        // internal static methods
+        /// <summary>
+        /// Creates a serializer.
+        /// </summary>
+        /// <param name="serializationConfig">The serialization config.</param>
+        /// <param name="serializerType">The type of the serializer.</param>
+        /// <returns>A serializer.</returns>
+        internal static IBsonSerializer CreateSerializer(SerializationConfig serializationConfig, Type serializerType)
+        {
+            string message;
+
+            if (serializerType.ContainsGenericParameters)
+            {
+                message = string.Format("Cannot create a serializer of type {0} because it is an open generic type.", serializerType.FullName);
+                throw new ArgumentException(message);
+            }
+
+            var constructorInfo = serializerType.GetConstructor(new[] { typeof(SerializationConfig) });
+            if (constructorInfo != null)
+            {
+                return (IBsonSerializer)constructorInfo.Invoke(new[] { serializationConfig });
+            }
+
+            constructorInfo = serializerType.GetConstructor(new Type[0]);
+            if (constructorInfo != null)
+            {
+                if (serializationConfig != SerializationConfig.Default)
+                {
+                    message = string.Format("Cannot create a serializer of type {0} because the no-argument constructor can only be used with the default serialization config.", serializerType.FullName);
+                    throw new ArgumentException(message);
+                }
+                return (IBsonSerializer)constructorInfo.Invoke(new object[0]);
+            }
+
+            message = string.Format("Cannot create a serializer of type {0} because no suitable constructor was found.", serializerType.FullName);
+            throw new ArgumentException(message);
         }
 
         // public methods
@@ -126,9 +164,9 @@ namespace MongoDB.Bson.Serialization
         public IBsonSerializer GetSerializer(Type type)
         {
             Type serializerType;
-            if (_serializers.TryGetValue(type, out serializerType))
+            if (__serializers.TryGetValue(type, out serializerType))
             {
-                return (IBsonSerializer)Activator.CreateInstance(serializerType, _serializationConfig);
+                return CreateSerializer(_serializationConfig, serializerType);
             }
 
             if (typeof(BsonDocument).IsAssignableFrom(type))
@@ -145,10 +183,10 @@ namespace MongoDB.Bson.Serialization
             {
                 var genericTypeDefinition = type.GetGenericTypeDefinition();
                 Type genericSerializerDefinition;
-                if (_genericSerializerDefinitions.TryGetValue(genericTypeDefinition, out genericSerializerDefinition))
+                if (__genericSerializerDefinitions.TryGetValue(genericTypeDefinition, out genericSerializerDefinition))
                 {
                     var genericSerializerType = genericSerializerDefinition.MakeGenericType(type.GetGenericArguments());
-                    return (IBsonSerializer)Activator.CreateInstance(genericSerializerType, _serializationConfig);
+                    return CreateSerializer(_serializationConfig, genericSerializerType);
                 }
             }
 
@@ -160,15 +198,15 @@ namespace MongoDB.Bson.Serialization
                     case 1:
                         var arraySerializerDefinition = typeof(ArraySerializer<>);
                         var arraySerializerType = arraySerializerDefinition.MakeGenericType(elementType);
-                        return (IBsonSerializer)Activator.CreateInstance(arraySerializerType, _serializationConfig);
+                        return CreateSerializer(_serializationConfig, arraySerializerType);
                     case 2:
                         var twoDimensionalArraySerializerDefinition = typeof(TwoDimensionalArraySerializer<>);
                         var twoDimensionalArraySerializerType = twoDimensionalArraySerializerDefinition.MakeGenericType(elementType);
-                        return (IBsonSerializer)Activator.CreateInstance(twoDimensionalArraySerializerType, _serializationConfig);
+                        return CreateSerializer(_serializationConfig, twoDimensionalArraySerializerType);
                     case 3:
                         var threeDimensionalArraySerializerDefinition = typeof(ThreeDimensionalArraySerializer<>);
                         var threeDimensionalArraySerializerType = threeDimensionalArraySerializerDefinition.MakeGenericType(elementType);
-                        return (IBsonSerializer)Activator.CreateInstance(threeDimensionalArraySerializerType, _serializationConfig);
+                        return CreateSerializer(_serializationConfig, threeDimensionalArraySerializerType);
                     default:
                         var message = string.Format("No serializer found for array for rank {0}.", type.GetArrayRank());
                         throw new BsonSerializationException(message);
@@ -238,7 +276,7 @@ namespace MongoDB.Bson.Serialization
                 var valueType = implementedGenericDictionaryInterface.GetGenericArguments()[1];
                 var genericSerializerDefinition = typeof(DictionarySerializer<,>);
                 var genericSerializerType = genericSerializerDefinition.MakeGenericType(keyType, valueType);
-                return (IBsonSerializer)Activator.CreateInstance(genericSerializerType, _serializationConfig);
+                return CreateSerializer(_serializationConfig, genericSerializerType);
             }
             else if (implementedDictionaryInterface != null)
             {
@@ -262,7 +300,7 @@ namespace MongoDB.Bson.Serialization
                     genericSerializerDefinition = typeof(EnumerableSerializer<>);
                 }
                 var genericSerializerType = genericSerializerDefinition.MakeGenericType(valueType);
-                return (IBsonSerializer)Activator.CreateInstance(genericSerializerType, _serializationConfig);
+                return CreateSerializer(_serializationConfig, genericSerializerType);
             }
             else if (implementedEnumerableInterface != null)
             {
