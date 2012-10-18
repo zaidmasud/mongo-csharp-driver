@@ -36,7 +36,7 @@ namespace MongoDB.Bson.Serialization.Conventions
         /// <summary>
         /// Initializes a new instance of the <see cref="AttributeConventionPack" /> class.
         /// </summary>
-        public AttributeConventionPack()
+        private AttributeConventionPack()
         {
             _attributeConvention = new AttributeConvention();
         }
@@ -45,7 +45,6 @@ namespace MongoDB.Bson.Serialization.Conventions
         /// <summary>
         /// Gets the instance.
         /// </summary>
-        [Obsolete]
         public static IConventionPack Instance
         {
             get { return __attributeConventionPack; }

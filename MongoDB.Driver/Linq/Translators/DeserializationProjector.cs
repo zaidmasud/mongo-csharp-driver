@@ -32,6 +32,7 @@ namespace MongoDB.Driver.Linq
     public class DeserializationProjector<TResult> : IEnumerable<TResult>
     {
         // private fields
+        private SerializationConfig _serializationConfig;
         private IEnumerable<BsonValue> _source;
         private BsonSerializationInfo _serializationInfo;
 
@@ -39,10 +40,12 @@ namespace MongoDB.Driver.Linq
         /// <summary>
         /// Initializes a new instance of the DeserializationProjector class.
         /// </summary>
+        /// <param name="serializationConfig">The serialization config.</param>
         /// <param name="source">The enumerable object that supplies the source objects.</param>
         /// <param name="serializationInfo">Serialization info for deserializing source objects into result objects.</param>
-        public DeserializationProjector(IEnumerable<BsonValue> source, BsonSerializationInfo serializationInfo)
+        public DeserializationProjector(SerializationConfig serializationConfig, IEnumerable<BsonValue> source, BsonSerializationInfo serializationInfo)
         {
+            _serializationConfig = serializationConfig;
             _source = source;
             _serializationInfo = serializationInfo;
         }
@@ -61,7 +64,7 @@ namespace MongoDB.Driver.Linq
                 {
                     bsonReader.ReadStartDocument();
                     bsonReader.ReadName("_v");
-                    yield return (TResult)_serializationInfo.Serializer.Deserialize(bsonReader, _serializationInfo.NominalType, _serializationInfo.SerializationOptions);
+                    yield return (TResult)_serializationInfo.Serializer.Deserialize(_serializationConfig, bsonReader, _serializationInfo.NominalType, _serializationInfo.SerializationOptions);
                     bsonReader.ReadEndDocument();
                 }
             }

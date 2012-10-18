@@ -21,21 +21,25 @@ using System.Text;
 
 using MongoDB.Bson;
 using MongoDB.Bson.IO;
+using MongoDB.Bson.Serialization;
 
 namespace MongoDB.Driver
 {
     internal abstract class MongoMessage
     {
         // private fields
+        private readonly MessageOpcode _opcode;
+        private readonly SerializationConfig _serializationConfig;
+
         private int _messageLength;
         private int _requestId;
         private int _responseTo;
-        private MessageOpcode _opcode;
 
         // constructors
-        protected MongoMessage(MessageOpcode opcode)
+        protected MongoMessage(MessageOpcode opcode, SerializationConfig serializationConfig)
         {
             _opcode = opcode;
+            _serializationConfig = serializationConfig;
         }
 
         // internal properties
@@ -54,6 +58,11 @@ namespace MongoDB.Driver
         internal int ResponseTo
         {
             get { return _responseTo; }
+        }
+
+        internal SerializationConfig SerializationConfig
+        {
+            get { return _serializationConfig; }
         }
 
         // protected methods

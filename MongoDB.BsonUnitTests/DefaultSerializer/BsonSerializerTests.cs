@@ -54,12 +54,12 @@ namespace MongoDB.BsonUnitTests.Serialization
         {
             private class DateOfBirthSerializer : BsonBaseSerializer
             {
-                public override object Deserialize(BsonReader bsonReader, Type nominalType, Type actualType, IBsonSerializationOptions options)
+                public override object Deserialize(SerializationConfig serializationConfig, BsonReader bsonReader, Type nominalType, Type actualType, IBsonSerializationOptions options)
                 {
                     return XmlConvert.ToDateTime(bsonReader.ReadString(), XmlDateTimeSerializationMode.RoundtripKind);
                 }
 
-                public override void Serialize(BsonWriter bsonWriter, Type nominalType, object value, IBsonSerializationOptions options)
+                public override void Serialize(SerializationConfig serializationConfig, BsonWriter bsonWriter, Type nominalType, object value, IBsonSerializationOptions options)
                 {
                     var dateTime = (DateTime)value;
                     bsonWriter.WriteString(dateTime.ToString("yyyy-MM-dd"));

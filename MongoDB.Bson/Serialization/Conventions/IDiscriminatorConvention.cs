@@ -36,17 +36,19 @@ namespace MongoDB.Bson.Serialization.Conventions
         /// <summary>
         /// Gets the actual type of an object by reading the discriminator from a BsonReader.
         /// </summary>
+        /// <param name="serializationConfig">The serialization config.</param>
         /// <param name="bsonReader">The reader.</param>
         /// <param name="nominalType">The nominal type.</param>
         /// <returns>The actual type.</returns>
-        Type GetActualType(BsonReader bsonReader, Type nominalType);
+        Type GetActualType(SerializationConfig serializationConfig, BsonReader bsonReader, Type nominalType);
 
         /// <summary>
         /// Gets the discriminator value for an actual type.
         /// </summary>
+        /// <param name="serializationConfig">The serialization config.</param>
         /// <param name="nominalType">The nominal type.</param>
         /// <param name="actualType">The actual type.</param>
         /// <returns>The discriminator value.</returns>
-        BsonValue GetDiscriminator(Type nominalType, Type actualType);
+        BsonValue GetDiscriminator(SerializationConfig serializationConfig, Type nominalType, Type actualType);
     }
 }

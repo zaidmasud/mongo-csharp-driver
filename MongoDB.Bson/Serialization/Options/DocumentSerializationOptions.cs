@@ -107,9 +107,10 @@ namespace MongoDB.Bson.Serialization
         /// <summary>
         /// Apply an attribute to these serialization options and modify the options accordingly.
         /// </summary>
+        /// <param name="serializationConfig">The serialization config.</param>
         /// <param name="serializer">The serializer that these serialization options are for.</param>
         /// <param name="attribute">The serialization options attribute.</param>
-        public override void ApplyAttribute(IBsonSerializer serializer, Attribute attribute)
+        public override void ApplyAttribute(SerializationConfig serializationConfig, IBsonSerializer serializer, Attribute attribute)
         {
             EnsureNotFrozen();
             var message = string.Format("A serialization options attribute of type {0} cannot be applied to serialization options of type {1}.",

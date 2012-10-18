@@ -38,7 +38,11 @@ namespace MongoDB.Driver
         /// <summary>
         /// Initializes a new instance of the GeoNearResult class.
         /// </summary>
-        protected GeoNearResult()
+        /// <param name="serializationConfig">The serialization config.</param>
+        /// <param name="command">The command.</param>
+        /// <param name="response">The response.</param>
+        protected GeoNearResult(SerializationConfig serializationConfig, IMongoCommand command, BsonDocument response)
+            : base(serializationConfig, command, response)
         {
         }
 
@@ -278,7 +282,11 @@ namespace MongoDB.Driver
         /// <summary>
         /// Initializes a new instance of the GeoNearResult class.
         /// </summary>
-        public GeoNearResult()
+        /// <param name="serializationConfig">The serialization config.</param>
+        /// <param name="command">The command.</param>
+        /// <param name="response">The response.</param>
+        public GeoNearResult(SerializationConfig serializationConfig, IMongoCommand command, BsonDocument response)
+            : base(serializationConfig, command, response)
         {
         }
 
@@ -292,7 +300,7 @@ namespace MongoDB.Driver
             {
                 if (_hits == null)
                 {
-                    _hits = new GeoNearHits(Response["results"].AsBsonArray);
+                    _hits = new GeoNearHits(SerializationConfig, Response["results"].AsBsonArray);
                 }
                 return _hits;
             }
@@ -320,10 +328,11 @@ namespace MongoDB.Driver
             /// <summary>
             /// Initializes a new instance of the GeoNearHits class.
             /// </summary>
+            /// <param name="serializationConfig">The serialization config.</param>
             /// <param name="hits">The hits.</param>
-            public GeoNearHits(BsonArray hits)
+            public GeoNearHits(SerializationConfig serializationConfig, BsonArray hits)
             {
-                _hits = hits.Select(h => new GeoNearHit(h.AsBsonDocument)).ToList();
+                _hits = hits.Select(h => new GeoNearHit(serializationConfig, h.AsBsonDocument)).ToList();
             }
 
             // public properties
@@ -382,14 +391,19 @@ namespace MongoDB.Driver
         /// </summary>
         public new class GeoNearHit : GeoNearResult.GeoNearHit
         {
+            // private fields
+            private readonly SerializationConfig _serializationConfig;
+
             // constructors
             /// <summary>
             /// Initializes a new instance of the GeoNearHit class.
             /// </summary>
+            /// <param name="serializationConfig">The serialization config.</param>
             /// <param name="hit">The hit.</param>
-            public GeoNearHit(BsonDocument hit)
+            public GeoNearHit(SerializationConfig serializationConfig, BsonDocument hit)
                 : base(hit)
             {
+                _serializationConfig = serializationConfig;
             }
 
             // public properties
@@ -406,7 +420,7 @@ namespace MongoDB.Driver
                     }
                     else
                     {
-                        return SerializationConfig.Default.Deserialize<TDocument>(RawDocument);
+                        return _serializationConfig.Deserialize<TDocument>(RawDocument);
                     }
                 }
             }

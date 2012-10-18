@@ -42,11 +42,12 @@ namespace MongoDB.Bson.Serialization
         /// <param name="memberMap">The member map.</param>
         public virtual void Apply(BsonMemberMap memberMap)
         {
+            var serializationConfig = memberMap.ClassMap.SerializationConfig;
             var memberSerializer = memberMap.GetSerializer(memberMap.MemberType);
             var memberSerializationOptions = memberMap.SerializationOptions;
             if (memberSerializationOptions == null)
             {
-                var memberDefaultSerializationOptions = memberSerializer.GetDefaultSerializationOptions();
+                var memberDefaultSerializationOptions = memberSerializer.GetDefaultSerializationOptions(serializationConfig);
                 if (memberDefaultSerializationOptions == null)
                 {
                     var message = string.Format(
@@ -58,7 +59,7 @@ namespace MongoDB.Bson.Serialization
                 memberSerializationOptions = memberDefaultSerializationOptions.Clone();
                 memberMap.SetSerializationOptions(memberSerializationOptions);
             }
-            memberSerializationOptions.ApplyAttribute(memberSerializer, this);
+            memberSerializationOptions.ApplyAttribute(serializationConfig, memberSerializer, this);
         }
     }
 }

@@ -20,6 +20,7 @@ using System.Linq;
 using System.Text;
 
 using MongoDB.Bson;
+using MongoDB.Bson.Serialization;
 
 namespace MongoDB.Driver
 {
@@ -43,6 +44,7 @@ namespace MongoDB.Driver
         private string _replicaSetName;
         private SafeMode _safeMode;
         private TimeSpan _secondaryAcceptableLatency;
+        private SerializationConfig _serializationConfig;
         private List<MongoServerAddress> _servers;
         private ReadOnlyCollection<MongoServerAddress> _serversReadOnly;
         private TimeSpan _socketTimeout;
@@ -76,6 +78,7 @@ namespace MongoDB.Driver
             _replicaSetName = null;
             _safeMode = MongoDefaults.SafeMode;
             _secondaryAcceptableLatency = MongoDefaults.SecondaryAcceptableLatency;
+            _serializationConfig = SerializationConfig.Default;
             _servers = new List<MongoServerAddress> { new MongoServerAddress("localhost") };
             _serversReadOnly = new ReadOnlyCollection<MongoServerAddress>(_servers);
             _socketTimeout = MongoDefaults.SocketTimeout;
@@ -290,6 +293,23 @@ namespace MongoDB.Driver
         }
 
         /// <summary>
+        /// Gets or sets the serialization config to use with this server.
+        /// </summary>
+        public SerializationConfig SerializationConfig
+        {
+            get { return _serializationConfig; }
+            set
+            {
+                if (_isFrozen) { throw new InvalidOperationException("MongoServerSettings is frozen."); }
+                if (value == null)
+                {
+                    throw new ArgumentNullException("value");
+                }
+                _serializationConfig = value;
+            }
+        }
+
+        /// <summary>
         /// Gets or sets the address of the server (see also Servers if using more than one address).
         /// </summary>
         public MongoServerAddress Server
@@ -413,6 +433,7 @@ namespace MongoDB.Driver
                 ReplicaSetName = _replicaSetName,
                 SafeMode = _safeMode,
                 SecondaryAcceptableLatency = _secondaryAcceptableLatency,
+                SerializationConfig = _serializationConfig,
                 Servers = new List<MongoServerAddress>(_servers),
                 SocketTimeout = _socketTimeout,
                 UseSsl = _useSsl,
@@ -457,6 +478,7 @@ namespace MongoDB.Driver
                         _replicaSetName == rhs._replicaSetName &&
                         _safeMode == rhs._safeMode &&
                         _secondaryAcceptableLatency == rhs._secondaryAcceptableLatency &&
+                        _serializationConfig == rhs._serializationConfig &&
                         _servers.SequenceEqual(rhs._servers) &&
                         _socketTimeout == rhs._socketTimeout &&
                         _useSsl == rhs._useSsl &&
@@ -558,6 +580,7 @@ namespace MongoDB.Driver
             hash = 37 * hash + ((_replicaSetName == null) ? 0 : _replicaSetName.GetHashCode());
             hash = 37 * hash +  _safeMode.GetHashCode();
             hash = 37 * hash + _secondaryAcceptableLatency.GetHashCode();
+            hash = 37 * hash + _serializationConfig.GetHashCode();
             foreach (var server in _servers)
             {
                 hash = 37 * hash + server.GetHashCode();
@@ -596,6 +619,7 @@ namespace MongoDB.Driver
             sb.AppendFormat("ReplicaSetName={0};", _replicaSetName);
             sb.AppendFormat("SafeMode={0};", _safeMode);
             sb.AppendFormat("SecondaryAcceptableLatency={0};", _secondaryAcceptableLatency);
+            sb.AppendFormat("SerializationConfig={0};", _serializationConfig);
             sb.AppendFormat("Servers={0};", string.Join(",", _servers.Select(s => s.ToString()).ToArray()));
             sb.AppendFormat("SocketTimeout={0};", _socketTimeout);
             sb.AppendFormat("Ssl={0};", _useSsl);

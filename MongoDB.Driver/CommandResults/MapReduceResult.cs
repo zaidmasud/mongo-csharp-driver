@@ -35,7 +35,11 @@ namespace MongoDB.Driver
         /// <summary>
         /// Initializes a new instance of the MapReduceResult class.
         /// </summary>
-        public MapReduceResult()
+        /// <param name="serializationConfig">The serialization config.</param>
+        /// <param name="command">The command.</param>
+        /// <param name="response">The response.</param>
+        public MapReduceResult(SerializationConfig serializationConfig, IMongoCommand command, BsonDocument response)
+            : base(serializationConfig, command, response)
         {
         }
 
@@ -145,7 +149,7 @@ namespace MongoDB.Driver
         /// <returns>The documents.</returns>
         public IEnumerable<object> GetInlineResultsAs(Type documentType)
         {
-            return InlineResults.Select(document => SerializationConfig.Default.Deserialize(document, documentType));
+            return InlineResults.Select(document => SerializationConfig.Deserialize(document, documentType));
         }
 
         /// <summary>

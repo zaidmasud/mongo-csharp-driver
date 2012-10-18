@@ -157,7 +157,7 @@ namespace MongoDB.Driver
             lock (_connectionLock)
             {
                 var nonceCommand = new CommandDocument("getnonce", 1);
-                var commandResult = RunCommand(databaseName, QueryFlags.None, nonceCommand, false);
+                var commandResult = RunCommand(SerializationConfig.Default, databaseName, QueryFlags.None, nonceCommand, false);
                 if (!commandResult.Ok)
                 {
                     throw new MongoAuthenticationException(
@@ -176,7 +176,7 @@ namespace MongoDB.Driver
                     { "key", digest }
                 };
 
-                commandResult = RunCommand(databaseName, QueryFlags.None, authenticateCommand, false);
+                commandResult = RunCommand(SerializationConfig.Default, databaseName, QueryFlags.None, authenticateCommand, false);
                 if (!commandResult.Ok)
                 {
                     var message = string.Format("Invalid credentials for database '{0}'.", databaseName);
@@ -345,7 +345,7 @@ namespace MongoDB.Driver
             lock (_connectionLock)
             {
                 var logoutCommand = new CommandDocument("logout", 1);
-                var commandResult = RunCommand(databaseName, QueryFlags.None, logoutCommand, false);
+                var commandResult = RunCommand(SerializationConfig.Default, databaseName, QueryFlags.None, logoutCommand, false);
                 if (!commandResult.Ok)
                 {
                     throw new MongoAuthenticationException(
@@ -407,6 +407,7 @@ namespace MongoDB.Driver
         // this is a low level method that doesn't require a MongoServer
         // so it can be used while connecting to a MongoServer
         internal CommandResult RunCommand(
+            SerializationConfig serializationConfig,
             string databaseName,
             QueryFlags queryFlags,
             CommandDocument command,
@@ -419,7 +420,7 @@ namespace MongoDB.Driver
                 GuidRepresentation = GuidRepresentation.Unspecified,
                 MaxDocumentSize = _serverInstance.MaxDocumentSize
             };
-            using (var message = new MongoQueryMessage(writerSettings, databaseName + ".$cmd", queryFlags, 0, 1, command, null))
+            using (var message = new MongoQueryMessage(serializationConfig, writerSettings, databaseName + ".$cmd", queryFlags, 0, 1, command, null))
             {
                 SendMessage(message, SafeMode.False, databaseName);
             }
@@ -429,14 +430,14 @@ namespace MongoDB.Driver
                 GuidRepresentation = GuidRepresentation.Unspecified,
                 MaxDocumentSize = _serverInstance.MaxDocumentSize
             };
-            var reply = ReceiveMessage<BsonDocument>(readerSettings, null);
+            var reply = ReceiveMessage<BsonDocument>(serializationConfig, readerSettings, null);
             if (reply.NumberReturned == 0)
             {
                 var message = string.Format("Command '{0}' failed. No response returned.", commandName);
                 throw new MongoCommandException(message);
             }
 
-            var commandResult = new CommandResult(command, reply.Documents[0]);
+            var commandResult = new CommandResult(serializationConfig, command, reply.Documents[0]);
             if (throwOnError && !commandResult.Ok)
             {
                 throw new MongoCommandException(commandResult);
@@ -446,6 +447,7 @@ namespace MongoDB.Driver
         }
 
         internal MongoReplyMessage<TDocument> ReceiveMessage<TDocument>(
+            SerializationConfig serializationConfig,
             BsonBinaryReaderSettings readerSettings,
             IBsonSerializationOptions serializationOptions)
         {
@@ -463,7 +465,7 @@ namespace MongoDB.Driver
                             networkStream.ReadTimeout = readTimeout;
                         }
                         buffer.LoadFrom(networkStream);
-                        var reply = new MongoReplyMessage<TDocument>(readerSettings);
+                        var reply = new MongoReplyMessage<TDocument>(serializationConfig, readerSettings);
                         reply.ReadFrom(buffer, serializationOptions);
                         return reply;
                     }
@@ -497,7 +499,7 @@ namespace MongoDB.Driver
                         { "wtimeout", (int) safeMode.WTimeout.TotalMilliseconds, safeMode.W > 1 && safeMode.WTimeout != TimeSpan.Zero }
                     };
                     // piggy back on network transmission for message
-                    using (var getLastErrorMessage = new MongoQueryMessage(message.Buffer, message.WriterSettings, databaseName + ".$cmd", QueryFlags.None, 0, 1, safeModeCommand, null))
+                    using (var getLastErrorMessage = new MongoQueryMessage(message.SerializationConfig, message.Buffer, message.WriterSettings, databaseName + ".$cmd", QueryFlags.None, 0, 1, safeModeCommand, null))
                     {
                         getLastErrorMessage.WriteToBuffer();
                     }
@@ -528,10 +530,9 @@ namespace MongoDB.Driver
                         GuidRepresentation = message.WriterSettings.GuidRepresentation,
                         MaxDocumentSize = _serverInstance.MaxDocumentSize
                     };
-                    var replyMessage = ReceiveMessage<BsonDocument>(readerSettings, null);
+                    var replyMessage = ReceiveMessage<BsonDocument>(message.SerializationConfig, readerSettings, null);
                     var safeModeResponse = replyMessage.Documents[0];
-                    safeModeResult = new SafeModeResult();
-                    safeModeResult.Initialize(safeModeCommand, safeModeResponse);
+                    safeModeResult = new SafeModeResult(message.SerializationConfig, safeModeCommand, safeModeResponse);
 
                     if (!safeModeResult.Ok)
                     {

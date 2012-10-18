@@ -35,8 +35,8 @@ namespace MongoDB.Bson.Serialization.Serializers
         /// <summary>
         /// Initializes a new instance of the ThreeDimensionalArraySerializer class.
         /// </summary>
-        public ThreeDimensionalArraySerializer(SerializationConfig serializationConfig)
-            : base(serializationConfig, new ArraySerializationOptions())
+        public ThreeDimensionalArraySerializer()
+            : base(new ArraySerializationOptions())
         {
         }
 
@@ -44,12 +44,14 @@ namespace MongoDB.Bson.Serialization.Serializers
         /// <summary>
         /// Deserializes an object from a BsonReader.
         /// </summary>
+        /// <param name="serializationConfig">The serialization config.</param>
         /// <param name="bsonReader">The BsonReader.</param>
         /// <param name="nominalType">The nominal type of the object.</param>
         /// <param name="actualType">The actual type of the object.</param>
         /// <param name="options">The serialization options.</param>
         /// <returns>An object.</returns>
         public override object Deserialize(
+            SerializationConfig serializationConfig,
             BsonReader bsonReader,
             Type nominalType,
             Type actualType,
@@ -68,7 +70,7 @@ namespace MongoDB.Bson.Serialization.Serializers
                     return null;
                 case BsonType.Array:
                     bsonReader.ReadStartArray();
-                    var discriminatorConvention = SerializationConfig.LookupDiscriminatorConvention(typeof(T));
+                    var discriminatorConvention = serializationConfig.LookupDiscriminatorConvention(typeof(T));
                     var outerList = new List<List<List<T>>>();
                     while (bsonReader.ReadBsonType() != BsonType.EndOfDocument)
                     {
@@ -80,9 +82,9 @@ namespace MongoDB.Bson.Serialization.Serializers
                             var innerList = new List<T>();
                             while (bsonReader.ReadBsonType() != BsonType.EndOfDocument)
                             {
-                                var elementType = discriminatorConvention.GetActualType(bsonReader, typeof(T));
-                                var serializer = SerializationConfig.LookupSerializer(elementType);
-                                var element = (T)serializer.Deserialize(bsonReader, typeof(T), elementType, itemSerializationOptions);
+                                var elementType = discriminatorConvention.GetActualType(serializationConfig, bsonReader, typeof(T));
+                                var serializer = serializationConfig.LookupSerializer(elementType);
+                                var element = (T)serializer.Deserialize(serializationConfig, bsonReader, typeof(T), elementType, itemSerializationOptions);
                                 innerList.Add(element);
                             }
                             bsonReader.ReadEndArray();
@@ -125,7 +127,7 @@ namespace MongoDB.Bson.Serialization.Serializers
                     bsonReader.ReadStartDocument();
                     bsonReader.ReadString("_t"); // skip over discriminator
                     bsonReader.ReadName("_v");
-                    var value = Deserialize(bsonReader, actualType, actualType, options);
+                    var value = Deserialize(serializationConfig, bsonReader, actualType, actualType, options);
                     bsonReader.ReadEndDocument();
                     return value;
                 default:
@@ -137,11 +139,13 @@ namespace MongoDB.Bson.Serialization.Serializers
         /// <summary>
         /// Serializes an object to a BsonWriter.
         /// </summary>
+        /// <param name="serializationConfig">The serialization config.</param>
         /// <param name="bsonWriter">The BsonWriter.</param>
         /// <param name="nominalType">The nominal type.</param>
         /// <param name="value">The object.</param>
         /// <param name="options">The serialization options.</param>
         public override void Serialize(
+            SerializationConfig serializationConfig,
             BsonWriter bsonWriter,
             Type nominalType,
             object value,
@@ -161,7 +165,7 @@ namespace MongoDB.Bson.Serialization.Serializers
                     bsonWriter.WriteStartDocument();
                     bsonWriter.WriteString("_t", TypeNameDiscriminator.GetDiscriminator(actualType));
                     bsonWriter.WriteName("_v");
-                    Serialize(bsonWriter, actualType, value, options);
+                    Serialize(serializationConfig, bsonWriter, actualType, value, options);
                     bsonWriter.WriteEndDocument();
                     return;
                 }
@@ -182,7 +186,7 @@ namespace MongoDB.Bson.Serialization.Serializers
                         bsonWriter.WriteStartArray();
                         for (int k = 0; k < length3; k++)
                         {
-                            SerializationConfig.Serialize(bsonWriter, typeof(T), array[i, j, k], itemSerializationOptions);
+                            serializationConfig.Serialize(bsonWriter, typeof(T), array[i, j, k], itemSerializationOptions);
                         }
                         bsonWriter.WriteEndArray();
                     }

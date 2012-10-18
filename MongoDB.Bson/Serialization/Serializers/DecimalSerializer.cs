@@ -30,25 +30,39 @@ namespace MongoDB.Bson.Serialization.Serializers
     /// </summary>
     public class DecimalSerializer : BsonBaseSerializer
     {
+        // private static fields
+        private static DecimalSerializer __instance = new DecimalSerializer();
+
         // constructors
         /// <summary>
         /// Initializes a new instance of the DecimalSerializer class.
         /// </summary>
-        public DecimalSerializer(SerializationConfig serializationConfig)
-            : base(serializationConfig, new RepresentationSerializationOptions(BsonType.String))
+        public DecimalSerializer()
+            : base(new RepresentationSerializationOptions(BsonType.String))
         {
+        }
+
+        // public static properties
+        /// <summary>
+        /// Gets an instance of the DecimalSerializer class.
+        /// </summary>
+        public static DecimalSerializer Instance
+        {
+            get { return __instance; }
         }
 
         // public methods
         /// <summary>
         /// Deserializes an object from a BsonReader.
         /// </summary>
+        /// <param name="serializationConfig">The serialization config.</param>
         /// <param name="bsonReader">The BsonReader.</param>
         /// <param name="nominalType">The nominal type of the object.</param>
         /// <param name="actualType">The actual type of the object.</param>
         /// <param name="options">The serialization options.</param>
         /// <returns>An object.</returns>
         public override object Deserialize(
+            SerializationConfig serializationConfig,
             BsonReader bsonReader,
             Type nominalType,
             Type actualType,
@@ -61,7 +75,7 @@ namespace MongoDB.Bson.Serialization.Serializers
             switch (bsonType)
             {
                 case BsonType.Array:
-                    var array = (BsonArray)SerializationConfig.LookupSerializer(typeof(BsonArray)).Deserialize(bsonReader, typeof(BsonArray), null);
+                    var array = (BsonArray)BsonArraySerializer.Instance.Deserialize(serializationConfig, bsonReader, typeof(BsonArray), null);
                     var bits = new int[4];
                     bits[0] = array[0].AsInt32;
                     bits[1] = array[1].AsInt32;
@@ -85,11 +99,13 @@ namespace MongoDB.Bson.Serialization.Serializers
         /// <summary>
         /// Serializes an object to a BsonWriter.
         /// </summary>
+        /// <param name="serializationConfig">The serialization config.</param>
         /// <param name="bsonWriter">The BsonWriter.</param>
         /// <param name="nominalType">The nominal type.</param>
         /// <param name="value">The object.</param>
         /// <param name="options">The serialization options.</param>
         public override void Serialize(
+            SerializationConfig serializationConfig,
             BsonWriter bsonWriter,
             Type nominalType,
             object value,

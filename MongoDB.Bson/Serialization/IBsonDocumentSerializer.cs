@@ -28,8 +28,9 @@ namespace MongoDB.Bson.Serialization
         /// <summary>
         /// Gets the serialization info for a member.
         /// </summary>
+        /// <param name="serializationConfig">The serialization config.</param>
         /// <param name="memberName">The member name.</param>
         /// <returns>The serialization info for the member.</returns>
-        BsonSerializationInfo GetMemberSerializationInfo(string memberName);
+        BsonSerializationInfo GetMemberSerializationInfo(SerializationConfig serializationConfig, string memberName);
     }
 }

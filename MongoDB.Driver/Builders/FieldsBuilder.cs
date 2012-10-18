@@ -171,12 +171,13 @@ namespace MongoDB.Driver
         /// <summary>
         /// Serializes the result of the builder to a BsonWriter.
         /// </summary>
+        /// <param name="serializationConfig">The serialization config.</param>
         /// <param name="bsonWriter">The writer.</param>
         /// <param name="nominalType">The nominal type.</param>
         /// <param name="options">The serialization options.</param>
-        protected override void Serialize(BsonWriter bsonWriter, Type nominalType, IBsonSerializationOptions options)
+        protected override void Serialize(SerializationConfig serializationConfig, BsonWriter bsonWriter, Type nominalType, IBsonSerializationOptions options)
         {
-            SerializationConfig.Default.LookupSerializer(typeof(BsonDocument)).Serialize(bsonWriter, nominalType, _document, options);
+            BsonDocumentSerializer.Instance.Serialize(serializationConfig, bsonWriter, nominalType, _document, options);
         }
     }
 
@@ -258,8 +259,16 @@ namespace MongoDB.Driver
         /// Initializes a new instance of the FieldsBuilder class.
         /// </summary>
         public FieldsBuilder()
+            : this(SerializationConfig.Default)
         {
-            _serializationInfoHelper = new BsonSerializationInfoHelper();
+        }
+
+        /// <summary>
+        /// Initializes a new instance of the FieldsBuilder class.
+        /// </summary>
+        public FieldsBuilder(SerializationConfig serializationConfig)
+        {
+            _serializationInfoHelper = new BsonSerializationInfoHelper(serializationConfig);
             _fieldsBuilder = new FieldsBuilder();
         }
 
@@ -330,12 +339,13 @@ namespace MongoDB.Driver
         /// <summary>
         /// Serializes the result of the builder to a BsonWriter.
         /// </summary>
+        /// <param name="serializationConfig">The serialization config.</param>
         /// <param name="bsonWriter">The writer.</param>
         /// <param name="nominalType">The nominal type.</param>
         /// <param name="options">The serialization options.</param>
-        protected override void Serialize(BsonWriter bsonWriter, Type nominalType, IBsonSerializationOptions options)
+        protected override void Serialize(SerializationConfig serializationConfig, BsonWriter bsonWriter, Type nominalType, IBsonSerializationOptions options)
         {
-            ((IBsonSerializable)_fieldsBuilder).Serialize(bsonWriter, nominalType, options);
+            ((IBsonSerializable)_fieldsBuilder).Serialize(serializationConfig, bsonWriter, nominalType, options);
         }
 
         // private methods

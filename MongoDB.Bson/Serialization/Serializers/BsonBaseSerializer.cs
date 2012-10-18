@@ -31,16 +31,13 @@ namespace MongoDB.Bson.Serialization.Serializers
     public abstract class BsonBaseSerializer : IBsonSerializer
     {
         // private fields
-        private readonly SerializationConfig _serializationConfig;
-        private readonly IBsonSerializationOptions _defaultSerializationOptions;
+        private IBsonSerializationOptions _defaultSerializationOptions;
 
         // constructors
         /// <summary>
         /// Initializes a new instance of the BsonBaseSerializer class.
         /// </summary>
-        [Obsolete]
         protected BsonBaseSerializer()
-            : this(SerializationConfig.Default)
         {
         }
 
@@ -48,34 +45,12 @@ namespace MongoDB.Bson.Serialization.Serializers
         /// Initializes a new instance of the BsonBaseSerializer class.
         /// </summary>
         /// <param name="defaultSerializationOptions">The default serialization options for this serializer.</param>
-        [Obsolete]
         protected BsonBaseSerializer(IBsonSerializationOptions defaultSerializationOptions)
-            : this(SerializationConfig.Default, defaultSerializationOptions)
         {
-        }
-
-        /// <summary>
-        /// Initializes a new instance of the BsonBaseSerializer class.
-        /// </summary>
-        /// <param name="serializationConfig">The serialization config.</param>
-        protected BsonBaseSerializer(SerializationConfig serializationConfig)
-            : this(serializationConfig, null)
-        {
-        }
-
-        /// <summary>
-        /// Initializes a new instance of the BsonBaseSerializer class.
-        /// </summary>
-        /// <param name="serializationConfig">The serialization config.</param>
-        /// <param name="defaultSerializationOptions">The default serialization options for this serializer.</param>
-        protected BsonBaseSerializer(SerializationConfig serializationConfig, IBsonSerializationOptions defaultSerializationOptions)
-        {
-            if (serializationConfig == null)
+            if (defaultSerializationOptions != null)
             {
-                throw new ArgumentNullException("serializationConfig");
+                _defaultSerializationOptions = defaultSerializationOptions.Clone().Freeze();
             }
-            _serializationConfig = serializationConfig;
-            _defaultSerializationOptions = (defaultSerializationOptions == null) ? null : defaultSerializationOptions.Clone().Freeze();
         }
 
         // public properties
@@ -87,37 +62,32 @@ namespace MongoDB.Bson.Serialization.Serializers
             get { return _defaultSerializationOptions; }
         }
 
-        /// <summary>
-        /// Gets the serialization config.
-        /// </summary>
-        public SerializationConfig SerializationConfig
-        {
-            get { return _serializationConfig; }
-        }
-
         // public methods
         /// <summary>
         /// Deserializes an object from a BsonReader.
         /// </summary>
+        /// <param name="serializationConfig">The serialization config.</param>
         /// <param name="bsonReader">The BsonReader.</param>
         /// <param name="nominalType">The nominal type of the object.</param>
         /// <param name="options">The serialization options.</param>
         /// <returns>An object.</returns>
-        public virtual object Deserialize(BsonReader bsonReader, Type nominalType, IBsonSerializationOptions options)
+        public virtual object Deserialize(SerializationConfig serializationConfig, BsonReader bsonReader, Type nominalType, IBsonSerializationOptions options)
         {
             // override this method to determine actualType if your serializer handles polymorphic data types
-            return Deserialize(bsonReader, nominalType, nominalType, options);
+            return Deserialize(serializationConfig, bsonReader, nominalType, nominalType, options);
         }
 
         /// <summary>
         /// Deserializes an object from a BsonReader.
         /// </summary>
+        /// <param name="serializationConfig">The serialization config.</param>
         /// <param name="bsonReader">The BsonReader.</param>
         /// <param name="nominalType">The nominal type of the object.</param>
         /// <param name="actualType">The actual type of the object.</param>
         /// <param name="options">The serialization options.</param>
         /// <returns>An object.</returns>
         public virtual object Deserialize(
+            SerializationConfig serializationConfig,
             BsonReader bsonReader,
             Type nominalType,
             Type actualType,
@@ -130,7 +100,8 @@ namespace MongoDB.Bson.Serialization.Serializers
         /// Gets the default serialization options for this serializer.
         /// </summary>
         /// <returns>The default serialization options for this serializer.</returns>
-        public virtual IBsonSerializationOptions GetDefaultSerializationOptions()
+        /// <param name="serializationConfig">The serialization config.</param>
+        public virtual IBsonSerializationOptions GetDefaultSerializationOptions(SerializationConfig serializationConfig)
         {
             return _defaultSerializationOptions;
         }
@@ -138,11 +109,13 @@ namespace MongoDB.Bson.Serialization.Serializers
         /// <summary>
         /// Serializes an object to a BsonWriter.
         /// </summary>
+        /// <param name="serializationConfig">The serialization config.</param>
         /// <param name="bsonWriter">The BsonWriter.</param>
         /// <param name="nominalType">The nominal type.</param>
         /// <param name="value">The object.</param>
         /// <param name="options">The serialization options.</param>
         public virtual void Serialize(
+            SerializationConfig serializationConfig, 
             BsonWriter bsonWriter,
             Type nominalType,
             object value,

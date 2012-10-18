@@ -36,8 +36,8 @@ namespace MongoDB.Bson.Serialization.Conventions
         /// <param name="serializationConfig">The serialization config.</param>
         public ConventionRegistry(SerializationConfig serializationConfig)
         {
-            RegisterConventions("__defaults__", new DefaultConventionPack(serializationConfig), t => true);
-            RegisterConventions("__attributes__", new AttributeConventionPack(), t => true);
+            RegisterConventions("__defaults__", DefaultConventionPack.Instance, t => true);
+            RegisterConventions("__attributes__", AttributeConventionPack.Instance, t => true);
         }
 
         // public methods

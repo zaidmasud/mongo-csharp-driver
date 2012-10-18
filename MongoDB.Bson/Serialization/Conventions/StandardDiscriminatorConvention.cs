@@ -29,20 +29,38 @@ namespace MongoDB.Bson.Serialization.Conventions
     /// </summary>
     public abstract class StandardDiscriminatorConvention : IDiscriminatorConvention
     {
+        // private static fields
+        private static ScalarDiscriminatorConvention __scalar = new ScalarDiscriminatorConvention("_t");
+        private static HierarchicalDiscriminatorConvention __hierarchical = new HierarchicalDiscriminatorConvention("_t");
+
         // private fields
-        private readonly SerializationConfig _serializationConfig;
         private readonly string _elementName;
 
         // constructors
         /// <summary>
         /// Initializes a new instance of the StandardDiscriminatorConvention class.
         /// </summary>
-        /// <param name="serializationConfig">The serialization config.</param>
         /// <param name="elementName">The element name.</param>
-        protected StandardDiscriminatorConvention(SerializationConfig serializationConfig, string elementName)
+        protected StandardDiscriminatorConvention(string elementName)
         {
-            _serializationConfig = serializationConfig;
             _elementName = elementName;
+        }
+
+        // public static properties
+        /// <summary>
+        /// Gets an instance of the ScalarDiscriminatorConvention.
+        /// </summary>
+        public static ScalarDiscriminatorConvention Scalar
+        {
+            get { return __scalar; }
+        }
+
+        /// <summary>
+        /// Gets an instance of the HierarchicalDiscriminatorConvention.
+        /// </summary>
+        public static HierarchicalDiscriminatorConvention Hierarchical
+        {
+            get { return __hierarchical; }
         }
 
         // public properties
@@ -54,23 +72,15 @@ namespace MongoDB.Bson.Serialization.Conventions
             get { return _elementName; }
         }
 
-        // protected properties
-        /// <summary>
-        /// Gets the serialization config.
-        /// </summary>
-        protected SerializationConfig SerializationConfig
-        {
-            get { return _serializationConfig; }
-        }
-
         // public methods
         /// <summary>
         /// Gets the actual type of an object by reading the discriminator from a BsonReader.
         /// </summary>
+        /// <param name="serializationConfig">The serialization config.</param>
         /// <param name="bsonReader">The reader.</param>
         /// <param name="nominalType">The nominal type.</param>
         /// <returns>The actual type.</returns>
-        public Type GetActualType(BsonReader bsonReader, Type nominalType)
+        public Type GetActualType(SerializationConfig serializationConfig, BsonReader bsonReader, Type nominalType)
         {
             // the BsonReader is sitting at the value whose actual type needs to be found
             var bsonType = bsonReader.GetCurrentBsonType();
@@ -108,22 +118,22 @@ namespace MongoDB.Bson.Serialization.Conventions
             if (bsonType == BsonType.Document)
             {
                 // ensure KnownTypes of nominalType are registered (so IsTypeDiscriminated returns correct answer)
-                _serializationConfig.EnsureKnownTypesAreRegistered(nominalType);
+                serializationConfig.EnsureKnownTypesAreRegistered(nominalType);
 
                 // we can skip looking for a discriminator if nominalType has no discriminated sub types
-                if (_serializationConfig.IsTypeDiscriminated(nominalType))
+                if (serializationConfig.IsTypeDiscriminated(nominalType))
                 {
                     var bookmark = bsonReader.GetBookmark();
                     bsonReader.ReadStartDocument();
                     var actualType = nominalType;
                     if (bsonReader.FindElement(_elementName))
                     {
-                        var discriminator = (BsonValue)_serializationConfig.LookupSerializer(typeof(BsonValue)).Deserialize(bsonReader, typeof(BsonValue), null);
+                        var discriminator = (BsonValue)BsonValueSerializer.Instance.Deserialize(serializationConfig, bsonReader, typeof(BsonValue), null);
                         if (discriminator.IsBsonArray)
                         {
                             discriminator = discriminator.AsBsonArray.Last(); // last item is leaf class discriminator
                         }
-                        actualType = _serializationConfig.LookupActualType(nominalType, discriminator);
+                        actualType = serializationConfig.LookupActualType(nominalType, discriminator);
                     }
                     bsonReader.ReturnToBookmark(bookmark);
                     return actualType;
@@ -136,9 +146,10 @@ namespace MongoDB.Bson.Serialization.Conventions
         /// <summary>
         /// Gets the discriminator value for an actual type.
         /// </summary>
+        /// <param name="serializationConfig">The serialization config.</param>
         /// <param name="nominalType">The nominal type.</param>
         /// <param name="actualType">The actual type.</param>
         /// <returns>The discriminator value.</returns>
-        public abstract BsonValue GetDiscriminator(Type nominalType, Type actualType);
+        public abstract BsonValue GetDiscriminator(SerializationConfig serializationConfig, Type nominalType, Type actualType);
     }
 }

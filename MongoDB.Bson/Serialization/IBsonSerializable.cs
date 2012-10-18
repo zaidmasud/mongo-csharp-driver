@@ -30,26 +30,29 @@ namespace MongoDB.Bson.Serialization
         /// <summary>
         /// Deserializes this object from a BsonReader.
         /// </summary>
+        /// <param name="serializationConfig">The serialization config.</param>
         /// <param name="bsonReader">The BsonReader.</param>
         /// <param name="nominalType">The nominal type of the object.</param>
         /// <param name="options">The serialization options.</param>
         /// <returns>Normally itself, though sometimes an instance of a subclass or null.</returns>
-        object Deserialize(BsonReader bsonReader, Type nominalType, IBsonSerializationOptions options);
+        object Deserialize(SerializationConfig serializationConfig, BsonReader bsonReader, Type nominalType, IBsonSerializationOptions options);
         /// <summary>
         /// Gets the document Id.
         /// </summary>
+        /// <param name="serializationConfig">The serialization config.</param>
         /// <param name="id">The Id.</param>
         /// <param name="idNominalType">The nominal type of the Id.</param>
         /// <param name="idGenerator">The IdGenerator for the Id type.</param>
         /// <returns>True if the document has an Id.</returns>
-        bool GetDocumentId(out object id, out Type idNominalType, out IIdGenerator idGenerator);
+        bool GetDocumentId(SerializationConfig serializationConfig, out object id, out Type idNominalType, out IIdGenerator idGenerator);
         /// <summary>
         /// Serializes this object to a BsonWriter.
         /// </summary>
+        /// <param name="serializationConfig">The serialization config.</param>
         /// <param name="bsonWriter">The BsonWriter.</param>
         /// <param name="nominalType">The nominal type of this object.</param>
         /// <param name="options">The serialization options.</param>
-        void Serialize(BsonWriter bsonWriter, Type nominalType, IBsonSerializationOptions options);
+        void Serialize(SerializationConfig serializationConfig, BsonWriter bsonWriter, Type nominalType, IBsonSerializationOptions options);
         /// <summary>
         /// Sets the document Id.
         /// </summary>

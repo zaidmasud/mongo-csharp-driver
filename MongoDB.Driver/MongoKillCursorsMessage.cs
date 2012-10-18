@@ -20,6 +20,7 @@ using System.Linq;
 using System.Text;
 
 using MongoDB.Bson;
+using MongoDB.Bson.Serialization;
 
 namespace MongoDB.Driver
 {
@@ -29,8 +30,8 @@ namespace MongoDB.Driver
         private long[] _cursorIds;
 
         // constructors
-        internal MongoKillCursorsMessage(params long[] cursorIds)
-            : base(MessageOpcode.KillCursors, null, null)
+        internal MongoKillCursorsMessage(SerializationConfig serializationConfig, params long[] cursorIds)
+            : base(MessageOpcode.KillCursors, serializationConfig, null, null)
         {
             _cursorIds = cursorIds;
         }

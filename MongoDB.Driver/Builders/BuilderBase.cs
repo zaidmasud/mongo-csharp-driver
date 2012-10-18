@@ -59,28 +59,30 @@ namespace MongoDB.Driver
         /// <summary>
         /// Serializes the result of the builder to a BsonWriter.
         /// </summary>
+        /// <param name="serializationConfig">The serialization config.</param>
         /// <param name="bsonWriter">The writer.</param>
         /// <param name="nominalType">The nominal type.</param>
         /// <param name="options">The serialization options.</param>
         protected abstract void Serialize(
+            SerializationConfig serializationConfig,
             BsonWriter bsonWriter,
             Type nominalType,
             IBsonSerializationOptions options);
 
         // explicit interface implementations
-        object IBsonSerializable.Deserialize(BsonReader bsonReader, Type nominalType, IBsonSerializationOptions options)
+        object IBsonSerializable.Deserialize(SerializationConfig serializationConfig, BsonReader bsonReader, Type nominalType, IBsonSerializationOptions options)
         {
             throw new NotSupportedException();
         }
 
-        bool IBsonSerializable.GetDocumentId(out object id, out Type idNominalType, out IIdGenerator idGenerator)
+        bool IBsonSerializable.GetDocumentId(SerializationConfig serializationConfig, out object id, out Type idNominalType, out IIdGenerator idGenerator)
         {
             throw new NotSupportedException();
         }
 
-        void IBsonSerializable.Serialize(BsonWriter bsonWriter, Type nominalType, IBsonSerializationOptions options)
+        void IBsonSerializable.Serialize(SerializationConfig serializationConfig, BsonWriter bsonWriter, Type nominalType, IBsonSerializationOptions options)
         {
-            Serialize(bsonWriter, nominalType, options);
+            Serialize(serializationConfig, bsonWriter, nominalType, options);
         }
 
         void IBsonSerializable.SetDocumentId(object id)

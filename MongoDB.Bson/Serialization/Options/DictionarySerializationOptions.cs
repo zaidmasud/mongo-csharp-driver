@@ -176,9 +176,10 @@ namespace MongoDB.Bson.Serialization
         /// <summary>
         /// Apply an attribute to these serialization options and modify the options accordingly.
         /// </summary>
+        /// <param name="serializationConfig">The serialization config.</param>
         /// <param name="serializer">The serializer that these serialization options are for.</param>
         /// <param name="attribute">The serialization options attribute.</param>
-        public override void ApplyAttribute(IBsonSerializer serializer, Attribute attribute)
+        public override void ApplyAttribute(SerializationConfig serializationConfig, IBsonSerializer serializer, Attribute attribute)
         {
             EnsureNotFrozen();
 
@@ -210,12 +211,12 @@ namespace MongoDB.Bson.Serialization
             {
                 valueType = serializer.GetType().GetGenericArguments()[1]; // TValue
             }
-            var valueSerializer = serializer.SerializationConfig.LookupSerializer(valueType);
+            var valueSerializer = serializationConfig.LookupSerializer(valueType);
 
             var valueSerializationOptions = _keyValuePairSerializationOptions.ValueSerializationOptions;
             if (valueSerializationOptions == null)
             {
-                var valueDefaultSerializationOptions = valueSerializer.GetDefaultSerializationOptions();
+                var valueDefaultSerializationOptions = valueSerializer.GetDefaultSerializationOptions(serializationConfig);
 
                 // special case for legacy dictionaries: allow BsonRepresentation on object
                 if (valueDefaultSerializationOptions == null && 
@@ -238,7 +239,7 @@ namespace MongoDB.Bson.Serialization
                 valueSerializationOptions = valueDefaultSerializationOptions.Clone();
             }
 
-            valueSerializationOptions.ApplyAttribute(valueSerializer, attribute);
+            valueSerializationOptions.ApplyAttribute(serializationConfig, valueSerializer, attribute);
             _keyValuePairSerializationOptions = new KeyValuePairSerializationOptions(
                 _keyValuePairSerializationOptions.Representation,
                 _keyValuePairSerializationOptions.KeySerializationOptions,

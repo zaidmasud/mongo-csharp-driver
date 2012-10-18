@@ -24,42 +24,39 @@ namespace MongoDB.Bson.Serialization
     /// </summary>
     public interface IBsonSerializer
     {
-        // properties
-        /// <summary>
-        /// Gets the serialization config.
-        /// </summary>
-        SerializationConfig SerializationConfig { get; }
-
-        // methods
         /// <summary>
         /// Deserializes an object from a BsonReader.
         /// </summary>
+        /// <param name="serializationConfig">The serialization config.</param>
         /// <param name="bsonReader">The BsonReader.</param>
         /// <param name="nominalType">The nominal type of the object.</param>
         /// <param name="options">The serialization options.</param>
         /// <returns>An object.</returns>
-        object Deserialize(BsonReader bsonReader, Type nominalType, IBsonSerializationOptions options);
+        object Deserialize(SerializationConfig serializationConfig, BsonReader bsonReader, Type nominalType, IBsonSerializationOptions options);
         /// <summary>
         /// Deserializes an object from a BsonReader.
         /// </summary>
+        /// <param name="serializationConfig">The serialization config.</param>
         /// <param name="bsonReader">The BsonReader.</param>
         /// <param name="nominalType">The nominal type of the object.</param>
         /// <param name="actualType">The actual type of the object.</param>
         /// <param name="options">The serialization options.</param>
         /// <returns>An object.</returns>
-        object Deserialize(BsonReader bsonReader, Type nominalType, Type actualType, IBsonSerializationOptions options);
+        object Deserialize(SerializationConfig serializationConfig, BsonReader bsonReader, Type nominalType, Type actualType, IBsonSerializationOptions options);
         /// <summary>
         /// Gets the default serialization options for this serializer.
         /// </summary>
         /// <returns>The default serialization options for this serializer.</returns>
-        IBsonSerializationOptions GetDefaultSerializationOptions();
+        /// <param name="serializationConfig">The serialization config.</param>
+        IBsonSerializationOptions GetDefaultSerializationOptions(SerializationConfig serializationConfig);
         /// <summary>
         /// Serializes an object to a BsonWriter.
         /// </summary>
+        /// <param name="serializationConfig">The serialization config.</param>
         /// <param name="bsonWriter">The BsonWriter.</param>
         /// <param name="nominalType">The nominal type.</param>
         /// <param name="value">The object.</param>
         /// <param name="options">The serialization options.</param>
-        void Serialize(BsonWriter bsonWriter, Type nominalType, object value, IBsonSerializationOptions options);
+        void Serialize(SerializationConfig serializationConfig, BsonWriter bsonWriter, Type nominalType, object value, IBsonSerializationOptions options);
     }
 }

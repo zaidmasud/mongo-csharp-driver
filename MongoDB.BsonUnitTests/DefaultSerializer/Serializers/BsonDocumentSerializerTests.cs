@@ -36,9 +36,9 @@ namespace MongoDB.BsonUnitTests.Serialization.Serializers
             var json = "{ x : 1, x : 1 }";
             using (var reader = BsonReader.Create(json))
             {
-                var serializer = new BsonDocumentSerializer(SerializationConfig.Default);
+                var serializer = new BsonDocumentSerializer();
                 var options = new DocumentSerializationOptions { AllowDuplicateNames = true };
-                var doc = (BsonDocument)serializer.Deserialize(reader, typeof(BsonDocument), options);
+                var doc = (BsonDocument)serializer.Deserialize(SerializationConfig.Default, reader, typeof(BsonDocument), options);
                 Assert.AreEqual(2, doc.ElementCount);
                 Assert.AreEqual("x", doc.GetElement(0).Name);
                 Assert.AreEqual("x", doc.GetElement(1).Name);
@@ -58,9 +58,9 @@ namespace MongoDB.BsonUnitTests.Serialization.Serializers
             var json = "{ a : [{ x : 1, x : 1 }] }";
             using (var reader = BsonReader.Create(json))
             {
-                var serializer = new BsonDocumentSerializer(SerializationConfig.Default);
+                var serializer = new BsonDocumentSerializer();
                 var options = new DocumentSerializationOptions { AllowDuplicateNames = true };
-                var doc = (BsonDocument)serializer.Deserialize(reader, typeof(BsonDocument), options);
+                var doc = (BsonDocument)serializer.Deserialize(SerializationConfig.Default, reader, typeof(BsonDocument), options);
                 var nestedArray = doc["a"].AsBsonArray;
                 var nestedDoc = nestedArray[0].AsBsonDocument;
                 Assert.AreEqual(2, nestedDoc.ElementCount);
@@ -82,9 +82,9 @@ namespace MongoDB.BsonUnitTests.Serialization.Serializers
             var json = "{ n : { x : 1, x : 1 } }";
             using (var reader = BsonReader.Create(json))
             {
-                var serializer = new BsonDocumentSerializer(SerializationConfig.Default);
+                var serializer = new BsonDocumentSerializer();
                 var options = new DocumentSerializationOptions { AllowDuplicateNames = true };
-                var doc = (BsonDocument)serializer.Deserialize(reader, typeof(BsonDocument), options);
+                var doc = (BsonDocument)serializer.Deserialize(SerializationConfig.Default, reader, typeof(BsonDocument), options);
                 var nestedDoc = doc["n"].AsBsonDocument;
                 Assert.AreEqual(2, nestedDoc.ElementCount);
                 Assert.AreEqual("x", nestedDoc.GetElement(0).Name);

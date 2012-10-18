@@ -58,7 +58,7 @@ namespace MongoDB.DriverUnitTests.Samples
         {
             public string ElementName { get { return null; } }
 
-            public Type GetActualType(BsonReader bsonReader, Type nominalType)
+            public Type GetActualType(SerializationConfig serializationConfig, BsonReader bsonReader, Type nominalType)
             {
                 var bookmark = bsonReader.GetBookmark();
                 bsonReader.ReadStartDocument();
@@ -82,7 +82,7 @@ namespace MongoDB.DriverUnitTests.Samples
                 return actualType;
             }
 
-            public BsonValue GetDiscriminator(Type nominalType, Type actualType)
+            public BsonValue GetDiscriminator(SerializationConfig serializationConfig, Type nominalType, Type actualType)
             {
                 return null;
             }

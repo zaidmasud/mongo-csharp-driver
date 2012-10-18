@@ -1157,12 +1157,13 @@ namespace MongoDB.Driver
         /// <summary>
         /// Serializes the result of the builder to a BsonWriter.
         /// </summary>
+        /// <param name="serializationConfig">The serialization config.</param>
         /// <param name="bsonWriter">The writer.</param>
         /// <param name="nominalType">The nominal type.</param>
         /// <param name="options">The serialization options.</param>
-        protected override void Serialize(BsonWriter bsonWriter, Type nominalType, IBsonSerializationOptions options)
+        protected override void Serialize(SerializationConfig serializationConfig, BsonWriter bsonWriter, Type nominalType, IBsonSerializationOptions options)
         {
-            SerializationConfig.Default.LookupSerializer(typeof(BsonDocument)).Serialize(bsonWriter, nominalType, _document, options);
+            BsonDocumentSerializer.Instance.Serialize(serializationConfig, bsonWriter, nominalType, _document, options);
         }
 
         // private methods
@@ -1500,6 +1501,7 @@ namespace MongoDB.Driver
     public class UpdateBuilder<TDocument> : BuilderBase, IMongoUpdate
     {
         // private fields
+        private readonly SerializationConfig _serializationConfig;
         private readonly BsonSerializationInfoHelper _serializationInfoHelper;
         private UpdateBuilder _updateBuilder;
 
@@ -1508,8 +1510,17 @@ namespace MongoDB.Driver
         /// Initializes a new instance of the UpdateBuilder class.
         /// </summary>
         public UpdateBuilder()
+            : this(SerializationConfig.Default)
         {
-            _serializationInfoHelper = new BsonSerializationInfoHelper();
+        }
+
+        /// <summary>
+        /// Initializes a new instance of the UpdateBuilder class.
+        /// </summary>
+        public UpdateBuilder(SerializationConfig serializationConfig)
+        {
+            _serializationConfig = serializationConfig;
+            _serializationInfoHelper = new BsonSerializationInfoHelper(serializationConfig);
             _updateBuilder = new UpdateBuilder();
         }
 
@@ -1807,7 +1818,7 @@ namespace MongoDB.Driver
 
             var serializationInfo = _serializationInfoHelper.GetSerializationInfo(memberExpression);
             var itemSerializationInfo = _serializationInfoHelper.GetItemSerializationInfo("Pull", serializationInfo);
-            var elementQueryBuilder = new QueryBuilder<TValue>(_serializationInfoHelper);
+            var elementQueryBuilder = new QueryBuilder<TValue>(_serializationConfig, _serializationInfoHelper);
             var elementQuery = elementQueryBuilderFunction(elementQueryBuilder);
             _updateBuilder = _updateBuilder.Pull(serializationInfo.ElementName, elementQuery);
             return this;
@@ -1947,12 +1958,13 @@ namespace MongoDB.Driver
         /// <summary>
         /// Serializes the result of the builder to a BsonWriter.
         /// </summary>
+        /// <param name="serializationConfig">The serialization config.</param>
         /// <param name="bsonWriter">The writer.</param>
         /// <param name="nominalType">The nominal type.</param>
         /// <param name="options">The serialization options.</param>
-        protected override void Serialize(BsonWriter bsonWriter, Type nominalType, IBsonSerializationOptions options)
+        protected override void Serialize(SerializationConfig serializationConfig, BsonWriter bsonWriter, Type nominalType, IBsonSerializationOptions options)
         {
-            ((IBsonSerializable)_updateBuilder).Serialize(bsonWriter, nominalType, options);
+            ((IBsonSerializable)_updateBuilder).Serialize(serializationConfig, bsonWriter, nominalType, options);
         }
     }
 }

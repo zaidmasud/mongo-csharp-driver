@@ -33,7 +33,9 @@ namespace MongoDB.Driver.Linq
     public class SelectQuery : TranslatedQuery
     {
         // private fields
+        private readonly SerializationConfig _serializationConfig;
         private readonly BsonSerializationInfoHelper _serializationInfoHelper;
+
         private LambdaExpression _where;
         private Type _ofType;
         private List<OrderByClause> _orderBy;
@@ -53,7 +55,8 @@ namespace MongoDB.Driver.Linq
         public SelectQuery(MongoCollection collection, Type documentType)
             : base(collection, documentType)
         {
-            _serializationInfoHelper = new BsonSerializationInfoHelper();
+            _serializationConfig = collection.Database.Server.Settings.SerializationConfig;
+            _serializationInfoHelper = new BsonSerializationInfoHelper(_serializationConfig);
         }
 
         // public properties
@@ -119,7 +122,7 @@ namespace MongoDB.Driver.Linq
 
             // TODO: check lambda for proper type
 
-            var predicateTranslator = new PredicateTranslator(_serializationInfoHelper);
+            var predicateTranslator = new PredicateTranslator(_serializationConfig, _serializationInfoHelper);
             var body = _where.Body;
             return predicateTranslator.BuildQuery(body);
         }
@@ -330,7 +333,7 @@ namespace MongoDB.Driver.Linq
 
             var deserializationProjectorGenericDefinition = typeof(DeserializationProjector<>);
             var deserializationProjectorType = deserializationProjectorGenericDefinition.MakeGenericType(keyExpression.Type);
-            return Activator.CreateInstance(deserializationProjectorType, source, serializationInfo);
+            return Activator.CreateInstance(deserializationProjectorType, _serializationConfig, source, serializationInfo);
         }
 
         private void SetElementSelector(MethodCallExpression methodCallExpression, Func<IEnumerable, object> elementSelector)
@@ -722,8 +725,8 @@ namespace MongoDB.Driver.Linq
                 throw new NotSupportedException("OfType after a projection is not supported.");
             }
 
-            var discriminatorConvention = SerializationConfig.Default.LookupDiscriminatorConvention(nominalType);
-            var discriminator = discriminatorConvention.GetDiscriminator(nominalType, actualType);
+            var discriminatorConvention = _serializationConfig.LookupDiscriminatorConvention(nominalType);
+            var discriminator = discriminatorConvention.GetDiscriminator(_serializationConfig, nominalType, actualType);
             if (discriminator == null)
             {
                 return; // nothing to do

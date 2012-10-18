@@ -23,36 +23,35 @@ namespace MongoDB.Bson.Serialization
     public abstract class BsonDocumentBackedClass
     {
         // private fields
-        private readonly BsonDocument _backingDocument;
+        private readonly SerializationConfig _serializationConfig;
         private readonly IBsonDocumentSerializer _serializer;
+        private readonly BsonDocument _backingDocument;
 
         // constructors
         /// <summary>
         /// Initializes a new instance of the <see cref="BsonDocumentBackedClass"/> class.
         /// </summary>
+        /// <param name="serializationConfig">The serialization config.</param>
         /// <param name="serializer">The serializer.</param>
-        protected BsonDocumentBackedClass(IBsonDocumentSerializer serializer)
-            : this(new BsonDocument(), serializer)
-        { }
-
-        /// <summary>
-        /// Initializes a new instance of the <see cref="BsonDocumentBackedClass"/> class.
-        /// </summary>
         /// <param name="backingDocument">The backing document.</param>
-        /// <param name="serializer">The serializer.</param>
-        protected BsonDocumentBackedClass(BsonDocument backingDocument, IBsonDocumentSerializer serializer)
+        protected BsonDocumentBackedClass(SerializationConfig serializationConfig, IBsonDocumentSerializer serializer, BsonDocument backingDocument)
         {
-            if (backingDocument == null)
+            if (serializationConfig == null)
             {
-                throw new ArgumentNullException("backingDocument");
+                throw new ArgumentNullException("serializationConfig");
             }
             if (serializer == null)
             {
                 throw new ArgumentNullException("serializer");
             }
+            if (backingDocument == null)
+            {
+                throw new ArgumentNullException("backingDocument");
+            }
 
-            _backingDocument = backingDocument;
+            _serializationConfig = serializationConfig;
             _serializer = serializer;
+            _backingDocument = backingDocument;
         }
 
         // protected internal properties
@@ -74,7 +73,7 @@ namespace MongoDB.Bson.Serialization
         /// <returns>The value.</returns>
         protected T GetValue<T>(string memberName, T defaultValue)
         {
-            var info = _serializer.GetMemberSerializationInfo(memberName);
+            var info = _serializer.GetMemberSerializationInfo(_serializationConfig, memberName);
 
             BsonValue bsonValue;
             if (!_backingDocument.TryGetValue(info.ElementName, out bsonValue))
@@ -92,7 +91,7 @@ namespace MongoDB.Bson.Serialization
         /// <param name="value">The value.</param>
         protected void SetValue(string memberName, object value)
         {
-            var info = _serializer.GetMemberSerializationInfo(memberName);
+            var info = _serializer.GetMemberSerializationInfo(_serializationConfig, memberName);
             var bsonValue = info.SerializeValue(value);
             _backingDocument.Set(info.ElementName, bsonValue);
         }

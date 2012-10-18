@@ -27,9 +27,10 @@ namespace MongoDB.Bson.Serialization
         /// <summary>
         /// Apply an attribute to these serialization options and modify the options accordingly.
         /// </summary>
+        /// <param name="serializationConfig">The serialization config.</param>
         /// <param name="serializer">The serializer that these serialization options are for.</param>
         /// <param name="attribute">The serialization options attribute.</param>
-        void ApplyAttribute(IBsonSerializer serializer, Attribute attribute);
+        void ApplyAttribute(SerializationConfig serializationConfig, IBsonSerializer serializer, Attribute attribute);
         /// <summary>
         /// Clones the serialization options.
         /// </summary>

@@ -22,6 +22,7 @@ using System.Text;
 using MongoDB.Bson;
 using MongoDB.Driver.Linq;
 using MongoDB.Driver.Linq.Utils;
+using MongoDB.Bson.Serialization;
 
 namespace MongoDB.Driver
 {
@@ -1207,6 +1208,7 @@ namespace MongoDB.Driver
     public class QueryBuilder<TDocument>
     {
         // private fields
+        private readonly SerializationConfig _serializationConfig;
         private readonly BsonSerializationInfoHelper _serializationInfoHelper;
         private readonly PredicateTranslator _predicateTranslator;
 
@@ -1215,17 +1217,26 @@ namespace MongoDB.Driver
         /// Initializes a new instance of the <see cref="QueryBuilder&lt;TDocument&gt;"/> class.
         /// </summary>
         public QueryBuilder()
-            : this(new BsonSerializationInfoHelper())
+            : this(SerializationConfig.Default)
         { }
 
         /// <summary>
         /// Initializes a new instance of the <see cref="QueryBuilder&lt;TDocument&gt;"/> class.
         /// </summary>
+        public QueryBuilder(SerializationConfig serializationConfig)
+            : this(serializationConfig, new BsonSerializationInfoHelper(serializationConfig))
+        { }
+
+        /// <summary>
+        /// Initializes a new instance of the <see cref="QueryBuilder&lt;TDocument&gt;"/> class.
+        /// </summary>
+        /// <param name="serializationConfig">The serialization config.</param>
         /// <param name="serializationInfoHelper">The serialization info helper.</param>
-        internal QueryBuilder(BsonSerializationInfoHelper serializationInfoHelper)
+        internal QueryBuilder(SerializationConfig serializationConfig, BsonSerializationInfoHelper serializationInfoHelper)
         {
+            _serializationConfig = serializationConfig;
             _serializationInfoHelper = serializationInfoHelper;
-            _predicateTranslator = new PredicateTranslator(_serializationInfoHelper);
+            _predicateTranslator = new PredicateTranslator(serializationConfig, _serializationInfoHelper);
         }
 
         // public methods
@@ -1293,7 +1304,7 @@ namespace MongoDB.Driver
 
             var serializationInfo = _serializationInfoHelper.GetSerializationInfo(memberExpression);
             var itemSerializationInfo = _serializationInfoHelper.GetItemSerializationInfo("ElemMatch", serializationInfo);
-            var elementQueryBuilder = new QueryBuilder<TValue>(_serializationInfoHelper);
+            var elementQueryBuilder = new QueryBuilder<TValue>(_serializationConfig, _serializationInfoHelper);
             var elementQuery = elementQueryBuilderFunction(elementQueryBuilder);
             return Query.ElemMatch(serializationInfo.ElementName, elementQuery);
         }

@@ -21,6 +21,7 @@ using System.Text.RegularExpressions;
 using System.Xml;
 
 using MongoDB.Bson;
+using MongoDB.Bson.Serialization;
 
 namespace MongoDB.Driver
 {
@@ -39,7 +40,11 @@ namespace MongoDB.Driver
         /// <summary>
         /// Initializes a new instance of the ValidateCollectionResult class.
         /// </summary>
-        public ValidateCollectionResult()
+        /// <param name="serializationConfig">The serialization config.</param>
+        /// <param name="command">The command.</param>
+        /// <param name="response">The response.</param>
+        public ValidateCollectionResult(SerializationConfig serializationConfig, IMongoCommand command, BsonDocument response)
+            : base(serializationConfig, command, response)
         {
         }
 

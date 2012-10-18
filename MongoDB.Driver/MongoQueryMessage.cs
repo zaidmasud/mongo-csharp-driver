@@ -37,6 +37,7 @@ namespace MongoDB.Driver
 
         // constructors
         internal MongoQueryMessage(
+            SerializationConfig serializationConfig,
             BsonBinaryWriterSettings writerSettings,
             string collectionFullName,
             QueryFlags flags,
@@ -44,11 +45,12 @@ namespace MongoDB.Driver
             int numberToReturn,
             IMongoQuery query,
             IMongoFields fields)
-            : this(null, writerSettings, collectionFullName, flags, numberToSkip, numberToReturn, query, fields)
+            : this(serializationConfig, null, writerSettings, collectionFullName, flags, numberToSkip, numberToReturn, query, fields)
         {
         }
 
         internal MongoQueryMessage(
+            SerializationConfig serializationConfig,
             BsonBuffer buffer,
             BsonBinaryWriterSettings writerSettings,
             string collectionFullName,
@@ -57,7 +59,7 @@ namespace MongoDB.Driver
             int numberToReturn,
             IMongoQuery query,
             IMongoFields fields)
-            : base(MessageOpcode.Query, buffer, writerSettings)
+            : base(MessageOpcode.Query, serializationConfig, buffer, writerSettings)
         {
             _collectionFullName = collectionFullName;
             _flags = flags;
@@ -84,11 +86,11 @@ namespace MongoDB.Driver
                 }
                 else
                 {
-                    SerializationConfig.Default.Serialize(bsonWriter, _query.GetType(), _query, DocumentSerializationOptions.SerializeIdFirstInstance);
+                    SerializationConfig.Serialize(bsonWriter, _query.GetType(), _query, DocumentSerializationOptions.SerializeIdFirstInstance);
                 }
                 if (_fields != null)
                 {
-                    SerializationConfig.Default.Serialize(bsonWriter, _fields);
+                    SerializationConfig.Serialize(bsonWriter, _fields);
                 }
             }
         }

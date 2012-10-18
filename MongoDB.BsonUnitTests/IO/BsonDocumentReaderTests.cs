@@ -22,6 +22,7 @@ using NUnit.Framework;
 using MongoDB.Bson;
 using MongoDB.Bson.IO;
 using MongoDB.Bson.Serialization.Serializers;
+using MongoDB.Bson.Serialization;
 
 namespace MongoDB.BsonUnitTests.IO
 {
@@ -34,7 +35,7 @@ namespace MongoDB.BsonUnitTests.IO
             BsonDocument document = new BsonDocument();
             using (var bsonReader = BsonReader.Create(document))
             {
-                var rehydrated = (BsonDocument)BsonDocumentSerializer.Instance.Deserialize(bsonReader, typeof(BsonDocument), null);
+                var rehydrated = (BsonDocument)BsonDocumentSerializer.Instance.Deserialize(SerializationConfig.Default, bsonReader, typeof(BsonDocument), null);
                 Assert.IsTrue(document.Equals(rehydrated));
             }
         }
@@ -45,7 +46,7 @@ namespace MongoDB.BsonUnitTests.IO
             BsonDocument document = new BsonDocument() { { "abc", "xyz" } };
             using (var bsonReader = BsonReader.Create(document))
             {
-                var rehydrated = (BsonDocument)BsonDocumentSerializer.Instance.Deserialize(bsonReader, typeof(BsonDocument), null);
+                var rehydrated = (BsonDocument)BsonDocumentSerializer.Instance.Deserialize(SerializationConfig.Default, bsonReader, typeof(BsonDocument), null);
                 Assert.IsTrue(document.Equals(rehydrated));
             }
         }
@@ -59,7 +60,7 @@ namespace MongoDB.BsonUnitTests.IO
             };
             using (var bsonReader = BsonReader.Create(document))
             {
-                var rehydrated = (BsonDocument)BsonDocumentSerializer.Instance.Deserialize(bsonReader, typeof(BsonDocument), null);
+                var rehydrated = (BsonDocument)BsonDocumentSerializer.Instance.Deserialize(SerializationConfig.Default, bsonReader, typeof(BsonDocument), null);
                 Assert.IsTrue(document.Equals(rehydrated));
             }
         }
@@ -73,7 +74,7 @@ namespace MongoDB.BsonUnitTests.IO
             };
             using (var bsonReader = BsonReader.Create(document))
             {
-                var rehydrated = (BsonDocument)BsonDocumentSerializer.Instance.Deserialize(bsonReader, typeof(BsonDocument), null);
+                var rehydrated = (BsonDocument)BsonDocumentSerializer.Instance.Deserialize(SerializationConfig.Default, bsonReader, typeof(BsonDocument), null);
                 Assert.IsTrue(document.Equals(rehydrated));
             }
         }
@@ -88,7 +89,7 @@ namespace MongoDB.BsonUnitTests.IO
             };
             using (var bsonReader = BsonReader.Create(document))
             {
-                var rehydrated = (BsonDocument)BsonDocumentSerializer.Instance.Deserialize(bsonReader, typeof(BsonDocument), null);
+                var rehydrated = (BsonDocument)BsonDocumentSerializer.Instance.Deserialize(SerializationConfig.Default, bsonReader, typeof(BsonDocument), null);
                 Assert.IsTrue(document.Equals(rehydrated));
             }
         }
@@ -102,7 +103,7 @@ namespace MongoDB.BsonUnitTests.IO
             };
             using (var bsonReader = BsonReader.Create(document))
             {
-                var rehydrated = (BsonDocument)BsonDocumentSerializer.Instance.Deserialize(bsonReader, typeof(BsonDocument), null);
+                var rehydrated = (BsonDocument)BsonDocumentSerializer.Instance.Deserialize(SerializationConfig.Default, bsonReader, typeof(BsonDocument), null);
                 Assert.IsTrue(document.Equals(rehydrated));
             }
         }
@@ -116,7 +117,7 @@ namespace MongoDB.BsonUnitTests.IO
             };
             using (var bsonReader = BsonReader.Create(document))
             {
-                var rehydrated = (BsonDocument)BsonDocumentSerializer.Instance.Deserialize(bsonReader, typeof(BsonDocument), null);
+                var rehydrated = (BsonDocument)BsonDocumentSerializer.Instance.Deserialize(SerializationConfig.Default, bsonReader, typeof(BsonDocument), null);
                 Assert.IsTrue(document.Equals(rehydrated));
             }
         }
@@ -130,7 +131,7 @@ namespace MongoDB.BsonUnitTests.IO
             };
             using (var bsonReader = BsonReader.Create(document))
             {
-                var rehydrated = (BsonDocument)BsonDocumentSerializer.Instance.Deserialize(bsonReader, typeof(BsonDocument), null);
+                var rehydrated = (BsonDocument)BsonDocumentSerializer.Instance.Deserialize(SerializationConfig.Default, bsonReader, typeof(BsonDocument), null);
                 Assert.IsTrue(document.Equals(rehydrated));
             }
         }
@@ -144,7 +145,7 @@ namespace MongoDB.BsonUnitTests.IO
             };
             using (var bsonReader = BsonReader.Create(document))
             {
-                var rehydrated = (BsonDocument)BsonDocumentSerializer.Instance.Deserialize(bsonReader, typeof(BsonDocument), null);
+                var rehydrated = (BsonDocument)BsonDocumentSerializer.Instance.Deserialize(SerializationConfig.Default, bsonReader, typeof(BsonDocument), null);
                 Assert.IsTrue(document.Equals(rehydrated));
             }
         }
@@ -158,7 +159,7 @@ namespace MongoDB.BsonUnitTests.IO
             };
             using (var bsonReader = BsonReader.Create(document))
             {
-                var rehydrated = (BsonDocument)BsonDocumentSerializer.Instance.Deserialize(bsonReader, typeof(BsonDocument), null);
+                var rehydrated = (BsonDocument)BsonDocumentSerializer.Instance.Deserialize(SerializationConfig.Default, bsonReader, typeof(BsonDocument), null);
                 Assert.IsTrue(document.Equals(rehydrated));
             }
         }
@@ -172,7 +173,7 @@ namespace MongoDB.BsonUnitTests.IO
             };
             using (var bsonReader = BsonReader.Create(document))
             {
-                var rehydrated = (BsonDocument)BsonDocumentSerializer.Instance.Deserialize(bsonReader, typeof(BsonDocument), null);
+                var rehydrated = (BsonDocument)BsonDocumentSerializer.Instance.Deserialize(SerializationConfig.Default, bsonReader, typeof(BsonDocument), null);
                 Assert.IsTrue(document.Equals(rehydrated));
             }
         }
@@ -186,7 +187,7 @@ namespace MongoDB.BsonUnitTests.IO
             };
             using (var bsonReader = BsonReader.Create(document))
             {
-                var rehydrated = (BsonDocument)BsonDocumentSerializer.Instance.Deserialize(bsonReader, typeof(BsonDocument), null);
+                var rehydrated = (BsonDocument)BsonDocumentSerializer.Instance.Deserialize(SerializationConfig.Default, bsonReader, typeof(BsonDocument), null);
                 Assert.IsTrue(document.Equals(rehydrated));
             }
         }
@@ -200,7 +201,7 @@ namespace MongoDB.BsonUnitTests.IO
             };
             using (var bsonReader = BsonReader.Create(document))
             {
-                var rehydrated = (BsonDocument)BsonDocumentSerializer.Instance.Deserialize(bsonReader, typeof(BsonDocument), null);
+                var rehydrated = (BsonDocument)BsonDocumentSerializer.Instance.Deserialize(SerializationConfig.Default, bsonReader, typeof(BsonDocument), null);
                 Assert.IsTrue(document.Equals(rehydrated));
             }
         }
@@ -214,7 +215,7 @@ namespace MongoDB.BsonUnitTests.IO
             };
             using (var bsonReader = BsonReader.Create(document))
             {
-                var rehydrated = (BsonDocument)BsonDocumentSerializer.Instance.Deserialize(bsonReader, typeof(BsonDocument), null);
+                var rehydrated = (BsonDocument)BsonDocumentSerializer.Instance.Deserialize(SerializationConfig.Default, bsonReader, typeof(BsonDocument), null);
                 Assert.IsTrue(document.Equals(rehydrated));
             }
         }

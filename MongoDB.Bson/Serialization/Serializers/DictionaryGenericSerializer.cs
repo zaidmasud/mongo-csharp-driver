@@ -38,22 +38,24 @@ namespace MongoDB.Bson.Serialization.Serializers
         /// <summary>
         /// Initializes a new instance of the DictionarySerializer class.
         /// </summary>
-        public DictionarySerializer(SerializationConfig serializationConfig)
-            : base(serializationConfig, DictionarySerializationOptions.Defaults)
+        public DictionarySerializer()
+            : base(DictionarySerializationOptions.Defaults)
         {
-            _keyValuePairSerializer = new KeyValuePairSerializer<TKey, TValue>(SerializationConfig);
+            _keyValuePairSerializer = new KeyValuePairSerializer<TKey, TValue>();
         }
 
         // public methods
         /// <summary>
         /// Deserializes an object from a BsonReader.
         /// </summary>
+        /// <param name="serializationConfig">The serialization config.</param>
         /// <param name="bsonReader">The BsonReader.</param>
         /// <param name="nominalType">The nominal type of the object.</param>
         /// <param name="actualType">The actual type of the object.</param>
         /// <param name="options">The serialization options.</param>
         /// <returns>An object.</returns>
         public override object Deserialize(
+            SerializationConfig serializationConfig,
             BsonReader bsonReader,
             Type nominalType,
             Type actualType,
@@ -76,21 +78,21 @@ namespace MongoDB.Bson.Serialization.Serializers
                     bsonReader.ReadStartDocument();
                     bsonReader.ReadString("_t"); // skip over discriminator
                     bsonReader.ReadName("_v");
-                    var value = Deserialize(bsonReader, actualType, options); // recursive call replacing nominalType with actualType
+                    var value = Deserialize(serializationConfig, bsonReader, actualType, options); // recursive call replacing nominalType with actualType
                     bsonReader.ReadEndDocument();
                     return value;
                 }
 
                 var dictionary = CreateInstance(actualType);
-                var valueDiscriminatorConvention = SerializationConfig.LookupDiscriminatorConvention(typeof(TValue));
+                var valueDiscriminatorConvention = serializationConfig.LookupDiscriminatorConvention(typeof(TValue));
 
                 bsonReader.ReadStartDocument();
                 while (bsonReader.ReadBsonType() != BsonType.EndOfDocument)
                 {
                     var key = (TKey)(object)bsonReader.ReadName();
-                    var valueType = valueDiscriminatorConvention.GetActualType(bsonReader, typeof(TValue));
-                    var valueSerializer = SerializationConfig.LookupSerializer(valueType);
-                    var value = (TValue)valueSerializer.Deserialize(bsonReader, typeof(TValue), valueType, keyValuePairSerializationOptions.ValueSerializationOptions);
+                    var valueType = valueDiscriminatorConvention.GetActualType(serializationConfig, bsonReader, typeof(TValue));
+                    var valueSerializer = serializationConfig.LookupSerializer(valueType);
+                    var value = (TValue)valueSerializer.Deserialize(serializationConfig, bsonReader, typeof(TValue), valueType, keyValuePairSerializationOptions.ValueSerializationOptions);
                     dictionary.Add(key, value);
                 }
                 bsonReader.ReadEndDocument();
@@ -105,6 +107,7 @@ namespace MongoDB.Bson.Serialization.Serializers
                 while (bsonReader.ReadBsonType() != BsonType.EndOfDocument)
                 {
                     var keyValuePair = (KeyValuePair<TKey, TValue>)_keyValuePairSerializer.Deserialize(
+                        serializationConfig,
                         bsonReader,
                         typeof(KeyValuePair<TKey, TValue>),
                         keyValuePairSerializationOptions);
@@ -124,11 +127,13 @@ namespace MongoDB.Bson.Serialization.Serializers
         /// <summary>
         /// Serializes an object to a BsonWriter.
         /// </summary>
+        /// <param name="serializationConfig">The serialization config.</param>
         /// <param name="bsonWriter">The BsonWriter.</param>
         /// <param name="nominalType">The nominal type.</param>
         /// <param name="value">The object.</param>
         /// <param name="options">The serialization options.</param>
         public override void Serialize(
+            SerializationConfig serializationConfig,
             BsonWriter bsonWriter,
             Type nominalType,
             object value,
@@ -146,7 +151,7 @@ namespace MongoDB.Bson.Serialization.Serializers
                     bsonWriter.WriteStartDocument();
                     bsonWriter.WriteString("_t", TypeNameDiscriminator.GetDiscriminator(actualType));
                     bsonWriter.WriteName("_v");
-                    Serialize(bsonWriter, actualType, value, options); // recursive call replacing nominalType with actualType
+                    Serialize(serializationConfig, bsonWriter, actualType, value, options); // recursive call replacing nominalType with actualType
                     bsonWriter.WriteEndDocument();
                     return;
                 }
@@ -184,7 +189,7 @@ namespace MongoDB.Bson.Serialization.Serializers
                         foreach (var keyValuePair in dictionary)
                         {
                             bsonWriter.WriteName((string)(object)keyValuePair.Key);
-                            SerializationConfig.Serialize(bsonWriter, typeof(TValue), keyValuePair.Value, keyValuePairSerializationOptions.ValueSerializationOptions);
+                            serializationConfig.Serialize(bsonWriter, typeof(TValue), keyValuePair.Value, keyValuePairSerializationOptions.ValueSerializationOptions);
                         }
                         bsonWriter.WriteEndDocument();
                         break;
@@ -205,6 +210,7 @@ namespace MongoDB.Bson.Serialization.Serializers
                         foreach (var keyValuePair in dictionary)
                         {
                             _keyValuePairSerializer.Serialize(
+                                serializationConfig,
                                 bsonWriter,
                                 typeof(KeyValuePair<TKey, TValue>),
                                 keyValuePair,

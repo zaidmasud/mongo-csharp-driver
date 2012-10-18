@@ -30,14 +30,14 @@ namespace MongoDB.Bson.Serialization.Serializers
     public class BsonDocumentSerializer : BsonBaseSerializer, IBsonIdProvider
     {
         // private static fields
-        private static BsonDocumentSerializer __instance = new BsonDocumentSerializer(SerializationConfig.Default);
+        private static BsonDocumentSerializer __instance = new BsonDocumentSerializer();
 
         // constructors
         /// <summary>
         /// Initializes a new instance of the BsonDocumentSerializer class.
         /// </summary>
-        public BsonDocumentSerializer(SerializationConfig serializationConfig)
-            : base(serializationConfig, new DocumentSerializationOptions())
+        public BsonDocumentSerializer()
+            : base(new DocumentSerializationOptions())
         {
         }
 
@@ -45,7 +45,6 @@ namespace MongoDB.Bson.Serialization.Serializers
         /// <summary>
         /// Gets an instance of the BsonDocumentSerializer class.
         /// </summary>
-        [Obsolete]
         public static BsonDocumentSerializer Instance
         {
             get { return __instance; }
@@ -55,12 +54,14 @@ namespace MongoDB.Bson.Serialization.Serializers
         /// <summary>
         /// Deserializes an object from a BsonReader.
         /// </summary>
+        /// <param name="serializationConfig">The serialization config.</param>
         /// <param name="bsonReader">The BsonReader.</param>
         /// <param name="nominalType">The nominal type of the object.</param>
         /// <param name="actualType">The actual type of the object.</param>
         /// <param name="options">The serialization options.</param>
         /// <returns>An object.</returns>
         public override object Deserialize(
+            SerializationConfig serializationConfig,
             BsonReader bsonReader,
             Type nominalType,
             Type actualType,
@@ -85,11 +86,10 @@ namespace MongoDB.Bson.Serialization.Serializers
 
                     bsonReader.ReadStartDocument();
                     var document = new BsonDocument(documentSerializationOptions.AllowDuplicateNames);
-                    var bsonValueSerializer = SerializationConfig.LookupSerializer(typeof(BsonValue));
                     while (bsonReader.ReadBsonType() != BsonType.EndOfDocument)
                     {
                         var name = bsonReader.ReadName();
-                        var value = (BsonValue)bsonValueSerializer.Deserialize(bsonReader, typeof(BsonValue), options);
+                        var value = (BsonValue)BsonValueSerializer.Instance.Deserialize(serializationConfig, bsonReader, typeof(BsonValue), options);
                         document.Add(name, value);
                     }
                     bsonReader.ReadEndDocument();
@@ -104,12 +104,14 @@ namespace MongoDB.Bson.Serialization.Serializers
         /// <summary>
         /// Gets the document Id.
         /// </summary>
+        /// <param name="serializationConfig">The serialization config.</param>
         /// <param name="document">The document.</param>
         /// <param name="id">The Id.</param>
         /// <param name="idNominalType">The nominal type of the Id.</param>
         /// <param name="idGenerator">The IdGenerator for the Id type.</param>
         /// <returns>True if the document has an Id.</returns>
         public bool GetDocumentId(
+            SerializationConfig serializationConfig,
             object document,
             out object id,
             out Type idNominalType,
@@ -121,7 +123,7 @@ namespace MongoDB.Bson.Serialization.Serializers
             if (bsonDocument.TryGetElement("_id", out idElement))
             {
                 id = idElement.Value;
-                idGenerator = SerializationConfig.LookupIdGenerator(id.GetType());
+                idGenerator = serializationConfig.LookupIdGenerator(id.GetType());
 
                 if (idGenerator == null)
                 {
@@ -145,11 +147,13 @@ namespace MongoDB.Bson.Serialization.Serializers
         /// <summary>
         /// Serializes an object to a BsonWriter.
         /// </summary>
+        /// <param name="serializationConfig">The serialization config.</param>
         /// <param name="bsonWriter">The BsonWriter.</param>
         /// <param name="nominalType">The nominal type.</param>
         /// <param name="value">The object.</param>
         /// <param name="options">The serialization options.</param>
         public override void Serialize(
+            SerializationConfig serializationConfig,
             BsonWriter bsonWriter,
             Type nominalType,
             object value,
@@ -164,7 +168,7 @@ namespace MongoDB.Bson.Serialization.Serializers
             var wrapper = value as BsonDocumentWrapper;
             if (wrapper != null)
             {
-                SerializationConfig.LookupSerializer(typeof(BsonDocumentWrapper)).Serialize(bsonWriter, nominalType, value, options);
+                serializationConfig.LookupSerializer(typeof(BsonDocumentWrapper)).Serialize(serializationConfig, bsonWriter, nominalType, value, options);
                 return;
             }
 
@@ -181,11 +185,10 @@ namespace MongoDB.Bson.Serialization.Serializers
 
             bsonWriter.WriteStartDocument();
             BsonElement idElement = null;
-            var bsonValueSerializer = SerializationConfig.LookupSerializer(typeof(BsonValue));
             if (documentSerializationOptions.SerializeIdFirst && bsonDocument.TryGetElement("_id", out idElement))
             {
                 bsonWriter.WriteName(idElement.Name);
-                bsonValueSerializer.Serialize(bsonWriter, typeof(BsonValue), idElement.Value, options);
+                BsonValueSerializer.Instance.Serialize(serializationConfig, bsonWriter, typeof(BsonValue), idElement.Value, options);
             }
 
             foreach (var element in bsonDocument)
@@ -194,7 +197,7 @@ namespace MongoDB.Bson.Serialization.Serializers
                 if (!object.ReferenceEquals(element, idElement))
                 {
                     bsonWriter.WriteName(element.Name);
-                    bsonValueSerializer.Serialize(bsonWriter, typeof(BsonValue), element.Value, options);
+                    BsonValueSerializer.Instance.Serialize(serializationConfig, bsonWriter, typeof(BsonValue), element.Value, options);
                 }
             }
 

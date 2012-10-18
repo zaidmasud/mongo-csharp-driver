@@ -65,9 +65,10 @@ namespace MongoDB.Bson.Serialization
         /// <summary>
         /// Apply an attribute to these serialization options and modify the options accordingly.
         /// </summary>
+        /// <param name="serializationConfig">The serialization config.</param>
         /// <param name="serializer">The serializer that these serialization options are for.</param>
         /// <param name="attribute">The serialization options attribute.</param>
-        public override void ApplyAttribute(IBsonSerializer serializer, Attribute attribute)
+        public override void ApplyAttribute(SerializationConfig serializationConfig, IBsonSerializer serializer, Attribute attribute)
         {
             EnsureNotFrozen();
             var arraySerializer = serializer as IBsonArraySerializer;
@@ -80,10 +81,10 @@ namespace MongoDB.Bson.Serialization
                 throw new NotSupportedException(message);
             }
 
-            var itemSerializer = arraySerializer.GetItemSerializationInfo().Serializer;
+            var itemSerializer = arraySerializer.GetItemSerializationInfo(serializationConfig).Serializer;
             if (_itemSerializationOptions == null)
             {
-                var itemDefaultSerializationOptions = itemSerializer.GetDefaultSerializationOptions();
+                var itemDefaultSerializationOptions = itemSerializer.GetDefaultSerializationOptions(serializationConfig);
 
                 // special case for legacy collections: allow BsonRepresentation on object
                 if (itemDefaultSerializationOptions == null &&
@@ -105,7 +106,7 @@ namespace MongoDB.Bson.Serialization
 
                 _itemSerializationOptions = itemDefaultSerializationOptions.Clone();
             }
-            _itemSerializationOptions.ApplyAttribute(itemSerializer, attribute);
+            _itemSerializationOptions.ApplyAttribute(serializationConfig, itemSerializer, attribute);
         }
 
         /// <summary>

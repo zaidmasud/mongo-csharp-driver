@@ -29,25 +29,39 @@ namespace MongoDB.Bson.Serialization.Serializers
     /// </summary>
     public class BsonBinaryDataSerializer : BsonBaseSerializer
     {
+        // private static fields
+        private static BsonBinaryDataSerializer __instance = new BsonBinaryDataSerializer();
+
         // constructors
         /// <summary>
         /// Initializes a new instance of the BsonBinaryDataSerializer class.
         /// </summary>
-        public BsonBinaryDataSerializer(SerializationConfig serializationConfig)
-            : base(serializationConfig, new RepresentationSerializationOptions(BsonType.Binary))
+        public BsonBinaryDataSerializer()
+            : base(new RepresentationSerializationOptions(BsonType.Binary))
         {
+        }
+
+        // public static properties
+        /// <summary>
+        /// Gets an instance of the BsonBinaryDataSerializer class.
+        /// </summary>
+        public static BsonBinaryDataSerializer Instance
+        {
+            get { return __instance; }
         }
 
         // public methods
         /// <summary>
         /// Deserializes an object from a BsonReader.
         /// </summary>
+        /// <param name="serializationConfig">The serialization config.</param>
         /// <param name="bsonReader">The BsonReader.</param>
         /// <param name="nominalType">The nominal type of the object.</param>
         /// <param name="actualType">The actual type of the object.</param>
         /// <param name="options">The serialization options.</param>
         /// <returns>An object.</returns>
         public override object Deserialize(
+            SerializationConfig serializationConfig,
             BsonReader bsonReader,
             Type nominalType,
             Type actualType,
@@ -69,11 +83,13 @@ namespace MongoDB.Bson.Serialization.Serializers
         /// <summary>
         /// Serializes an object to a BsonWriter.
         /// </summary>
+        /// <param name="serializationConfig">The serialization config.</param>
         /// <param name="bsonWriter">The BsonWriter.</param>
         /// <param name="nominalType">The nominal type.</param>
         /// <param name="value">The object.</param>
         /// <param name="options">The serialization options.</param>
         public override void Serialize(
+            SerializationConfig serializationConfig,
             BsonWriter bsonWriter,
             Type nominalType,
             object value,

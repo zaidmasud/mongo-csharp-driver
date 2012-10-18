@@ -34,11 +34,12 @@ namespace MongoDB.Driver
 
         // constructors
         internal MongoDeleteMessage(
+            SerializationConfig serializationConfig,
             BsonBinaryWriterSettings writerSettings,
             string collectionFullName,
             RemoveFlags flags,
             IMongoQuery query)
-            : base(MessageOpcode.Delete, null, writerSettings)
+            : base(MessageOpcode.Delete, serializationConfig, null, writerSettings)
         {
             _collectionFullName = collectionFullName;
             _flags = flags;
@@ -61,7 +62,7 @@ namespace MongoDB.Driver
                 }
                 else
                 {
-                    SerializationConfig.Default.Serialize(bsonWriter, _query.GetType(), _query, DocumentSerializationOptions.SerializeIdFirstInstance);
+                    SerializationConfig.Serialize(bsonWriter, _query.GetType(), _query, DocumentSerializationOptions.SerializeIdFirstInstance);
                 }
             }
         }

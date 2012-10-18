@@ -566,19 +566,19 @@ namespace MongoDB.Driver.GridFS
         }
 
         // explicit interface implementations
-        object IBsonSerializable.Deserialize(BsonReader bsonReader, Type nominalType, IBsonSerializationOptions options)
+        object IBsonSerializable.Deserialize(SerializationConfig serializationConfig, BsonReader bsonReader, Type nominalType, IBsonSerializationOptions options)
         {
             MongoGridFS gridFS = ((SerializationOptions)options).GridFS;
-            var fileInfo = (BsonDocument)SerializationConfig.Default.LookupSerializer(typeof(BsonDocument)).Deserialize(bsonReader, typeof(BsonDocument), null);
+            var fileInfo = (BsonDocument)BsonDocumentSerializer.Instance.Deserialize(serializationConfig, bsonReader, typeof(BsonDocument), null);
             return new MongoGridFSFileInfo(gridFS, fileInfo);
         }
 
-        bool IBsonSerializable.GetDocumentId(out object id, out Type idNominalType, out IIdGenerator idGenerator)
+        bool IBsonSerializable.GetDocumentId(SerializationConfig serializationConfig, out object id, out Type idNominalType, out IIdGenerator idGenerator)
         {
             throw new NotSupportedException();
         }
 
-        void IBsonSerializable.Serialize(BsonWriter bsonWriter, Type nominalType, IBsonSerializationOptions options)
+        void IBsonSerializable.Serialize(SerializationConfig serializationConfig, BsonWriter bsonWriter, Type nominalType, IBsonSerializationOptions options)
         {
             throw new NotSupportedException();
         }

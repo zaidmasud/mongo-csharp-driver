@@ -44,18 +44,17 @@ namespace MongoDB.Bson.Serialization.Serializers
         /// <summary>
         /// Initializes a new instance of the KeyValuePairSerializer class.
         /// </summary>
-        public KeyValuePairSerializer(SerializationConfig serializationConfig)
-            : base(serializationConfig, new KeyValuePairSerializationOptions { Representation = BsonType.Document })
+        public KeyValuePairSerializer()
+            : base(new KeyValuePairSerializationOptions { Representation = BsonType.Document })
         {
         }
 
         /// <summary>
         /// Initializes a new instance of the KeyValuePairSerializer class.
         /// </summary>
-        /// <param name="serializationConfig">The serialization config.</param>
         /// <param name="defaultSerializationOptions">The default serialization options for this serializer.</param>
-        public KeyValuePairSerializer(SerializationConfig serializationConfig, IBsonSerializationOptions defaultSerializationOptions)
-            : base(serializationConfig, defaultSerializationOptions)
+        public KeyValuePairSerializer(IBsonSerializationOptions defaultSerializationOptions)
+            : base(defaultSerializationOptions)
         {
         }
 
@@ -63,12 +62,14 @@ namespace MongoDB.Bson.Serialization.Serializers
         /// <summary>
         /// Deserializes an object from a BsonReader.
         /// </summary>
+        /// <param name="serializationConfig">The serialization config.</param>
         /// <param name="bsonReader">The BsonReader.</param>
         /// <param name="nominalType">The nominal type of the object.</param>
         /// <param name="actualType">The actual type of the object.</param>
         /// <param name="options">The serialization options.</param>
         /// <returns>An object.</returns>
         public override object Deserialize(
+            SerializationConfig serializationConfig,
             BsonReader bsonReader,
             Type nominalType,
             Type actualType,
@@ -77,8 +78,8 @@ namespace MongoDB.Bson.Serialization.Serializers
             VerifyTypes(nominalType, actualType, typeof(KeyValuePair<TKey, TValue>));
             var keyValuePairSerializationOptions = EnsureSerializationOptions<KeyValuePairSerializationOptions>(options);
 
-            var keyDiscriminatorConvention = GetKeyDiscriminatorConvention();
-            var valueDiscriminatorConvention = GetValueDiscriminatorConvention();
+            var keyDiscriminatorConvention = GetKeyDiscriminatorConvention(serializationConfig);
+            var valueDiscriminatorConvention = GetValueDiscriminatorConvention(serializationConfig);
             TKey key;
             TValue value;            
 
@@ -87,13 +88,13 @@ namespace MongoDB.Bson.Serialization.Serializers
             {
                 bsonReader.ReadStartArray();
                 bsonReader.ReadBsonType();
-                var keyType = keyDiscriminatorConvention.GetActualType(bsonReader, typeof(TKey));
-                var keySerializer = GetKeySerializer(keyType);
-                key = (TKey)keySerializer.Deserialize(bsonReader, typeof(TKey), keyType, keyValuePairSerializationOptions.KeySerializationOptions);
+                var keyType = keyDiscriminatorConvention.GetActualType(serializationConfig, bsonReader, typeof(TKey));
+                var keySerializer = GetKeySerializer(serializationConfig, keyType);
+                key = (TKey)keySerializer.Deserialize(serializationConfig, bsonReader, typeof(TKey), keyType, keyValuePairSerializationOptions.KeySerializationOptions);
                 bsonReader.ReadBsonType();
-                var valueType = valueDiscriminatorConvention.GetActualType(bsonReader, typeof(TValue));
-                var valueSerializer = GetValueSerializer(valueType);
-                value = (TValue)valueSerializer.Deserialize(bsonReader, typeof(TValue), valueType, keyValuePairSerializationOptions.ValueSerializationOptions);
+                var valueType = valueDiscriminatorConvention.GetActualType(serializationConfig, bsonReader, typeof(TValue));
+                var valueSerializer = GetValueSerializer(serializationConfig, valueType);
+                value = (TValue)valueSerializer.Deserialize(serializationConfig, bsonReader, typeof(TValue), valueType, keyValuePairSerializationOptions.ValueSerializationOptions);
                 bsonReader.ReadEndArray();
             }
             else if (bsonType == BsonType.Document)
@@ -111,16 +112,16 @@ namespace MongoDB.Bson.Serialization.Serializers
                     {
                         if (elementIsKey)
                         {
-                            var keyType = keyDiscriminatorConvention.GetActualType(bsonReader, typeof(TKey));
-                            var keySerializer = GetValueSerializer(keyType);
-                            key = (TKey)keySerializer.Deserialize(bsonReader, typeof(TKey), keyType, keyValuePairSerializationOptions.KeySerializationOptions);
+                            var keyType = keyDiscriminatorConvention.GetActualType(serializationConfig, bsonReader, typeof(TKey));
+                            var keySerializer = GetValueSerializer(serializationConfig, keyType);
+                            key = (TKey)keySerializer.Deserialize(serializationConfig, bsonReader, typeof(TKey), keyType, keyValuePairSerializationOptions.KeySerializationOptions);
                             keyFound = true;
                         }
                         else
                         {
-                            var valueType = valueDiscriminatorConvention.GetActualType(bsonReader, typeof(TValue));
-                            var valueSerializer = GetValueSerializer(valueType);
-                            value = (TValue)valueSerializer.Deserialize(bsonReader, typeof(TValue), valueType, keyValuePairSerializationOptions.ValueSerializationOptions);
+                            var valueType = valueDiscriminatorConvention.GetActualType(serializationConfig, bsonReader, typeof(TValue));
+                            var valueSerializer = GetValueSerializer(serializationConfig, valueType);
+                            value = (TValue)valueSerializer.Deserialize(serializationConfig, bsonReader, typeof(TValue), valueType, keyValuePairSerializationOptions.ValueSerializationOptions);
                             valueFound = true;
                         }
                     }
@@ -156,11 +157,13 @@ namespace MongoDB.Bson.Serialization.Serializers
         /// <summary>
         /// Serializes an object to a BsonWriter.
         /// </summary>
+        /// <param name="serializationConfig">The serialization config.</param>
         /// <param name="bsonWriter">The BsonWriter.</param>
         /// <param name="nominalType">The nominal type.</param>
         /// <param name="value">The object.</param>
         /// <param name="options">The serialization options.</param>
         public override void Serialize(
+            SerializationConfig serializationConfig,
             BsonWriter bsonWriter,
             Type nominalType,
             object value,
@@ -169,22 +172,22 @@ namespace MongoDB.Bson.Serialization.Serializers
             var keyValuePair = (KeyValuePair<TKey, TValue>)value;
             var keyValuePairSerializationOptions = EnsureSerializationOptions<KeyValuePairSerializationOptions>(options);
 
-            var keySerializer = GetKeySerializer(keyValuePair.Key.GetType());
-            var valueSerializer = GetValueSerializer(keyValuePair.Value.GetType());
+            var keySerializer = GetKeySerializer(serializationConfig, keyValuePair.Key.GetType());
+            var valueSerializer = GetValueSerializer(serializationConfig, keyValuePair.Value.GetType());
             switch (keyValuePairSerializationOptions.Representation)
             {
                 case BsonType.Array:
                     bsonWriter.WriteStartArray();
-                    keySerializer.Serialize(bsonWriter, typeof(TKey), keyValuePair.Key, keyValuePairSerializationOptions.KeySerializationOptions);
-                    valueSerializer.Serialize(bsonWriter, typeof(TValue), keyValuePair.Value, keyValuePairSerializationOptions.ValueSerializationOptions);
+                    keySerializer.Serialize(serializationConfig, bsonWriter, typeof(TKey), keyValuePair.Key, keyValuePairSerializationOptions.KeySerializationOptions);
+                    valueSerializer.Serialize(serializationConfig, bsonWriter, typeof(TValue), keyValuePair.Value, keyValuePairSerializationOptions.ValueSerializationOptions);
                     bsonWriter.WriteEndArray();
                     break;
                 case BsonType.Document:
                     bsonWriter.WriteStartDocument();
                     bsonWriter.WriteName("k");
-                    keySerializer.Serialize(bsonWriter, typeof(TKey), keyValuePair.Key, keyValuePairSerializationOptions.KeySerializationOptions);
+                    keySerializer.Serialize(serializationConfig, bsonWriter, typeof(TKey), keyValuePair.Key, keyValuePairSerializationOptions.KeySerializationOptions);
                     bsonWriter.WriteName("v");
-                    valueSerializer.Serialize(bsonWriter, typeof(TValue), keyValuePair.Value, keyValuePairSerializationOptions.ValueSerializationOptions);
+                    valueSerializer.Serialize(serializationConfig, bsonWriter, typeof(TValue), keyValuePair.Value, keyValuePairSerializationOptions.ValueSerializationOptions);
                     bsonWriter.WriteEndDocument();
                     break;
                 default:
@@ -214,14 +217,14 @@ namespace MongoDB.Bson.Serialization.Serializers
         /// Gets the discriminator convention for keys.
         /// </summary>
         /// <returns>The discriminator convention for the class.</returns>
-        private IDiscriminatorConvention GetKeyDiscriminatorConvention()
+        private IDiscriminatorConvention GetKeyDiscriminatorConvention(SerializationConfig serializationConfig)
         {
             // return a cached discriminator convention when possible
             var discriminatorConvention = _cachedKeyDiscriminatorConvention;
             if (discriminatorConvention == null)
             {
                 // it's possible but harmless for multiple threads to do the initial lookup at the same time
-                discriminatorConvention = SerializationConfig.LookupDiscriminatorConvention(typeof(TKey));
+                discriminatorConvention = serializationConfig.LookupDiscriminatorConvention(typeof(TKey));
                 _cachedKeyDiscriminatorConvention = discriminatorConvention;
             }
             return discriminatorConvention;
@@ -230,9 +233,10 @@ namespace MongoDB.Bson.Serialization.Serializers
         /// <summary>
         /// Gets the key serializer.
         /// </summary>
+        /// <param name="serializationConfig">The serialization config.</param>
         /// <param name="actualType">The actual type of the key.</param>
         /// <returns>The serializer for the key type.</returns>
-        private IBsonSerializer GetKeySerializer(Type actualType)
+        private IBsonSerializer GetKeySerializer(SerializationConfig serializationConfig, Type actualType)
         {
             // return a cached serializer when possible
             if (actualType == typeof(TKey))
@@ -241,14 +245,14 @@ namespace MongoDB.Bson.Serialization.Serializers
                 if (serializer == null)
                 {
                     // it's possible but harmless for multiple threads to do the initial lookup at the same time
-                    serializer = SerializationConfig.LookupSerializer(typeof(TKey));
+                    serializer = serializationConfig.LookupSerializer(typeof(TKey));
                     _cachedKeySerializer = serializer;
                 }
                 return serializer;
             }
             else
             {
-                return SerializationConfig.LookupSerializer(actualType);
+                return serializationConfig.LookupSerializer(actualType);
             }
         }
 
@@ -256,14 +260,14 @@ namespace MongoDB.Bson.Serialization.Serializers
         /// Gets the discriminator convention for values.
         /// </summary>
         /// <returns>The discriminator convention for the class.</returns>
-        private IDiscriminatorConvention GetValueDiscriminatorConvention()
+        private IDiscriminatorConvention GetValueDiscriminatorConvention(SerializationConfig serializationConfig)
         {
             // return a cached discriminator convention when possible
             var discriminatorConvention = _cachedValueDiscriminatorConvention;
             if (discriminatorConvention == null)
             {
                 // it's possible but harmless for multiple threads to do the initial lookup at the same time
-                discriminatorConvention = SerializationConfig.LookupDiscriminatorConvention(typeof(TValue));
+                discriminatorConvention = serializationConfig.LookupDiscriminatorConvention(typeof(TValue));
                 _cachedValueDiscriminatorConvention = discriminatorConvention;
             }
             return discriminatorConvention;
@@ -272,9 +276,10 @@ namespace MongoDB.Bson.Serialization.Serializers
         /// <summary>
         /// Gets the value serializer.
         /// </summary>
+        /// <param name="serializationConfig">The serialization config.</param>
         /// <param name="actualType">The actual type of the value.</param>
         /// <returns>The serializer for the value type.</returns>
-        private IBsonSerializer GetValueSerializer(Type actualType)
+        private IBsonSerializer GetValueSerializer(SerializationConfig serializationConfig, Type actualType)
         {
             // return a cached serializer when possible
             if (actualType == typeof(TValue))
@@ -283,14 +288,14 @@ namespace MongoDB.Bson.Serialization.Serializers
                 if (serializer == null)
                 {
                     // it's possible but harmless for multiple threads to do the initial lookup at the same time
-                    serializer = SerializationConfig.LookupSerializer(typeof(TValue));
+                    serializer = serializationConfig.LookupSerializer(typeof(TValue));
                     _cachedValueSerializer = serializer;
                 }
                 return serializer;
             }
             else
             {
-                return SerializationConfig.LookupSerializer(actualType);
+                return serializationConfig.LookupSerializer(actualType);
             }
         }
     }

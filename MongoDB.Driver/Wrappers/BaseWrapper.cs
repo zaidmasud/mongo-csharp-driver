@@ -58,11 +58,12 @@ namespace MongoDB.Driver
         /// <summary>
         /// Deserialize is an invalid operation for wrapper classes.
         /// </summary>
+        /// <param name="serializationConfig">The serialization config.</param>
         /// <param name="bsonReader">Not applicable.</param>
         /// <param name="nominalType">Not applicable.</param>
         /// <param name="options">Not applicable.</param>
         /// <returns>Not applicable.</returns>
-        object IBsonSerializable.Deserialize(BsonReader bsonReader, Type nominalType, IBsonSerializationOptions options)
+        object IBsonSerializable.Deserialize(SerializationConfig serializationConfig, BsonReader bsonReader, Type nominalType, IBsonSerializationOptions options)
         {
             var message = string.Format("Deserialize method cannot be called on a {0}.", this.GetType().Name);
             throw new NotSupportedException(message);
@@ -71,11 +72,12 @@ namespace MongoDB.Driver
         /// <summary>
         /// GetDocumentId is an invalid operation for wrapper classes.
         /// </summary>
+        /// <param name="serializationConfig">The serialization config.</param>
         /// <param name="id">Not applicable.</param>
         /// <param name="idNominalType">Not applicable.</param>
         /// <param name="idGenerator">Not applicable.</param>
         /// <returns>Not applicable.</returns>
-        bool IBsonSerializable.GetDocumentId(out object id, out Type idNominalType, out IIdGenerator idGenerator)
+        bool IBsonSerializable.GetDocumentId(SerializationConfig serializationConfig, out object id, out Type idNominalType, out IIdGenerator idGenerator)
         {
             var message = string.Format("GetDocumentId method cannot be called on a {0}.", this.GetType().Name);
             throw new NotSupportedException(message);
@@ -84,12 +86,13 @@ namespace MongoDB.Driver
         /// <summary>
         /// Serializes a wrapped object to a BsonWriter.
         /// </summary>
+        /// <param name="serializationConfig">The serialization config.</param>
         /// <param name="bsonWriter">The writer.</param>
         /// <param name="nominalType">The nominal type (ignored).</param>
         /// <param name="options">The serialization options.</param>
-        void IBsonSerializable.Serialize(BsonWriter bsonWriter, Type nominalType, IBsonSerializationOptions options)
+        void IBsonSerializable.Serialize(SerializationConfig serializationConfig, BsonWriter bsonWriter, Type nominalType, IBsonSerializationOptions options)
         {
-            SerializationConfig.Default.Serialize(bsonWriter, _nominalType, _obj, options); // use wrapped nominalType
+            serializationConfig.Serialize(bsonWriter, _nominalType, _obj, options); // use wrapped nominalType
         }
 
         /// <summary>

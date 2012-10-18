@@ -32,14 +32,16 @@ namespace MongoDB.Driver.Linq.Utils
     internal class BsonSerializationInfoFinder : ExpressionVisitor<BsonSerializationInfo>
     {
         // private fields
+        private readonly SerializationConfig _serializationConfig;
         private Dictionary<Expression, BsonSerializationInfo> _serializationInfoCache;
 
         // constructors
         /// <summary>
         /// Initializes a new instance of the BsonSerializationInfoFinder class.
         /// </summary>
-        private BsonSerializationInfoFinder(Dictionary<Expression, BsonSerializationInfo> serializationInfoCache)
+        private BsonSerializationInfoFinder(SerializationConfig serializationConfig, Dictionary<Expression, BsonSerializationInfo> serializationInfoCache)
         {
+            _serializationConfig = serializationConfig;
             _serializationInfoCache = serializationInfoCache ?? new Dictionary<Expression, BsonSerializationInfo>();
         }
 
@@ -47,12 +49,13 @@ namespace MongoDB.Driver.Linq.Utils
         /// <summary>
         /// Gets the serialization info for the node utilizing precalculated serialization information.
         /// </summary>
+        /// <param name="serializationConfig">The serialization config.</param>
         /// <param name="node">The expression.</param>
         /// <param name="serializationInfoCache">The serialization info cache.</param>
         /// <returns>BsonSerializationInfo for the expression.</returns>
-        public static BsonSerializationInfo GetSerializationInfo(Expression node, Dictionary<Expression, BsonSerializationInfo> serializationInfoCache)
+        public static BsonSerializationInfo GetSerializationInfo(SerializationConfig serializationConfig, Expression node, Dictionary<Expression, BsonSerializationInfo> serializationInfoCache)
         {
-            var finder = new BsonSerializationInfoFinder(serializationInfoCache);
+            var finder = new BsonSerializationInfoFinder(serializationConfig, serializationInfoCache);
             var serializationInfo = finder.Visit(node);
             if (serializationInfo == null)
             {
@@ -113,9 +116,10 @@ namespace MongoDB.Driver.Linq.Utils
             }
             var index = Convert.ToInt32(indexEpression.Value);
 
-            var itemSerializationInfo = arraySerializer.GetItemSerializationInfo();
+            var itemSerializationInfo = arraySerializer.GetItemSerializationInfo(_serializationConfig);
             itemSerializationInfo = new BsonSerializationInfo(
                 index.ToString(),
+                _serializationConfig,
                 itemSerializationInfo.Serializer,
                 itemSerializationInfo.NominalType,
                 itemSerializationInfo.SerializationOptions);
@@ -152,7 +156,7 @@ namespace MongoDB.Driver.Linq.Utils
                 return null;
             }
 
-            var memberSerializationInfo = documentSerializer.GetMemberSerializationInfo(node.Member.Name);
+            var memberSerializationInfo = documentSerializer.GetMemberSerializationInfo(_serializationConfig, node.Member.Name);
             return CombineSerializationInfo(serializationInfo, memberSerializationInfo);
         }
 
@@ -181,8 +185,8 @@ namespace MongoDB.Driver.Linq.Utils
         /// <returns>BsonSerializationInfo for the expression.</returns>
         protected override BsonSerializationInfo VisitParameter(ParameterExpression node)
         {
-            var serializer = SerializationConfig.Default.LookupSerializer(node.Type);
-            var serializationInfo = CreateSerializationInfo(node, serializer);
+            var serializer = _serializationConfig.LookupSerializer(node.Type);
+            var serializationInfo = CreateSerializationInfo(_serializationConfig, node, serializer);
             _serializationInfoCache.Add(node, serializationInfo);
             return serializationInfo;
         }
@@ -208,8 +212,8 @@ namespace MongoDB.Driver.Linq.Utils
             // if the target conversion type cannot be assigned from the operand, than we are downcasting and we need to get the more specific serializer
             if (!node.Type.IsAssignableFrom(node.Operand.Type))
             {
-                var conversionSerializer = SerializationConfig.Default.LookupSerializer(node.Type);
-                var conversionSerializationInfo = CreateSerializationInfo(node, conversionSerializer);
+                var conversionSerializer = _serializationConfig.LookupSerializer(node.Type);
+                var conversionSerializationInfo = CreateSerializationInfo(_serializationConfig, node, conversionSerializer);
                 return CombineSerializationInfo(serializationInfo, conversionSerializationInfo);
             }
 
@@ -244,9 +248,10 @@ namespace MongoDB.Driver.Linq.Utils
                 return null;
             }
 
-            var itemSerializationInfo = arraySerializer.GetItemSerializationInfo();
+            var itemSerializationInfo = arraySerializer.GetItemSerializationInfo(_serializationConfig);
             itemSerializationInfo = new BsonSerializationInfo(
                 index.ToString(),
+                _serializationConfig,
                 itemSerializationInfo.Serializer,
                 itemSerializationInfo.NominalType,
                 itemSerializationInfo.SerializationOptions);
@@ -274,9 +279,10 @@ namespace MongoDB.Driver.Linq.Utils
             }
 
             var index = (int)((ConstantExpression)node.Arguments[1]).Value;
-            var itemSerializationInfo = arraySerializer.GetItemSerializationInfo();
+            var itemSerializationInfo = arraySerializer.GetItemSerializationInfo(_serializationConfig);
             itemSerializationInfo = new BsonSerializationInfo(
                 index.ToString(),
+                _serializationConfig,
                 itemSerializationInfo.Serializer,
                 itemSerializationInfo.NominalType,
                 itemSerializationInfo.SerializationOptions);
@@ -302,18 +308,20 @@ namespace MongoDB.Driver.Linq.Utils
 
             return new BsonSerializationInfo(
                 elementName,
+                newInfo.SerializationConfig,
                 newInfo.Serializer,
                 newInfo.NominalType,
                 newInfo.SerializationOptions);
         }
 
-        private static BsonSerializationInfo CreateSerializationInfo(Expression node, IBsonSerializer serializer)
+        private static BsonSerializationInfo CreateSerializationInfo(SerializationConfig serializationConfig, Expression node, IBsonSerializer serializer)
         {
             return new BsonSerializationInfo(
                 null,
+                serializationConfig,
                 serializer,
                 node.Type,
-                serializer.GetDefaultSerializationOptions());
+                serializer.GetDefaultSerializationOptions(serializationConfig));
         }
     }
 }

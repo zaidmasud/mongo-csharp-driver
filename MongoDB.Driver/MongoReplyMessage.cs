@@ -37,8 +37,8 @@ namespace MongoDB.Driver
         private List<TDocument> _documents;
 
         // constructors
-        internal MongoReplyMessage(BsonBinaryReaderSettings readerSettings)
-            : base(MessageOpcode.Reply)
+        internal MongoReplyMessage(SerializationConfig serializationConfig, BsonBinaryReaderSettings readerSettings)
+            : base(MessageOpcode.Reply, serializationConfig)
         {
             _readerSettings = readerSettings;
         }
@@ -93,7 +93,7 @@ namespace MongoDB.Driver
                 }
                 if ((_responseFlags & ResponseFlags.QueryFailure) != 0)
                 {
-                    var document = (BsonDocument)SerializationConfig.Default.LookupSerializer(typeof(BsonDocument)).Deserialize(bsonReader, typeof(BsonDocument), null);
+                    var document = (BsonDocument)BsonDocumentSerializer.Instance.Deserialize(SerializationConfig, bsonReader, typeof(BsonDocument), null);
                     var err = document.GetValue("$err", "Unknown error.");
                     var message = string.Format("QueryFailure flag was {0} (response was {1}).", err, document.ToJson());
                     throw new MongoQueryException(message, document);
@@ -102,7 +102,7 @@ namespace MongoDB.Driver
                 _documents = new List<TDocument>(_numberReturned);
                 while (buffer.Position - messageStartPosition < MessageLength)
                 {
-                    var document = (TDocument)SerializationConfig.Default.Deserialize(bsonReader, typeof(TDocument), serializationOptions);
+                    var document = (TDocument)SerializationConfig.Deserialize(bsonReader, typeof(TDocument), serializationOptions);
                     _documents.Add(document);
                 }
             }

@@ -30,6 +30,7 @@ namespace MongoDB.Bson.Serialization
     {
         // private fields
         private string _elementName;
+        private SerializationConfig _serializationConfig;
         private IBsonSerializer _serializer;
         private Type _nominalType;
         private IBsonSerializationOptions _serializationOptions;
@@ -39,12 +40,14 @@ namespace MongoDB.Bson.Serialization
         /// Initializes a new instance of the BsonSerializationInfo class.
         /// </summary>
         /// <param name="elementName">The element name.</param>
+        /// <param name="serializationConfig">The serialization config.</param>
         /// <param name="serializer">The serializer.</param>
         /// <param name="nominalType">The nominal type.</param>
         /// <param name="serializationOptions">The serialization options.</param>
-        public BsonSerializationInfo(string elementName, IBsonSerializer serializer, Type nominalType, IBsonSerializationOptions serializationOptions)
+        public BsonSerializationInfo(string elementName, SerializationConfig serializationConfig, IBsonSerializer serializer, Type nominalType, IBsonSerializationOptions serializationOptions)
         {
             _elementName = elementName;
+            _serializationConfig = serializationConfig;
             _serializer = serializer;
             _nominalType = nominalType;
             _serializationOptions = serializationOptions;
@@ -57,6 +60,14 @@ namespace MongoDB.Bson.Serialization
         public string ElementName
         {
             get { return _elementName; }
+        }
+
+        /// <summary>
+        /// Gets the serialization config.
+        /// </summary>
+        public SerializationConfig SerializationConfig
+        {
+            get { return _serializationConfig; }
         }
 
         /// <summary>
@@ -95,7 +106,7 @@ namespace MongoDB.Bson.Serialization
             {
                 reader.ReadStartDocument();
                 reader.ReadName("value");
-                var deserializedValue = _serializer.Deserialize(reader, _nominalType, _serializationOptions);
+                var deserializedValue = _serializer.Deserialize(_serializationConfig, reader, _nominalType, _serializationOptions);
                 reader.ReadEndDocument();
                 return deserializedValue;
             }
@@ -149,9 +160,9 @@ namespace MongoDB.Bson.Serialization
             var actualType = (value == null) ? _nominalType : value.GetType();
             if (actualType != _nominalType)
             {
-                serializer = _serializer.SerializationConfig.LookupSerializer(actualType);
+                serializer = _serializationConfig.LookupSerializer(actualType);
             }
-            serializer.Serialize(bsonWriter, _nominalType, value, _serializationOptions);
+            serializer.Serialize(_serializationConfig, bsonWriter, _nominalType, value, _serializationOptions);
         }
     }
 }

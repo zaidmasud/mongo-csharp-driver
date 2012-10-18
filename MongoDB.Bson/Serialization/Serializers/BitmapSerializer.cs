@@ -37,7 +37,6 @@ namespace MongoDB.Bson.Serialization.Serializers
         /// Initializes a new instance of the BitmapSerializer class.
         /// </summary>
         public BitmapSerializer(SerializationConfig serializationConfig)
-            : base(serializationConfig)
         {
             serializationConfig.RegisterDiscriminator(typeof(Bitmap), "Bitmap");
         }
@@ -46,12 +45,14 @@ namespace MongoDB.Bson.Serialization.Serializers
         /// <summary>
         /// Deserializes an Bitmap from a BsonReader.
         /// </summary>
+        /// <param name="serializationConfig">The serialization config.</param>
         /// <param name="bsonReader">The BsonReader.</param>
         /// <param name="nominalType">The nominal type of the Bitmap.</param>
         /// <param name="actualType">The actual type of the Bitmap.</param>
         /// <param name="options">The serialization options.</param>
         /// <returns>A Bitmap.</returns>
         public override object Deserialize(
+            SerializationConfig serializationConfig,
             BsonReader bsonReader,
             Type nominalType,
             Type actualType,
@@ -100,11 +101,13 @@ namespace MongoDB.Bson.Serialization.Serializers
         /// <summary>
         /// Serializes a Bitmap to a BsonWriter.
         /// </summary>
+        /// <param name="serializationConfig">The serialization config.</param>
         /// <param name="bsonWriter">The BsonWriter.</param>
         /// <param name="nominalType">The nominal type.</param>
         /// <param name="value">The Bitmap.</param>
         /// <param name="options">The serialization options.</param>
         public override void Serialize(
+            SerializationConfig serializationConfig,
             BsonWriter bsonWriter,
             Type nominalType,
             object value,

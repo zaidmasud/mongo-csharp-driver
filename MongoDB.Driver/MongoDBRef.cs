@@ -196,26 +196,18 @@ namespace MongoDB.Driver
     /// </summary>
     public class MongoDBRefSerializer : BsonBaseSerializer, IBsonDocumentSerializer
     {
-        // constructors
-        /// <summary>
-        /// Initializes a new instance of the MongoDBRef class.
-        /// </summary>
-        /// <param name="serializationConfig">The serialization config.</param>
-        public MongoDBRefSerializer(SerializationConfig serializationConfig)
-            : base(serializationConfig)
-        {
-        }
-
         // public methods
         /// <summary>
         /// Deserializes an object from a BsonReader.
         /// </summary>
+        /// <param name="serializationConfig">The serialization config.</param>
         /// <param name="bsonReader">The BsonReader.</param>
         /// <param name="nominalType">The nominal type of the object.</param>
         /// <param name="actualType">The actual type of the object.</param>
         /// <param name="options">The serialization options.</param>
         /// <returns>An object.</returns>
         public override object Deserialize(
+            SerializationConfig serializationConfig,
             BsonReader bsonReader,
             Type nominalType,
             Type actualType,
@@ -245,7 +237,7 @@ namespace MongoDB.Driver
                             collectionName = bsonReader.ReadString();
                             break;
                         case "$id":
-                            id = (BsonValue)SerializationConfig.LookupSerializer(typeof(BsonValue)).Deserialize(bsonReader, typeof(BsonValue), null);
+                            id = (BsonValue)BsonValueSerializer.Instance.Deserialize(serializationConfig, bsonReader, typeof(BsonValue), null);
                             break;
                         case "$db":
                             databaseName = bsonReader.ReadString();
@@ -264,9 +256,10 @@ namespace MongoDB.Driver
         /// <summary>
         /// Gets the serialization info for a member.
         /// </summary>
+        /// <param name="serializationConfig">The serialization config.</param>
         /// <param name="memberName">The member name.</param>
         /// <returns>The serialization info for the member.</returns>
-        public BsonSerializationInfo GetMemberSerializationInfo(string memberName)
+        public BsonSerializationInfo GetMemberSerializationInfo(SerializationConfig serializationConfig, string memberName)
         {
             string elementName;
             IBsonSerializer serializer;
@@ -277,17 +270,17 @@ namespace MongoDB.Driver
             {
                 case "DatabaseName":
                     elementName = "$db";
-                    serializer = SerializationConfig.LookupSerializer(typeof(string));
+                    serializer = serializationConfig.LookupSerializer(typeof(string));
                     nominalType = typeof(string);
                     break;
                 case "CollectionName":
                     elementName = "$ref";
-                    serializer = SerializationConfig.LookupSerializer(typeof(string));
+                    serializer = serializationConfig.LookupSerializer(typeof(string));
                     nominalType = typeof(string);
                     break;
                 case "Id":
                     elementName = "$id";
-                    serializer = SerializationConfig.LookupSerializer(typeof(BsonDocument));
+                    serializer = BsonDocumentSerializer.Instance;
                     nominalType = typeof(BsonValue);
                     break;
                 default:
@@ -295,17 +288,19 @@ namespace MongoDB.Driver
                     throw new ArgumentOutOfRangeException("memberName", message);
             }
 
-            return new BsonSerializationInfo(elementName, serializer, nominalType, serializationOptions);
+            return new BsonSerializationInfo(elementName, serializationConfig, serializer, nominalType, serializationOptions);
         }
 
         /// <summary>
         /// Serializes an object to a BsonWriter.
         /// </summary>
+        /// <param name="serializationConfig">The serialization config.</param>
         /// <param name="bsonWriter">The BsonWriter.</param>
         /// <param name="nominalType">The nominal type.</param>
         /// <param name="value">The object.</param>
         /// <param name="options">The serialization options.</param>
         public override void Serialize(
+            SerializationConfig serializationConfig,
             BsonWriter bsonWriter,
             Type nominalType,
             object value,
@@ -322,7 +317,7 @@ namespace MongoDB.Driver
                 bsonWriter.WriteStartDocument();
                 bsonWriter.WriteString("$ref", dbRef.CollectionName);
                 bsonWriter.WriteName("$id");
-                SerializationConfig.LookupSerializer(typeof(BsonValue)).Serialize(bsonWriter, typeof(BsonValue), dbRef.Id, null);
+                BsonValueSerializer.Instance.Serialize(serializationConfig, bsonWriter, typeof(BsonValue), dbRef.Id, null);
                 if (dbRef.DatabaseName != null)
                 {
                     bsonWriter.WriteString("$db", dbRef.DatabaseName);

@@ -31,6 +31,9 @@ namespace MongoDB.Bson.Serialization.Serializers
     /// </summary>
     public class DictionarySerializer : BsonBaseSerializer
     {
+        // private static fields
+        private static DictionarySerializer __instance = new DictionarySerializer();
+
         // private fields
         private readonly KeyValuePairSerializer<object, object> _keyValuePairSerializer;
 
@@ -38,22 +41,33 @@ namespace MongoDB.Bson.Serialization.Serializers
         /// <summary>
         /// Initializes a new instance of the DictionarySerializer class.
         /// </summary>
-        public DictionarySerializer(SerializationConfig serializationConfig)
-            : base(serializationConfig, DictionarySerializationOptions.Defaults)
+        public DictionarySerializer()
+            : base(DictionarySerializationOptions.Defaults)
         {
-            _keyValuePairSerializer = new KeyValuePairSerializer<object, object>(SerializationConfig);
+            _keyValuePairSerializer = new KeyValuePairSerializer<object, object>();
+        }
+
+        // public static properties
+        /// <summary>
+        /// Gets an instance of the DictionarySerializer class.
+        /// </summary>
+        public static DictionarySerializer Instance
+        {
+            get { return __instance; }
         }
 
         // public methods
         /// <summary>
         /// Deserializes an object from a BsonReader.
         /// </summary>
+        /// <param name="serializationConfig">The serialization config.</param>
         /// <param name="bsonReader">The BsonReader.</param>
         /// <param name="nominalType">The nominal type of the object.</param>
         /// <param name="actualType">The actual type of the object.</param>
         /// <param name="options">The serialization options.</param>
         /// <returns>An object.</returns>
         public override object Deserialize(
+            SerializationConfig serializationConfig,
             BsonReader bsonReader,
             Type nominalType,
             Type actualType,
@@ -76,21 +90,21 @@ namespace MongoDB.Bson.Serialization.Serializers
                     bsonReader.ReadStartDocument();
                     bsonReader.ReadString("_t"); // skip over discriminator
                     bsonReader.ReadName("_v");
-                    var value = Deserialize(bsonReader, actualType, options); // recursive call replacing nominalType with actualType
+                    var value = Deserialize(serializationConfig, bsonReader, actualType, options); // recursive call replacing nominalType with actualType
                     bsonReader.ReadEndDocument();
                     return value;
                 }
 
                 var dictionary = CreateInstance(actualType);
-                var valueDiscriminatorConvention = SerializationConfig.LookupDiscriminatorConvention(typeof(object));
+                var valueDiscriminatorConvention = serializationConfig.LookupDiscriminatorConvention(typeof(object));
 
                 bsonReader.ReadStartDocument();
                 while (bsonReader.ReadBsonType() != BsonType.EndOfDocument)
                 {
                     var key = bsonReader.ReadName();
-                    var valueType = valueDiscriminatorConvention.GetActualType(bsonReader, typeof(object));
-                    var valueSerializer = SerializationConfig.LookupSerializer(valueType);
-                    var value = valueSerializer.Deserialize(bsonReader, typeof(object), valueType, keyValuePairSerializationOptions.ValueSerializationOptions);
+                    var valueType = valueDiscriminatorConvention.GetActualType(serializationConfig, bsonReader, typeof(object));
+                    var valueSerializer = serializationConfig.LookupSerializer(valueType);
+                    var value = valueSerializer.Deserialize(serializationConfig, bsonReader, typeof(object), valueType, keyValuePairSerializationOptions.ValueSerializationOptions);
                     dictionary.Add(key, value);
                 }
                 bsonReader.ReadEndDocument();
@@ -105,6 +119,7 @@ namespace MongoDB.Bson.Serialization.Serializers
                 while (bsonReader.ReadBsonType() != BsonType.EndOfDocument)
                 {
                     var keyValuePair = (KeyValuePair<object, object>)_keyValuePairSerializer.Deserialize(
+                        serializationConfig,
                         bsonReader,
                         typeof(KeyValuePair<object, object>),
                         keyValuePairSerializationOptions);
@@ -124,11 +139,13 @@ namespace MongoDB.Bson.Serialization.Serializers
         /// <summary>
         /// Serializes an object to a BsonWriter.
         /// </summary>
+        /// <param name="serializationConfig">The serialization config.</param>
         /// <param name="bsonWriter">The BsonWriter.</param>
         /// <param name="nominalType">The nominal type.</param>
         /// <param name="value">The object.</param>
         /// <param name="options">The serialization options.</param>
         public override void Serialize(
+            SerializationConfig serializationConfig,
             BsonWriter bsonWriter,
             Type nominalType,
             object value,
@@ -146,7 +163,7 @@ namespace MongoDB.Bson.Serialization.Serializers
                     bsonWriter.WriteStartDocument();
                     bsonWriter.WriteString("_t", TypeNameDiscriminator.GetDiscriminator(actualType));
                     bsonWriter.WriteName("_v");
-                    Serialize(bsonWriter, actualType, value, options); // recursive call replacing nominalType with actualType
+                    Serialize(serializationConfig, bsonWriter, actualType, value, options); // recursive call replacing nominalType with actualType
                     bsonWriter.WriteEndDocument();
                     return;
                 }
@@ -177,7 +194,7 @@ namespace MongoDB.Bson.Serialization.Serializers
                         foreach (DictionaryEntry dictionaryEntry in dictionary)
                         {
                             bsonWriter.WriteName((string)dictionaryEntry.Key);
-                            SerializationConfig.Serialize(bsonWriter, typeof(object), dictionaryEntry.Value, keyValuePairSerializationOptions.ValueSerializationOptions);
+                            serializationConfig.Serialize(bsonWriter, typeof(object), dictionaryEntry.Value, keyValuePairSerializationOptions.ValueSerializationOptions);
                         }
                         bsonWriter.WriteEndDocument();
                         break;
@@ -199,6 +216,7 @@ namespace MongoDB.Bson.Serialization.Serializers
                         {
                             var keyValuePair = new KeyValuePair<object, object>(dictionaryEntry.Key, dictionaryEntry.Value);
                             _keyValuePairSerializer.Serialize(
+                                serializationConfig,
                                 bsonWriter,
                                 typeof(KeyValuePair<object, object>),
                                 keyValuePair,

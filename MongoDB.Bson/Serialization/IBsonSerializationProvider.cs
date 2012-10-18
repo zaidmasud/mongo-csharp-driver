@@ -27,8 +27,9 @@ namespace MongoDB.Bson.Serialization
         /// <summary>
         /// Gets a serializer for a type.
         /// </summary>
+        /// <param name="serializationConfig">The serialization config.</param>
         /// <param name="type">The type.</param>
         /// <returns>A serializer.</returns>
-        IBsonSerializer GetSerializer(Type type);
+        IBsonSerializer GetSerializer(SerializationConfig serializationConfig, Type type);
     }
 }

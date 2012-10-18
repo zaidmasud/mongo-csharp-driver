@@ -63,51 +63,19 @@ namespace MongoDB.Bson.Serialization
         /// <param name="memberMap">The member map.</param>
         public void Apply(BsonMemberMap memberMap)
         {
-            var serializer = CreateSerializer(memberMap.ClassMap.SerializationConfig, memberMap.MemberType);
+            var serializationConfig = memberMap.ClassMap.SerializationConfig;
+            var serializer = CreateSerializer(serializationConfig);
             memberMap.SetSerializer(serializer);
         }
 
         /// <summary>
-        /// Creates a serializer for a type based on the serializer type specified by the attribute.
+        /// Creates a serializer based on the serializer type specified by the attribute.
         /// </summary>
         /// <param name="serializationConfig">The serialization config.</param>
-        /// <param name="type">The type that a serializer should be created for.</param>
-        /// <returns>A serializer for the type.</returns>
-        internal IBsonSerializer CreateSerializer(SerializationConfig serializationConfig, Type type)
+        /// <returns>A serializer.</returns>
+        internal IBsonSerializer CreateSerializer(SerializationConfig serializationConfig)
         {
-            string message;
-
-            if (type.ContainsGenericParameters)
-            {
-                message = "Cannot create a serializer because the type to serialize is an open generic type.";
-                throw new ArgumentException(message);
-            }
-
-            if (_serializerType.ContainsGenericParameters)
-            {
-                message = "Cannot create a serializer because the serializer type is an open generic type.";
-                throw new ArgumentException(message);
-            }
-
-            var constructorInfo = _serializerType.GetConstructor(new[] { typeof(SerializationConfig) });
-            if (constructorInfo != null)
-            {
-                return (IBsonSerializer)constructorInfo.Invoke(new[] { serializationConfig });
-            }
-
-            constructorInfo = _serializerType.GetConstructor(new Type[0]);
-            if (constructorInfo != null)
-            {
-                if (serializationConfig != SerializationConfig.Default)
-                {
-                    message = string.Format("Serializer type {0} no-argument constructor can only be used with the default serialization config.", _serializerType.FullName);
-                    throw new ArgumentException(message);
-                }
-                return (IBsonSerializer)constructorInfo.Invoke(new object[0]);
-            }
-
-            message = string.Format("No suitable constructor found for serializer type {0}.", _serializerType.FullName);
-            throw new ArgumentException(message);
+            return BsonDefaultSerializationProvider.CreateSerializer(serializationConfig, _serializerType);
         }
     }
 }

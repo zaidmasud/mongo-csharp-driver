@@ -25,19 +25,6 @@ namespace MongoDB.Bson.Serialization.Conventions
     /// </summary>
     public class LookupIdGeneratorConvention : ConventionBase, IPostProcessingConvention
     {
-        // private fields
-        private readonly SerializationConfig _serializationConfig;
-
-        // constructors
-        /// <summary>
-        /// Initializes a new instance of the LookupIdGeneratorConvention class.
-        /// </summary>
-        /// <param name="serializationConfig">The serialization config.</param>
-        public LookupIdGeneratorConvention(SerializationConfig serializationConfig)
-        {
-            _serializationConfig = serializationConfig;
-        }
-
         /// <summary>
         /// Applies a post processing modification to the class map.
         /// </summary>
@@ -49,7 +36,8 @@ namespace MongoDB.Bson.Serialization.Conventions
             {
                 if (idMemberMap.IdGenerator == null)
                 {
-                    var idGenerator = _serializationConfig.LookupIdGenerator(idMemberMap.MemberType);
+                    var serializationConfig = classMap.SerializationConfig;
+                    var idGenerator = serializationConfig.LookupIdGenerator(idMemberMap.MemberType);
                     if (idGenerator != null)
                     {
                         idMemberMap.SetIdGenerator(idGenerator);

@@ -32,24 +32,37 @@ namespace MongoDB.Bson.Serialization.Serializers
     /// </summary>
     public class ImageSerializer : BsonBaseSerializer
     {
+        // private static fields
+        private static ImageSerializer __instance = new ImageSerializer();
+
         // constructors
         /// <summary>
         /// Initializes a new instance of the ImageSerializer class.
         /// </summary>
-        public ImageSerializer(SerializationConfig serializationConfig)
-            : base(serializationConfig)
+        public ImageSerializer()
         {
+        }
+
+        // public static properties
+        /// <summary>
+        /// Gets an instance of the ImageSerializer class.
+        /// </summary>
+        public static ImageSerializer Instance
+        {
+            get { return __instance; }
         }
 
         // public methods
         /// <summary>
         /// Deserializes an Image from a BsonReader.
         /// </summary>
+        /// <param name="serializationConfig">The serialization config.</param>
         /// <param name="bsonReader">The BsonReader.</param>
         /// <param name="nominalType">The nominal type of the Image.</param>
         /// <param name="options">The serialization options.</param>
         /// <returns>An Image.</returns>
         public override object Deserialize(
+            SerializationConfig serializationConfig,
             BsonReader bsonReader,
             Type nominalType,
             IBsonSerializationOptions options)
@@ -60,27 +73,29 @@ namespace MongoDB.Bson.Serialization.Serializers
                 throw new ArgumentException(message, "nominalType");
             }
 
-            var discriminatorConvention = SerializationConfig.LookupDiscriminatorConvention(typeof(Image));
-            var actualType = discriminatorConvention.GetActualType(bsonReader, typeof(Image));
+            var discriminatorConvention = serializationConfig.LookupDiscriminatorConvention(typeof(Image));
+            var actualType = discriminatorConvention.GetActualType(serializationConfig, bsonReader, typeof(Image));
             if (actualType == typeof(Image))
             {
                 var message = string.Format("Unable to determine actual type of Image to deserialize.");
                 throw new FileFormatException(message);
             }
 
-            var serializer = SerializationConfig.LookupSerializer(actualType);
-            return serializer.Deserialize(bsonReader, nominalType, actualType, options);
+            var serializer = serializationConfig.LookupSerializer(actualType);
+            return serializer.Deserialize(serializationConfig, bsonReader, nominalType, actualType, options);
         }
 
         /// <summary>
         /// Deserializes an Image from a BsonReader.
         /// </summary>
+        /// <param name="serializationConfig">The serialization config.</param>
         /// <param name="bsonReader">The BsonReader.</param>
         /// <param name="nominalType">The nominal type of the Image.</param>
         /// <param name="actualType">The actual type of the Image.</param>
         /// <param name="options">The serialization options.</param>
         /// <returns>An Image.</returns>
         public override object Deserialize(
+            SerializationConfig serializationConfig,
             BsonReader bsonReader,
             Type nominalType,
             Type actualType,
@@ -114,11 +129,13 @@ namespace MongoDB.Bson.Serialization.Serializers
         /// <summary>
         /// Serializes an Image to a BsonWriter.
         /// </summary>
+        /// <param name="serializationConfig">The serialization config.</param>
         /// <param name="bsonWriter">The BsonWriter.</param>
         /// <param name="nominalType">The nominal type.</param>
         /// <param name="value">The Image.</param>
         /// <param name="options">The serialization options.</param>
         public override void Serialize(
+            SerializationConfig serializationConfig,
             BsonWriter bsonWriter,
             Type nominalType,
             object value,

@@ -29,25 +29,38 @@ namespace MongoDB.Bson.Serialization.Serializers
     /// </summary>
     public class BsonJavaScriptWithScopeSerializer : BsonBaseSerializer
     {
+        // private static fields
+        private static BsonJavaScriptWithScopeSerializer __instance = new BsonJavaScriptWithScopeSerializer();
+
         // constructors
         /// <summary>
         /// Initializes a new instance of the BsonJavaScriptWithScopeSerializer class.
         /// </summary>
-        public BsonJavaScriptWithScopeSerializer(SerializationConfig serializationConfig)
-            : base(serializationConfig)
+        public BsonJavaScriptWithScopeSerializer()
         {
+        }
+
+        // public static properties
+        /// <summary>
+        /// Gets an instance of the BsonJavaScriptWithScopeSerializer class.
+        /// </summary>
+        public static BsonJavaScriptWithScopeSerializer Instance
+        {
+            get { return __instance; }
         }
 
         // public methods
         /// <summary>
         /// Deserializes an object from a BsonReader.
         /// </summary>
+        /// <param name="serializationConfig">The serialization config.</param>
         /// <param name="bsonReader">The BsonReader.</param>
         /// <param name="nominalType">The nominal type of the object.</param>
         /// <param name="actualType">The actual type of the object.</param>
         /// <param name="options">The serialization options.</param>
         /// <returns>An object.</returns>
         public override object Deserialize(
+            SerializationConfig serializationConfig,
             BsonReader bsonReader,
             Type nominalType,
             Type actualType,
@@ -60,7 +73,7 @@ namespace MongoDB.Bson.Serialization.Serializers
             {
                 case BsonType.JavaScriptWithScope:
                     var code = bsonReader.ReadJavaScriptWithScope();
-                    var scope = (BsonDocument)SerializationConfig.LookupSerializer(typeof(BsonDocument)).Deserialize(bsonReader, typeof(BsonDocument), null);
+                    var scope = (BsonDocument)BsonDocumentSerializer.Instance.Deserialize(serializationConfig, bsonReader, typeof(BsonDocument), null);
                     return new BsonJavaScriptWithScope(code, scope);
                 default:
                     var message = string.Format("Cannot deserialize BsonJavaScriptWithScope from BsonType {0}.", bsonType);
@@ -71,11 +84,13 @@ namespace MongoDB.Bson.Serialization.Serializers
         /// <summary>
         /// Serializes an object to a BsonWriter.
         /// </summary>
+        /// <param name="serializationConfig">The serialization config.</param>
         /// <param name="bsonWriter">The BsonWriter.</param>
         /// <param name="nominalType">The nominal type.</param>
         /// <param name="value">The object.</param>
         /// <param name="options">The serialization options.</param>
         public override void Serialize(
+            SerializationConfig serializationConfig,
             BsonWriter bsonWriter,
             Type nominalType,
             object value,
@@ -88,7 +103,7 @@ namespace MongoDB.Bson.Serialization.Serializers
 
             var script = (BsonJavaScriptWithScope)value;
             bsonWriter.WriteJavaScriptWithScope(script.Code);
-            SerializationConfig.LookupSerializer(typeof(BsonDocument)).Serialize(bsonWriter, typeof(BsonDocument), script.Scope, null);
+            BsonDocumentSerializer.Instance.Serialize(serializationConfig, bsonWriter, typeof(BsonDocument), script.Scope, null);
         }
     }
 }

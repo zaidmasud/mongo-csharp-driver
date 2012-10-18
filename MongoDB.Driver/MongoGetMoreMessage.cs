@@ -20,6 +20,7 @@ using System.Linq;
 using System.Text;
 
 using MongoDB.Bson;
+using MongoDB.Bson.Serialization;
 
 namespace MongoDB.Driver
 {
@@ -31,8 +32,8 @@ namespace MongoDB.Driver
         private long _cursorId;
 
         // constructors
-        internal MongoGetMoreMessage(string collectionFullName, int numberToReturn, long cursorId)
-            : base(MessageOpcode.GetMore, null, null)
+        internal MongoGetMoreMessage(SerializationConfig serializationConfig, string collectionFullName, int numberToReturn, long cursorId)
+            : base(MessageOpcode.GetMore, serializationConfig, null, null)
         {
             _collectionFullName = collectionFullName;
             _numberToReturn = numberToReturn;

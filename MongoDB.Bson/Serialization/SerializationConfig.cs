@@ -243,19 +243,19 @@ namespace MongoDB.Bson.Serialization
             if (nominalType.IsInterface)
             {
                 var discriminatorConvention = LookupDiscriminatorConvention(nominalType);
-                var actualType = discriminatorConvention.GetActualType(bsonReader, nominalType);
+                var actualType = discriminatorConvention.GetActualType(this, bsonReader, nominalType);
                 if (actualType == nominalType)
                 {
                     var message = string.Format("Unable to determine actual type of object to deserialize. NominalType is the interface {0}.", nominalType);
                     throw new FileFormatException(message);
                 }
                 var serializer = LookupSerializer(actualType);
-                return serializer.Deserialize(bsonReader, actualType, options);
+                return serializer.Deserialize(this, bsonReader, actualType, options);
             }
             else
             {
                 var serializer = LookupSerializer(nominalType);
-                return serializer.Deserialize(bsonReader, nominalType, options);
+                return serializer.Deserialize(this, bsonReader, nominalType, options);
             }
         }
 
@@ -507,7 +507,7 @@ namespace MongoDB.Bson.Serialization
                     // if there is no convention registered for object register the default one
                     if (!_discriminatorConventions.ContainsKey(typeof(object)))
                     {
-                        var defaultDiscriminatorConvention = new HierarchicalDiscriminatorConvention(this, "_t");
+                        var defaultDiscriminatorConvention = StandardDiscriminatorConvention.Hierarchical;
                         _discriminatorConventions.Add(typeof(object), defaultDiscriminatorConvention);
                         if (type == typeof(object))
                         {
@@ -667,7 +667,7 @@ namespace MongoDB.Bson.Serialization
                         if (serializerAttributes.Length == 1)
                         {
                             var serializerAttribute = (BsonSerializerAttribute)serializerAttributes[0];
-                            serializer = serializerAttribute.CreateSerializer(this, type);
+                            serializer = serializerAttribute.CreateSerializer(this);
                         }
                     }
 
@@ -686,7 +686,7 @@ namespace MongoDB.Bson.Serialization
                     {
                         foreach (var serializationProvider in _serializationProviders)
                         {
-                            serializer = serializationProvider.GetSerializer(type);
+                            serializer = serializationProvider.GetSerializer(this, type);
                             if (serializer != null)
                             {
                                 break;
@@ -991,7 +991,7 @@ namespace MongoDB.Bson.Serialization
         {
             var actualType = (value == null) ? nominalType : value.GetType();
             var serializer = LookupSerializer(actualType);
-            serializer.Serialize(bsonWriter, nominalType, value, options);
+            serializer.Serialize(this, bsonWriter, nominalType, value, options);
         }
 
         /// <summary>
@@ -1045,8 +1045,8 @@ namespace MongoDB.Bson.Serialization
         private void RegisterDefaultSerializationProviders()
         {
             // last one registered gets first chance at providing the serializer
-            RegisterSerializationProvider(new BsonClassMapSerializationProvider(this));
-            RegisterSerializationProvider(new BsonDefaultSerializationProvider(this));
+            RegisterSerializationProvider(new BsonClassMapSerializationProvider());
+            RegisterSerializationProvider(new BsonDefaultSerializationProvider());
         }
 
         private void RegisterIdGenerators()

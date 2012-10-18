@@ -32,39 +32,32 @@ namespace MongoDB.Bson.Serialization.Serializers
     public class BsonClassMapSerializer : IBsonSerializer, IBsonIdProvider, IBsonDocumentSerializer
     {
         // private fields
-        private readonly SerializationConfig _serializationConfig;
-        private readonly BsonClassMap _classMap;
+        private BsonClassMap _classMap;
 
         // constructors
         /// <summary>
         /// Initializes a new instance of the BsonClassMapSerializer class.
         /// </summary>
-        /// <param name="serializationConfig">The serialization config.</param>
         /// <param name="classMap">The class map.</param>
-        public BsonClassMapSerializer(SerializationConfig serializationConfig, BsonClassMap classMap)
+        public BsonClassMapSerializer(BsonClassMap classMap)
         {
-            _serializationConfig = serializationConfig;
             _classMap = classMap;
-        }
-
-        // public properties
-        /// <summary>
-        /// Gets the serialization config.
-        /// </summary>
-        public SerializationConfig SerializationConfig
-        {
-            get { return _serializationConfig; }
         }
 
         // public methods
         /// <summary>
         /// Deserializes an object from a BsonReader.
         /// </summary>
+        /// <param name="serializationConfig">The serialization config.</param>
         /// <param name="bsonReader">The BsonReader.</param>
         /// <param name="nominalType">The nominal type of the object.</param>
         /// <param name="options">The serialization options.</param>
         /// <returns>An object.</returns>
-        public object Deserialize(BsonReader bsonReader, Type nominalType, IBsonSerializationOptions options)
+        public object Deserialize(
+            SerializationConfig serializationConfig,
+            BsonReader bsonReader,
+            Type nominalType,
+            IBsonSerializationOptions options)
         {
             VerifyNominalType(nominalType);
             if (bsonReader.GetCurrentBsonType() == Bson.BsonType.Null)
@@ -75,29 +68,31 @@ namespace MongoDB.Bson.Serialization.Serializers
             else
             {
                 var discriminatorConvention = _classMap.GetDiscriminatorConvention();
-                var actualType = discriminatorConvention.GetActualType(bsonReader, nominalType);
+                var actualType = discriminatorConvention.GetActualType(serializationConfig, bsonReader, nominalType);
                 if (actualType != nominalType)
                 {
-                    var serializer = _serializationConfig.LookupSerializer(actualType);
+                    var serializer = serializationConfig.LookupSerializer(actualType);
                     if (serializer != this)
                     {
-                        return serializer.Deserialize(bsonReader, nominalType, actualType, options);
+                        return serializer.Deserialize(serializationConfig, bsonReader, nominalType, actualType, options);
                     }
                 }
 
-                return Deserialize(bsonReader, nominalType, actualType, options);
+                return Deserialize(serializationConfig, bsonReader, nominalType, actualType, options);
             }
         }
 
         /// <summary>
         /// Deserializes an object from a BsonReader.
         /// </summary>
+        /// <param name="serializationConfig">The serialization config.</param>
         /// <param name="bsonReader">The BsonReader.</param>
         /// <param name="nominalType">The nominal type of the object.</param>
         /// <param name="actualType">The actual type of the object.</param>
         /// <param name="options">The serialization options.</param>
         /// <returns>An object.</returns>
         public object Deserialize(
+            SerializationConfig serializationConfig,
             BsonReader bsonReader,
             Type nominalType,
             Type actualType,
@@ -168,12 +163,12 @@ namespace MongoDB.Bson.Serialization.Serializers
                             }
                             else
                             {
-                                DeserializeMember(bsonReader, obj, memberMap);
+                                DeserializeMember(serializationConfig, bsonReader, obj, memberMap);
                             }
                         }
                         else
                         {
-                            DeserializeExtraElement(bsonReader, obj, elementName, memberMap);
+                            DeserializeExtraElement(serializationConfig, bsonReader, obj, elementName, memberMap);
                         }
                         memberMapBitArray[memberMapIndex >> 5] |= 1U << (memberMapIndex & 31);
                     }
@@ -187,7 +182,7 @@ namespace MongoDB.Bson.Serialization.Serializers
 
                         if (extraElementsMemberMapIndex >= 0)
                         {
-                            DeserializeExtraElement(bsonReader, obj, elementName, _classMap.ExtraElementsMemberMap);
+                            DeserializeExtraElement(serializationConfig, bsonReader, obj, elementName, _classMap.ExtraElementsMemberMap);
                             memberMapBitArray[extraElementsMemberMapIndex >> 5] |= 1U << (extraElementsMemberMapIndex & 31);
                         }
                         else if (_classMap.IgnoreExtraElements)
@@ -259,7 +254,7 @@ namespace MongoDB.Bson.Serialization.Serializers
         /// Get the default serialization options for this serializer.
         /// </summary>
         /// <returns>The default serialization options for this serializer.</returns>
-        public IBsonSerializationOptions GetDefaultSerializationOptions()
+        public IBsonSerializationOptions GetDefaultSerializationOptions(SerializationConfig serializationConfig)
         {
             return null;
         }
@@ -267,12 +262,14 @@ namespace MongoDB.Bson.Serialization.Serializers
         /// <summary>
         /// Gets the document Id.
         /// </summary>
+        /// <param name="serializationConfig">The serialization config.</param>
         /// <param name="document">The document.</param>
         /// <param name="id">The Id.</param>
         /// <param name="idNominalType">The nominal type of the Id.</param>
         /// <param name="idGenerator">The IdGenerator for the Id type.</param>
         /// <returns>True if the document has an Id.</returns>
         public bool GetDocumentId(
+            SerializationConfig serializationConfig,
             object document,
             out object id,
             out Type idNominalType,
@@ -298,9 +295,10 @@ namespace MongoDB.Bson.Serialization.Serializers
         /// <summary>
         /// Gets the serialization info for a member.
         /// </summary>
+        /// <param name="serializationConfig">The serialization config.</param>
         /// <param name="memberName">The member name.</param>
         /// <returns>The serialization info for the member.</returns>
-        public BsonSerializationInfo GetMemberSerializationInfo(string memberName)
+        public BsonSerializationInfo GetMemberSerializationInfo(SerializationConfig serializationConfig, string memberName)
         {
             foreach (var memberMap in _classMap.AllMemberMaps)
             {
@@ -310,7 +308,7 @@ namespace MongoDB.Bson.Serialization.Serializers
                     var serializer = memberMap.GetSerializer(memberMap.MemberType);
                     var nominalType = memberMap.MemberType;
                     var serializationOptions = memberMap.SerializationOptions;
-                    return new BsonSerializationInfo(elementName, serializer, nominalType, serializationOptions);
+                    return new BsonSerializationInfo(elementName, serializationConfig, serializer, nominalType, serializationOptions);
                 }
             }
 
@@ -324,11 +322,13 @@ namespace MongoDB.Bson.Serialization.Serializers
         /// <summary>
         /// Serializes an object to a BsonWriter.
         /// </summary>
+        /// <param name="serializationConfig">The serialization config.</param>
         /// <param name="bsonWriter">The BsonWriter.</param>
         /// <param name="nominalType">The nominal type.</param>
         /// <param name="value">The object.</param>
         /// <param name="options">The serialization options.</param>
         public void Serialize(
+            SerializationConfig serializationConfig,
             BsonWriter bsonWriter,
             Type nominalType,
             object value,
@@ -374,7 +374,7 @@ namespace MongoDB.Bson.Serialization.Serializers
                     idMemberMap = _classMap.IdMemberMap;
                     if (idMemberMap != null)
                     {
-                        SerializeMember(bsonWriter, value, idMemberMap);
+                        SerializeMember(serializationConfig, bsonWriter, value, idMemberMap);
                     }
                 }
 
@@ -384,11 +384,11 @@ namespace MongoDB.Bson.Serialization.Serializers
                     if (!_classMap.IsAnonymous)
                     {
                         var discriminatorConvention = _classMap.GetDiscriminatorConvention();
-                        var discriminator = discriminatorConvention.GetDiscriminator(nominalType, actualType);
+                        var discriminator = discriminatorConvention.GetDiscriminator(serializationConfig, nominalType, actualType);
                         if (discriminator != null)
                         {
                             bsonWriter.WriteName(discriminatorConvention.ElementName);
-                            SerializationConfig.LookupSerializer(typeof(BsonValue)).Serialize(bsonWriter, typeof(BsonValue), discriminator, null);
+                            BsonValueSerializer.Instance.Serialize(serializationConfig, bsonWriter, typeof(BsonValue), discriminator, null);
                         }
                     }
                 }
@@ -404,11 +404,11 @@ namespace MongoDB.Bson.Serialization.Serializers
                     {
                         if (memberMapIndex != extraElementsMemberMapIndex)
                         {
-                            SerializeMember(bsonWriter, value, memberMap);
+                            SerializeMember(serializationConfig, bsonWriter, value, memberMap);
                         }
                         else
                         {
-                            SerializeExtraElements(bsonWriter, value, memberMap);
+                            SerializeExtraElements(serializationConfig, bsonWriter, value, memberMap);
                         }
                     }
                 }
@@ -444,6 +444,7 @@ namespace MongoDB.Bson.Serialization.Serializers
 
         // private methods
         private void DeserializeExtraElement(
+            SerializationConfig serializationConfig,
             BsonReader bsonReader,
             object obj,
             string elementName,
@@ -457,7 +458,7 @@ namespace MongoDB.Bson.Serialization.Serializers
                     extraElements = new BsonDocument();
                     extraElementsMemberMap.Setter(obj, extraElements);
                 }
-                var bsonValue = (BsonValue)SerializationConfig.LookupSerializer(typeof(BsonValue)).Deserialize(bsonReader, typeof(BsonValue), null);
+                var bsonValue = (BsonValue)BsonValueSerializer.Instance.Deserialize(serializationConfig, bsonReader, typeof(BsonValue), null);
                 extraElements[elementName] = bsonValue;
             }
             else
@@ -475,12 +476,16 @@ namespace MongoDB.Bson.Serialization.Serializers
                     }
                     extraElementsMemberMap.Setter(obj, extraElements);
                 }
-                var bsonValue = (BsonValue)SerializationConfig.LookupSerializer(typeof(BsonValue)).Deserialize(bsonReader, typeof(BsonValue), null);
+                var bsonValue = (BsonValue)BsonValueSerializer.Instance.Deserialize(serializationConfig, bsonReader, typeof(BsonValue), null);
                 extraElements[elementName] = BsonTypeMapper.MapToDotNetValue(bsonValue);
             }
         }
 
-        private void DeserializeMember(BsonReader bsonReader, object obj, BsonMemberMap memberMap)
+        private void DeserializeMember(
+            SerializationConfig serializationConfig,
+            BsonReader bsonReader,
+            object obj,
+            BsonMemberMap memberMap)
         {
             try
             {
@@ -517,10 +522,10 @@ namespace MongoDB.Bson.Serialization.Serializers
                 else
                 {
                     var discriminatorConvention = memberMap.GetDiscriminatorConvention();
-                    actualType = discriminatorConvention.GetActualType(bsonReader, nominalType); // returns nominalType if no discriminator found
+                    actualType = discriminatorConvention.GetActualType(serializationConfig, bsonReader, nominalType); // returns nominalType if no discriminator found
                 }
                 var serializer = memberMap.GetSerializer(actualType);
-                value = serializer.Deserialize(bsonReader, nominalType, actualType, memberMap.SerializationOptions);
+                value = serializer.Deserialize(serializationConfig, bsonReader, nominalType, actualType, memberMap.SerializationOptions);
 
                 setvalue:
                 memberMap.Setter(obj, value);
@@ -561,7 +566,7 @@ namespace MongoDB.Bson.Serialization.Serializers
             return false;
         }
 
-        private void SerializeExtraElements(BsonWriter bsonWriter, object obj, BsonMemberMap extraElementsMemberMap)
+        private void SerializeExtraElements(SerializationConfig serializationConfig, BsonWriter bsonWriter, object obj, BsonMemberMap extraElementsMemberMap)
         {
             var extraElements = extraElementsMemberMap.Getter(obj);
             if (extraElements != null)
@@ -572,7 +577,7 @@ namespace MongoDB.Bson.Serialization.Serializers
                     foreach (var element in bsonDocument)
                     {
                         bsonWriter.WriteName(element.Name);
-                        SerializationConfig.LookupSerializer(typeof(BsonValue)).Serialize(bsonWriter, typeof(BsonValue), element.Value, null);
+                        BsonValueSerializer.Instance.Serialize(serializationConfig, bsonWriter, typeof(BsonValue), element.Value, null);
                     }
                 }
                 else
@@ -589,14 +594,14 @@ namespace MongoDB.Bson.Serialization.Serializers
                         else
                         {
                             var bsonValue = BsonTypeMapper.MapToBsonValue(dictionary[key]);
-                            SerializationConfig.LookupSerializer(typeof(BsonValue)).Serialize(bsonWriter, typeof(BsonValue), bsonValue, null);
+                            BsonValueSerializer.Instance.Serialize(serializationConfig, bsonWriter, typeof(BsonValue), bsonValue, null);
                         }
                     }
                 }
             }
         }
 
-        private void SerializeMember(BsonWriter bsonWriter, object obj, BsonMemberMap memberMap)
+        private void SerializeMember(SerializationConfig serializationConfig, BsonWriter bsonWriter, object obj, BsonMemberMap memberMap)
         {
             var value = memberMap.Getter(obj);
 
@@ -621,7 +626,7 @@ namespace MongoDB.Bson.Serialization.Serializers
             {
                 var actualType = (value == null) ? nominalType : value.GetType();
                 var serializer = memberMap.GetSerializer(actualType);
-                serializer.Serialize(bsonWriter, nominalType, value, memberMap.SerializationOptions);
+                serializer.Serialize(serializationConfig, bsonWriter, nominalType, value, memberMap.SerializationOptions);
             }
         }
 

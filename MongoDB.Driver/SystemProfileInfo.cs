@@ -48,8 +48,9 @@ namespace MongoDB.Driver
         /// <param name="serializationConfig">The serialization config.</param>
         /// <param name="backingDocument">The backing document.</param>
         internal SystemProfileInfo(SerializationConfig serializationConfig, BsonDocument backingDocument)
-            : base(backingDocument, (IBsonDocumentSerializer)serializationConfig.LookupSerializer(typeof(SystemProfileInfo)))
-        { }
+            : base(serializationConfig, (IBsonDocumentSerializer)serializationConfig.LookupSerializer(typeof(SystemProfileInfo)), backingDocument)
+        {
+        }
 
         // public properties
         /// <summary>
@@ -353,7 +354,7 @@ namespace MongoDB.Driver
         /// <param name="serializationConfig">The serialization config.</param>
         /// <param name="backingDocument">The backing document.</param>
         internal SystemProfileLockStatistics(SerializationConfig serializationConfig, BsonDocument backingDocument)
-            : base(backingDocument, (IBsonDocumentSerializer)serializationConfig.LookupSerializer(typeof(SystemProfileLockStatistics)))
+            : base(serializationConfig, (IBsonDocumentSerializer)serializationConfig.LookupSerializer(typeof(SystemProfileLockStatistics)), backingDocument)
         { }
 
         // public properties
@@ -406,7 +407,7 @@ namespace MongoDB.Driver
         /// <param name="serializationConfig">The serialization config.</param>
         /// <param name="backingDocument">The backing document.</param>
         internal SystemProfileReadWriteLockStatistics(SerializationConfig serializationConfig, BsonDocument backingDocument)
-            : base(backingDocument, (IBsonDocumentSerializer)serializationConfig.LookupSerializer(typeof(SystemProfileReadWriteLockStatistics)))
+            : base(serializationConfig, (IBsonDocumentSerializer)serializationConfig.LookupSerializer(typeof(SystemProfileReadWriteLockStatistics)), backingDocument)
         { }
 
         // public properties
@@ -447,49 +448,49 @@ namespace MongoDB.Driver
         /// Initializes a new instance of the <see cref="SystemProfileInfoSerializer"/> class.
         /// </summary>
         public SystemProfileInfoSerializer(SerializationConfig serializationConfig)
-            : base(serializationConfig)
         {
-            RegisterMember("Abbreviated", "abbreviated", SerializationConfig.LookupSerializer(typeof(string)), typeof(string), null);
-            RegisterMember("Client", "client", SerializationConfig.LookupSerializer(typeof(string)), typeof(string), null);
-            RegisterMember("Command", "command", SerializationConfig.LookupSerializer(typeof(BsonDocument)), typeof(BsonDocument), null);
-            RegisterMember("CursorId", "cursorid", SerializationConfig.LookupSerializer(typeof(long)), typeof(long), null);
-            RegisterMember("Duration", "millis", SerializationConfig.LookupSerializer(typeof(TimeSpan)), typeof(TimeSpan), new TimeSpanSerializationOptions(BsonType.Double, TimeSpanUnits.Milliseconds));
-            RegisterMember("Error", "err", SerializationConfig.LookupSerializer(typeof(string)), typeof(string), null);
-            RegisterMember("Exception", "exception", SerializationConfig.LookupSerializer(typeof(string)), typeof(string), null);
-            RegisterMember("ExceptionCode", "exceptionCode", SerializationConfig.LookupSerializer(typeof(int)), typeof(int), null);
-            RegisterMember("Exhaust", "exhaust", SerializationConfig.LookupSerializer(typeof(bool)), typeof(bool), null);
-            RegisterMember("FastMod", "fastmod", SerializationConfig.LookupSerializer(typeof(bool)), typeof(bool), null);
-            RegisterMember("FastModInsert", "fastmodinsert", SerializationConfig.LookupSerializer(typeof(bool)), typeof(bool), null);
-            RegisterMember("IdHack", "idhack", SerializationConfig.LookupSerializer(typeof(bool)), typeof(bool), null);
-            RegisterMember("Info", "info", SerializationConfig.LookupSerializer(typeof(string)), typeof(string), null);
-            RegisterMember("KeyUpdates", "keyUpdates", SerializationConfig.LookupSerializer(typeof(int)), typeof(int), null);
-            RegisterMember("LockStatistics", "lockStatMillis", SerializationConfig.LookupSerializer(typeof(SystemProfileLockStatistics)), typeof(SystemProfileLockStatistics), null);
-            RegisterMember("Moved", "moved", SerializationConfig.LookupSerializer(typeof(bool)), typeof(bool), null);
-            RegisterMember("Namespace", "ns", SerializationConfig.LookupSerializer(typeof(string)), typeof(string), null);
-            RegisterMember("NumberReturned", "nreturned", SerializationConfig.LookupSerializer(typeof(int)), typeof(int), null);
-            RegisterMember("NumberScanned", "nscanned", SerializationConfig.LookupSerializer(typeof(int)), typeof(int), null);
-            RegisterMember("NumberToReturn", "ntoreturn", SerializationConfig.LookupSerializer(typeof(int)), typeof(int), null);
-            RegisterMember("NumberToSkip", "ntoskip", SerializationConfig.LookupSerializer(typeof(int)), typeof(int), null);
-            RegisterMember("NumberOfYields", "numYield", SerializationConfig.LookupSerializer(typeof(int)), typeof(int), null);
-            RegisterMember("Op", "op", SerializationConfig.LookupSerializer(typeof(string)), typeof(string), null);
-            RegisterMember("Query", "query", SerializationConfig.LookupSerializer(typeof(BsonDocument)), typeof(BsonDocument), null);
-            RegisterMember("ResponseLength", "responseLength", SerializationConfig.LookupSerializer(typeof(int)), typeof(int), null);
-            RegisterMember("ScanAndOrder", "scanAndOrder", SerializationConfig.LookupSerializer(typeof(bool)), typeof(bool), null);
-            RegisterMember("Timestamp", "ts", SerializationConfig.LookupSerializer(typeof(DateTime)), typeof(DateTime), null);
-            RegisterMember("UpdateObject", "updateobj", SerializationConfig.LookupSerializer(typeof(BsonDocument)), typeof(BsonDocument), null);
-            RegisterMember("Upsert", "upsert", SerializationConfig.LookupSerializer(typeof(bool)), typeof(bool), null);
-            RegisterMember("User", "user", SerializationConfig.LookupSerializer(typeof(string)), typeof(string), null);
+            RegisterMember("Abbreviated", "abbreviated", serializationConfig, serializationConfig.LookupSerializer(typeof(string)), typeof(string), null);
+            RegisterMember("Client", "client", serializationConfig, serializationConfig.LookupSerializer(typeof(string)), typeof(string), null);
+            RegisterMember("Command", "command",serializationConfig, BsonDocumentSerializer.Instance, typeof(BsonDocument), null);
+            RegisterMember("CursorId", "cursorid", serializationConfig, serializationConfig.LookupSerializer(typeof(long)), typeof(long), null);
+            RegisterMember("Duration", "millis", serializationConfig, serializationConfig.LookupSerializer(typeof(TimeSpan)), typeof(TimeSpan), new TimeSpanSerializationOptions(BsonType.Double, TimeSpanUnits.Milliseconds));
+            RegisterMember("Error", "err", serializationConfig, serializationConfig.LookupSerializer(typeof(string)), typeof(string), null);
+            RegisterMember("Exception", "exception", serializationConfig, serializationConfig.LookupSerializer(typeof(string)), typeof(string), null);
+            RegisterMember("ExceptionCode", "exceptionCode", serializationConfig, serializationConfig.LookupSerializer(typeof(int)), typeof(int), null);
+            RegisterMember("Exhaust", "exhaust", serializationConfig, serializationConfig.LookupSerializer(typeof(bool)), typeof(bool), null);
+            RegisterMember("FastMod", "fastmod", serializationConfig, serializationConfig.LookupSerializer(typeof(bool)), typeof(bool), null);
+            RegisterMember("FastModInsert", "fastmodinsert", serializationConfig, serializationConfig.LookupSerializer(typeof(bool)), typeof(bool), null);
+            RegisterMember("IdHack", "idhack", serializationConfig, serializationConfig.LookupSerializer(typeof(bool)), typeof(bool), null);
+            RegisterMember("Info", "info", serializationConfig, serializationConfig.LookupSerializer(typeof(string)), typeof(string), null);
+            RegisterMember("KeyUpdates", "keyUpdates", serializationConfig, serializationConfig.LookupSerializer(typeof(int)), typeof(int), null);
+            RegisterMember("LockStatistics", "lockStatMillis", serializationConfig, serializationConfig.LookupSerializer(typeof(SystemProfileLockStatistics)), typeof(SystemProfileLockStatistics), null);
+            RegisterMember("Moved", "moved", serializationConfig, serializationConfig.LookupSerializer(typeof(bool)), typeof(bool), null);
+            RegisterMember("Namespace", "ns", serializationConfig, serializationConfig.LookupSerializer(typeof(string)), typeof(string), null);
+            RegisterMember("NumberReturned", "nreturned", serializationConfig, serializationConfig.LookupSerializer(typeof(int)), typeof(int), null);
+            RegisterMember("NumberScanned", "nscanned", serializationConfig, serializationConfig.LookupSerializer(typeof(int)), typeof(int), null);
+            RegisterMember("NumberToReturn", "ntoreturn", serializationConfig, serializationConfig.LookupSerializer(typeof(int)), typeof(int), null);
+            RegisterMember("NumberToSkip", "ntoskip", serializationConfig, serializationConfig.LookupSerializer(typeof(int)), typeof(int), null);
+            RegisterMember("NumberOfYields", "numYield", serializationConfig, serializationConfig.LookupSerializer(typeof(int)), typeof(int), null);
+            RegisterMember("Op", "op", serializationConfig, serializationConfig.LookupSerializer(typeof(string)), typeof(string), null);
+            RegisterMember("Query", "query", serializationConfig, BsonDocumentSerializer.Instance, typeof(BsonDocument), null);
+            RegisterMember("ResponseLength", "responseLength", serializationConfig, serializationConfig.LookupSerializer(typeof(int)), typeof(int), null);
+            RegisterMember("ScanAndOrder", "scanAndOrder", serializationConfig, serializationConfig.LookupSerializer(typeof(bool)), typeof(bool), null);
+            RegisterMember("Timestamp", "ts", serializationConfig, serializationConfig.LookupSerializer(typeof(DateTime)), typeof(DateTime), null);
+            RegisterMember("UpdateObject", "updateobj", serializationConfig, BsonDocumentSerializer.Instance, typeof(BsonDocument), null);
+            RegisterMember("Upsert", "upsert", serializationConfig, serializationConfig.LookupSerializer(typeof(bool)), typeof(bool), null);
+            RegisterMember("User", "user", serializationConfig, serializationConfig.LookupSerializer(typeof(string)), typeof(string), null);
         }
 
         // protected methods
         /// <summary>
         /// Creates the instance.
         /// </summary>
+        /// <param name="serializationConfig">The serialization config.</param>
         /// <param name="backingDocument">The backing document.</param>
         /// <returns>A SystemProfileInfo instance.</returns>
-        protected override SystemProfileInfo CreateInstance(BsonDocument backingDocument)
+        protected override SystemProfileInfo CreateInstance(SerializationConfig serializationConfig, BsonDocument backingDocument)
         {
-            return new SystemProfileInfo(SerializationConfig, backingDocument);
+            return new SystemProfileInfo(serializationConfig, backingDocument);
         }
     }
 
@@ -503,21 +504,21 @@ namespace MongoDB.Driver
         /// Initializes a new instance of the <see cref="SystemProfileLockStatisticsSerializer"/> class.
         /// </summary>
         public SystemProfileLockStatisticsSerializer(SerializationConfig serializationConfig)
-            : base(serializationConfig)
         {
-            RegisterMember("TimeAcquiring", "timeAcquiring", serializationConfig.LookupSerializer(typeof(SystemProfileReadWriteLockStatistics)), typeof(SystemProfileReadWriteLockStatistics), null);
-            RegisterMember("TimeLocked", "timeLocked", serializationConfig.LookupSerializer(typeof(SystemProfileReadWriteLockStatistics)), typeof(SystemProfileReadWriteLockStatistics), null);
+            RegisterMember("TimeAcquiring", "timeAcquiring", serializationConfig, serializationConfig.LookupSerializer(typeof(SystemProfileReadWriteLockStatistics)), typeof(SystemProfileReadWriteLockStatistics), null);
+            RegisterMember("TimeLocked", "timeLocked", serializationConfig, serializationConfig.LookupSerializer(typeof(SystemProfileReadWriteLockStatistics)), typeof(SystemProfileReadWriteLockStatistics), null);
         }
 
         // protected methods
         /// <summary>
         /// Creates the instance.
         /// </summary>
+        /// <param name="serializationConfig">The serialization config.</param>
         /// <param name="backingDocument">The backing document.</param>
         /// <returns>A SystemProfileLockStatistics instance.</returns>
-        protected override SystemProfileLockStatistics CreateInstance(BsonDocument backingDocument)
+        protected override SystemProfileLockStatistics CreateInstance(SerializationConfig serializationConfig, BsonDocument backingDocument)
         {
-            return new SystemProfileLockStatistics(SerializationConfig, backingDocument);
+            return new SystemProfileLockStatistics(serializationConfig, backingDocument);
         }
     }
 
@@ -531,22 +532,22 @@ namespace MongoDB.Driver
         /// Initializes a new instance of the <see cref="SystemProfileReadWriteLockStatisticsSerializer"/> class.
         /// </summary>
         public SystemProfileReadWriteLockStatisticsSerializer(SerializationConfig serializationConfig)
-            : base(serializationConfig)
         { 
             var timeSpanSerializationOptions = new TimeSpanSerializationOptions(BsonType.Double, TimeSpanUnits.Milliseconds);
-            RegisterMember("Read", "r", SerializationConfig.LookupSerializer(typeof(TimeSpan)), typeof(TimeSpan), timeSpanSerializationOptions);
-            RegisterMember("Write", "w", SerializationConfig.LookupSerializer(typeof(TimeSpan)), typeof(TimeSpan), timeSpanSerializationOptions);
+            RegisterMember("Read", "r", serializationConfig, serializationConfig.LookupSerializer(typeof(TimeSpan)), typeof(TimeSpan), timeSpanSerializationOptions);
+            RegisterMember("Write", "w", serializationConfig, serializationConfig.LookupSerializer(typeof(TimeSpan)), typeof(TimeSpan), timeSpanSerializationOptions);
         }
 
         // protected methods
         /// <summary>
         /// Creates the instance.
         /// </summary>
+        /// <param name="serializationConfig">The serialization config.</param>
         /// <param name="backingDocument">The backing document.</param>
         /// <returns>A SystemProfileReadWriteLockStatistics instance.</returns>
-        protected override SystemProfileReadWriteLockStatistics CreateInstance(BsonDocument backingDocument)
+        protected override SystemProfileReadWriteLockStatistics CreateInstance(SerializationConfig serializationConfig, BsonDocument backingDocument)
         {
-            return new SystemProfileReadWriteLockStatistics(SerializationConfig, backingDocument);
+            return new SystemProfileReadWriteLockStatistics(serializationConfig, backingDocument);
         }
     }
 }
