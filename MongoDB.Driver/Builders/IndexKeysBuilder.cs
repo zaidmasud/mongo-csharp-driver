@@ -277,8 +277,16 @@ namespace MongoDB.Driver
         /// Initializes a new instance of the IndexKeysBuilder class.
         /// </summary>
         public IndexKeysBuilder()
+            : this(SerializationConfig.Default)
         {
-            _serializationInfoHelper = new BsonSerializationInfoHelper();
+        }
+
+        /// <summary>
+        /// Initializes a new instance of the IndexKeysBuilder class.
+        /// </summary>
+        public IndexKeysBuilder(SerializationConfig serializationConfig)
+        {
+            _serializationInfoHelper = new BsonSerializationInfoHelper(serializationConfig);
             _indexKeysBuilder = new IndexKeysBuilder();
         }
 

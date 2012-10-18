@@ -38,6 +38,7 @@ namespace MongoDB.Driver
         private bool _done = false;
         private MongoCursor<TDocument> _cursor;
         private MongoServerInstance _serverInstance; // set when first request is sent to server instance
+        private SerializationConfig _serializationConfig; // set when _serverInstance is set
         private int _count;
         private int _positiveLimit;
         private MongoReplyMessage<TDocument> _reply;
@@ -207,6 +208,7 @@ namespace MongoDB.Driver
                 // first time we need a connection let Server.AcquireConnection pick the server instance
                 var connection = _cursor.Server.AcquireConnection(_cursor.Database, _cursor.ReadPreference);
                 _serverInstance = connection.ServerInstance;
+                _serializationConfig = connection.ServerInstance.Settings.SerializationConfig;
                 return connection;
             }
             else
@@ -246,7 +248,7 @@ namespace MongoDB.Driver
                 }
 
                 var writerSettings = _cursor.Collection.GetWriterSettings(connection);
-                using (var message = new MongoQueryMessage(writerSettings, _cursor.Collection.FullName, _cursor.Flags, _cursor.Skip, numberToReturn, WrapQuery(), _cursor.Fields))
+                using (var message = new MongoQueryMessage(_serializationConfig, writerSettings, _cursor.Collection.FullName, _cursor.Flags, _cursor.Skip, numberToReturn, WrapQuery(), _cursor.Fields))
                 {
                     return GetReply(connection, message);
                 }
@@ -276,7 +278,7 @@ namespace MongoDB.Driver
                     numberToReturn = _cursor.BatchSize;
                 }
 
-                using (var message = new MongoGetMoreMessage(_cursor.Collection.FullName, numberToReturn, _openCursorId))
+                using (var message = new MongoGetMoreMessage(_serializationConfig, _cursor.Collection.FullName, numberToReturn, _openCursorId))
                 {
                     return GetReply(connection, message);
                 }
@@ -308,7 +310,7 @@ namespace MongoDB.Driver
                         var connection = _cursor.Server.AcquireConnection(_cursor.Database, _serverInstance);
                         try
                         {
-                            using (var message = new MongoKillCursorsMessage(_openCursorId))
+                            using (var message = new MongoKillCursorsMessage(_serializationConfig, _openCursorId))
                             {
                                 connection.SendMessage(message, SafeMode.False, _cursor.Database.Name); // no need to use SafeMode for KillCursors
                             }

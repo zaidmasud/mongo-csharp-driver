@@ -258,8 +258,16 @@ namespace MongoDB.Driver
         /// Initializes a new instance of the FieldsBuilder class.
         /// </summary>
         public FieldsBuilder()
+            : this(SerializationConfig.Default)
         {
-            _serializationInfoHelper = new BsonSerializationInfoHelper();
+        }
+
+        /// <summary>
+        /// Initializes a new instance of the FieldsBuilder class.
+        /// </summary>
+        public FieldsBuilder(SerializationConfig serializationConfig)
+        {
+            _serializationInfoHelper = new BsonSerializationInfoHelper(serializationConfig);
             _fieldsBuilder = new FieldsBuilder();
         }
 

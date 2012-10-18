@@ -38,7 +38,11 @@ namespace MongoDB.Driver
         /// <summary>
         /// Initializes a new instance of the GeoHaystackSearchResult class.
         /// </summary>
-        protected GeoHaystackSearchResult()
+        /// <param name="serializationConfig">The serialization config.</param>
+        /// <param name="command">The command.</param>
+        /// <param name="response">The response.</param>
+        protected GeoHaystackSearchResult(SerializationConfig serializationConfig, IMongoCommand command, BsonDocument response)
+            : base(serializationConfig, command, response)
         {
         }
 
@@ -238,7 +242,11 @@ namespace MongoDB.Driver
         /// <summary>
         /// Initializes a new instance of the GeoHaystackSearchResult class.
         /// </summary>
-        public GeoHaystackSearchResult()
+        /// <param name="serializationConfig">The serialization config.</param>
+        /// <param name="command">The command.</param>
+        /// <param name="response">The response.</param>
+        public GeoHaystackSearchResult(SerializationConfig serializationConfig, IMongoCommand command, BsonDocument response)
+            : base(serializationConfig, command, response)
         {
         }
 
@@ -252,7 +260,7 @@ namespace MongoDB.Driver
             {
                 if (_hits == null)
                 {
-                    _hits = new GeoHaystackSearchHits(Response["results"].AsBsonArray);
+                    _hits = new GeoHaystackSearchHits(SerializationConfig, Response["results"].AsBsonArray);
                 }
                 return _hits;
             }
@@ -280,10 +288,11 @@ namespace MongoDB.Driver
             /// <summary>
             /// Initializes a new instance of the GeoHaystackSearchHits class.
             /// </summary>
+            /// <param name="serializationConfig">The serialization config.</param>
             /// <param name="hits">The hits.</param>
-            public GeoHaystackSearchHits(BsonArray hits)
+            public GeoHaystackSearchHits(SerializationConfig serializationConfig, BsonArray hits)
             {
-                _hits = hits.Select(h => new GeoHaystackSearchHit(h.AsBsonDocument)).ToList();
+                _hits = hits.Select(h => new GeoHaystackSearchHit(serializationConfig, h.AsBsonDocument)).ToList();
             }
 
             // public properties
@@ -342,14 +351,19 @@ namespace MongoDB.Driver
         /// </summary>
         public new class GeoHaystackSearchHit : GeoHaystackSearchResult.GeoHaystackSearchHit
         {
+            // private fields
+            private readonly SerializationConfig _serializationConfig;
+
             // constructors
             /// <summary>
             /// Initializes a new instance of the GeoHaystackSearchHit class.
             /// </summary>
+            /// <param name="serializationConfig">The serialization config.</param>
             /// <param name="hit">The hit.</param>
-            public GeoHaystackSearchHit(BsonDocument hit)
+            public GeoHaystackSearchHit(SerializationConfig serializationConfig, BsonDocument hit)
                 : base(hit)
             {
+                _serializationConfig = serializationConfig;
             }
 
             // public properties
@@ -366,7 +380,7 @@ namespace MongoDB.Driver
                     }
                     else
                     {
-                        return SerializationConfig.Default.Deserialize<TDocument>(RawDocument);
+                        return _serializationConfig.Deserialize<TDocument>(RawDocument);
                     }
                 }
             }

@@ -32,11 +32,12 @@ namespace MongoDB.Driver
     public abstract class MongoCollection
     {
         // private fields
-        private MongoServer _server;
-        private MongoDatabase _database;
-        private MongoCollectionSettings _settings;
-        private string _name;
-        private MongoCollection<BsonDocument> _commandCollection; // used to run commands with this collection's settings
+        private readonly MongoServer _server;
+        private readonly SerializationConfig _serializationConfig;
+        private readonly MongoDatabase _database;
+        private readonly MongoCollectionSettings _settings;
+        private readonly string _name;
+        private readonly MongoCollection<BsonDocument> _commandCollection; // used to run commands with this collection's settings
 
         // constructors
         /// <summary>
@@ -70,6 +71,7 @@ namespace MongoDB.Driver
             settings.Freeze();
 
             _server = database.Server;
+            _serializationConfig = database.Server.Settings.SerializationConfig;
             _database = database;
             _settings = settings;
             _name = name;
@@ -490,8 +492,7 @@ namespace MongoDB.Driver
                         { "value", BsonNull.Value },
                         { "ok", true }
                     };
-                    var result = new FindAndModifyResult();
-                    result.Initialize(command, response);
+                    var result = new FindAndModifyResult(_serializationConfig, command, response);
                     return result;
                 }
                 throw;
@@ -527,8 +528,7 @@ namespace MongoDB.Driver
                         { "value", BsonNull.Value },
                         { "ok", true }
                     };
-                    var result = new FindAndModifyResult();
-                    result.Initialize(command, response);
+                    var result = new FindAndModifyResult(_serializationConfig, command, response);
                     return result;
                 }
                 throw;
@@ -1143,7 +1143,7 @@ namespace MongoDB.Driver
                 List<SafeModeResult> results = (safeMode.Enabled) ? new List<SafeModeResult>() : null;
 
                 var writerSettings = GetWriterSettings(connection);
-                using (var message = new MongoInsertMessage(writerSettings, FullName, options.CheckElementNames, options.Flags))
+                using (var message = new MongoInsertMessage(_serializationConfig, writerSettings, FullName, options.CheckElementNames, options.Flags))
                 {
                     message.WriteToBuffer(); // must be called before AddDocument
 
@@ -1156,7 +1156,7 @@ namespace MongoDB.Driver
 
                         if (_settings.AssignIdOnInsert)
                         {
-                            var serializer = SerializationConfig.Default.LookupSerializer(document.GetType());
+                            var serializer = _serializationConfig.LookupSerializer(document.GetType());
                             var idProvider = serializer as IBsonIdProvider;
                             if (idProvider != null)
                             {
@@ -1328,7 +1328,7 @@ namespace MongoDB.Driver
             try
             {
                 var writerSettings = GetWriterSettings(connection);
-                using (var message = new MongoDeleteMessage(writerSettings, FullName, flags, query))
+                using (var message = new MongoDeleteMessage(_serializationConfig, writerSettings, FullName, flags, query))
                 {
                     return connection.SendMessage(message, safeMode ?? _settings.SafeMode, _database.Name);
                 }
@@ -1433,7 +1433,7 @@ namespace MongoDB.Driver
             {
                 throw new ArgumentNullException("document");
             }
-            var serializer = SerializationConfig.Default.LookupSerializer(document.GetType());
+            var serializer = _serializationConfig.LookupSerializer(document.GetType());
             var idProvider = serializer as IBsonIdProvider;
             object id;
             Type idNominalType;
@@ -1455,9 +1455,9 @@ namespace MongoDB.Driver
                 {
                     BsonValue idBsonValue;
                     var documentType = document.GetType();
-                    if (SerializationConfig.Default.IsClassMapRegistered(documentType))
+                    if (_serializationConfig.IsClassMapRegistered(documentType))
                     {
-                        var classMap = SerializationConfig.Default.LookupClassMap(documentType);
+                        var classMap = _serializationConfig.LookupClassMap(documentType);
                         var idMemberMap = classMap.IdMemberMap;
                         var idSerializer = idMemberMap.GetSerializer(id.GetType());
                         // we only care about the serialized _id value but we need a dummy document to serialize it into
@@ -1558,7 +1558,7 @@ namespace MongoDB.Driver
             try
             {
                 var writerSettings = GetWriterSettings(connection);
-                using (var message = new MongoUpdateMessage(writerSettings, FullName, options.CheckElementNames, options.Flags, query, update))
+                using (var message = new MongoUpdateMessage(_serializationConfig, writerSettings, FullName, options.CheckElementNames, options.Flags, query, update))
                 {
                     var safeMode = options.SafeMode ?? _settings.SafeMode;
                     return connection.SendMessage(message, safeMode, _database.Name);
@@ -1653,7 +1653,7 @@ namespace MongoDB.Driver
         }
 
         internal TCommandResult RunCommandAs<TCommandResult>(IMongoCommand command)
-            where TCommandResult : CommandResult, new()
+            where TCommandResult : CommandResult
         {
             return (TCommandResult)RunCommandAs(typeof(TCommandResult), command);
         }
@@ -1670,8 +1670,7 @@ namespace MongoDB.Driver
                     var message = string.Format("Command '{0}' failed. No response returned.", commandName);
                     throw new MongoCommandException(message);
                 }
-                var commandResult = (CommandResult)Activator.CreateInstance(commandResultType); // constructor can't have arguments
-                commandResult.Initialize(command, response); // so two phase construction required
+                var commandResult = (CommandResult)Activator.CreateInstance(commandResultType, _serializationConfig, command, response);
                 if (!commandResult.Ok)
                 {
                     if (commandResult.ErrorMessage == "not master")

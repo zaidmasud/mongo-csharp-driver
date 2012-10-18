@@ -56,6 +56,7 @@ namespace MongoDB.Driver
         // private fields
         private object _connectionLock = new object();
         private MongoServerInstance _serverInstance;
+        private SerializationConfig _serializationConfig;
         private MongoConnectionPool _connectionPool;
         private int _generationId; // the generationId of the connection pool at the time this connection was created
         private MongoConnectionState _state;
@@ -71,6 +72,7 @@ namespace MongoDB.Driver
         internal MongoConnection(MongoConnectionPool connectionPool)
         {
             _serverInstance = connectionPool.ServerInstance;
+            _serializationConfig = connectionPool.ServerInstance.Settings.SerializationConfig;
             _connectionPool = connectionPool;
             _generationId = connectionPool.GenerationId;
             _createdAt = DateTime.UtcNow;
@@ -80,6 +82,7 @@ namespace MongoDB.Driver
         internal MongoConnection(MongoServerInstance serverInstance)
         {
             _serverInstance = serverInstance;
+            _serializationConfig = serverInstance.Settings.SerializationConfig;
             _createdAt = DateTime.UtcNow;
             _state = MongoConnectionState.Initial;
         }
@@ -419,7 +422,7 @@ namespace MongoDB.Driver
                 GuidRepresentation = GuidRepresentation.Unspecified,
                 MaxDocumentSize = _serverInstance.MaxDocumentSize
             };
-            using (var message = new MongoQueryMessage(writerSettings, databaseName + ".$cmd", queryFlags, 0, 1, command, null))
+            using (var message = new MongoQueryMessage(_serializationConfig, writerSettings, databaseName + ".$cmd", queryFlags, 0, 1, command, null))
             {
                 SendMessage(message, SafeMode.False, databaseName);
             }
@@ -436,7 +439,7 @@ namespace MongoDB.Driver
                 throw new MongoCommandException(message);
             }
 
-            var commandResult = new CommandResult(command, reply.Documents[0]);
+            var commandResult = new CommandResult(_serializationConfig, command, reply.Documents[0]);
             if (throwOnError && !commandResult.Ok)
             {
                 throw new MongoCommandException(commandResult);
@@ -463,7 +466,7 @@ namespace MongoDB.Driver
                             networkStream.ReadTimeout = readTimeout;
                         }
                         buffer.LoadFrom(networkStream);
-                        var reply = new MongoReplyMessage<TDocument>(readerSettings);
+                        var reply = new MongoReplyMessage<TDocument>(_serializationConfig, readerSettings);
                         reply.ReadFrom(buffer, serializationOptions);
                         return reply;
                     }
@@ -497,7 +500,7 @@ namespace MongoDB.Driver
                         { "wtimeout", (int) safeMode.WTimeout.TotalMilliseconds, safeMode.W > 1 && safeMode.WTimeout != TimeSpan.Zero }
                     };
                     // piggy back on network transmission for message
-                    using (var getLastErrorMessage = new MongoQueryMessage(message.Buffer, message.WriterSettings, databaseName + ".$cmd", QueryFlags.None, 0, 1, safeModeCommand, null))
+                    using (var getLastErrorMessage = new MongoQueryMessage(_serializationConfig, message.Buffer, message.WriterSettings, databaseName + ".$cmd", QueryFlags.None, 0, 1, safeModeCommand, null))
                     {
                         getLastErrorMessage.WriteToBuffer();
                     }
@@ -530,8 +533,7 @@ namespace MongoDB.Driver
                     };
                     var replyMessage = ReceiveMessage<BsonDocument>(readerSettings, null);
                     var safeModeResponse = replyMessage.Documents[0];
-                    safeModeResult = new SafeModeResult();
-                    safeModeResult.Initialize(safeModeCommand, safeModeResponse);
+                    safeModeResult = new SafeModeResult(_serializationConfig, safeModeCommand, safeModeResponse);
 
                     if (!safeModeResult.Ok)
                     {

@@ -36,13 +36,14 @@ namespace MongoDB.Driver
 
         // constructors
         internal MongoUpdateMessage(
+            SerializationConfig serializationConfig,
             BsonBinaryWriterSettings writerSettings,
             string collectionFullName,
             bool checkUpdateDocument,
             UpdateFlags flags,
             IMongoQuery query,
             IMongoUpdate update)
-            : base(MessageOpcode.Update, null, writerSettings)
+            : base(serializationConfig, MessageOpcode.Update, null, writerSettings)
         {
             _collectionFullName = collectionFullName;
             _checkUpdateDocument = checkUpdateDocument;
@@ -67,10 +68,10 @@ namespace MongoDB.Driver
                 }
                 else
                 {
-                    SerializationConfig.Default.Serialize(bsonWriter, _query.GetType(), _query, DocumentSerializationOptions.SerializeIdFirstInstance);
+                    SerializationConfig.Serialize(bsonWriter, _query.GetType(), _query, DocumentSerializationOptions.SerializeIdFirstInstance);
                 }
                 bsonWriter.CheckUpdateDocument = _checkUpdateDocument;
-                SerializationConfig.Default.Serialize(bsonWriter, _update.GetType(), _update, DocumentSerializationOptions.SerializeIdFirstInstance);
+                SerializationConfig.Serialize(bsonWriter, _update.GetType(), _update, DocumentSerializationOptions.SerializeIdFirstInstance);
             }
         }
     }

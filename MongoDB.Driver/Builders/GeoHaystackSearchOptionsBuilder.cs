@@ -214,8 +214,16 @@ namespace MongoDB.Driver
         /// Initializes a new instance of the GeoHaystackSearchOptionsBuilder class.
         /// </summary>
         public GeoHaystackSearchOptionsBuilder()
+            : this(SerializationConfig.Default)
         {
-            _serializationInfoHelper = new BsonSerializationInfoHelper();
+        }
+
+        /// <summary>
+        /// Initializes a new instance of the GeoHaystackSearchOptionsBuilder class.
+        /// </summary>
+        public GeoHaystackSearchOptionsBuilder(SerializationConfig serializationConfig)
+        {
+            _serializationInfoHelper = new BsonSerializationInfoHelper(serializationConfig);
             _geoHaystackBuilder = new GeoHaystackSearchOptionsBuilder();
         }
 

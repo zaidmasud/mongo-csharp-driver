@@ -29,11 +29,13 @@ namespace MongoDB.Driver.Linq.Utils
     internal class BsonSerializationInfoHelper
     {
         // private fields
+        private readonly SerializationConfig _serializationConfig;
         private readonly Dictionary<Expression, BsonSerializationInfo> _serializationInfoCache;
 
         // constructors
-        public BsonSerializationInfoHelper()
+        public BsonSerializationInfoHelper(SerializationConfig serializationConfig)
         {
+            _serializationConfig = serializationConfig;
             _serializationInfoCache = new Dictionary<Expression, BsonSerializationInfo>();
         }
 
@@ -46,7 +48,7 @@ namespace MongoDB.Driver.Linq.Utils
         public BsonSerializationInfo GetSerializationInfo(Expression node)
         {
             var evaluatedNode = PartialEvaluator.Evaluate(node);
-            return BsonSerializationInfoFinder.GetSerializationInfo(evaluatedNode, _serializationInfoCache);
+            return BsonSerializationInfoFinder.GetSerializationInfo(_serializationConfig, evaluatedNode, _serializationInfoCache);
         }
 
         /// <summary>

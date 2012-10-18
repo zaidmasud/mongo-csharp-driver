@@ -20,6 +20,7 @@ using System.Text;
 using System.Text.RegularExpressions;
 
 using MongoDB.Bson;
+using MongoDB.Bson.Serialization;
 
 namespace MongoDB.Driver
 {
@@ -33,7 +34,11 @@ namespace MongoDB.Driver
         /// <summary>
         /// Initializes a new instance of the AggregateResult class.
         /// </summary>
-        public AggregateResult()
+        /// <param name="serializationConfig">The serialization config.</param>
+        /// <param name="command">The command.</param>
+        /// <param name="response">The response.</param>
+        public AggregateResult(SerializationConfig serializationConfig, IMongoCommand command, BsonDocument response)
+            : base(serializationConfig, command, response)
         {
         }
 

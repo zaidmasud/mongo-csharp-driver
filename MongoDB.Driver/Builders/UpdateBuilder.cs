@@ -1500,6 +1500,7 @@ namespace MongoDB.Driver
     public class UpdateBuilder<TDocument> : BuilderBase, IMongoUpdate
     {
         // private fields
+        private readonly SerializationConfig _serializationConfig;
         private readonly BsonSerializationInfoHelper _serializationInfoHelper;
         private UpdateBuilder _updateBuilder;
 
@@ -1508,8 +1509,18 @@ namespace MongoDB.Driver
         /// Initializes a new instance of the UpdateBuilder class.
         /// </summary>
         public UpdateBuilder()
+            : this(SerializationConfig.Default)
         {
-            _serializationInfoHelper = new BsonSerializationInfoHelper();
+        }
+
+        /// <summary>
+        /// Initializes a new instance of the UpdateBuilder class.
+        /// </summary>
+        /// <param name="serializationConfig">The serialization config.</param>
+        public UpdateBuilder(SerializationConfig serializationConfig)
+        {
+            _serializationConfig = serializationConfig;
+            _serializationInfoHelper = new BsonSerializationInfoHelper(serializationConfig);
             _updateBuilder = new UpdateBuilder();
         }
 
@@ -1807,7 +1818,7 @@ namespace MongoDB.Driver
 
             var serializationInfo = _serializationInfoHelper.GetSerializationInfo(memberExpression);
             var itemSerializationInfo = _serializationInfoHelper.GetItemSerializationInfo("Pull", serializationInfo);
-            var elementQueryBuilder = new QueryBuilder<TValue>(_serializationInfoHelper);
+            var elementQueryBuilder = new QueryBuilder<TValue>(_serializationConfig, _serializationInfoHelper);
             var elementQuery = elementQueryBuilderFunction(elementQueryBuilder);
             _updateBuilder = _updateBuilder.Pull(serializationInfo.ElementName, elementQuery);
             return this;

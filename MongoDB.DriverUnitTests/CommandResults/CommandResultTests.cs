@@ -43,7 +43,7 @@ namespace MongoDB.DriverUnitTests
         {
             var command = new CommandDocument("invalid", 1);
             var document = new BsonDocument();
-            var result = new CommandResult(command, document);
+            var result = new CommandResult(SerializationConfig.Default, command, document);
             try
             {
                 var dummy = result.Ok;
@@ -58,7 +58,7 @@ namespace MongoDB.DriverUnitTests
         public void TestOkFalse()
         {
             var document = new BsonDocument("ok", false);
-            var result = new CommandResult(null, document);
+            var result = new CommandResult(SerializationConfig.Default, null, document);
             Assert.IsFalse(result.Ok);
             Assert.IsNotNull(result.ErrorMessage);
         }
@@ -67,7 +67,7 @@ namespace MongoDB.DriverUnitTests
         public void TestOkTrue()
         {
             var document = new BsonDocument("ok", true);
-            var result = new CommandResult(null, document);
+            var result = new CommandResult(SerializationConfig.Default, null, document);
             Assert.IsTrue(result.Ok);
             Assert.IsNull(result.ErrorMessage);
         }
@@ -76,7 +76,7 @@ namespace MongoDB.DriverUnitTests
         public void TestOkZero()
         {
             var document = new BsonDocument("ok", 0);
-            var result = new CommandResult(null, document);
+            var result = new CommandResult(SerializationConfig.Default, null, document);
             Assert.IsFalse(result.Ok);
             Assert.IsNotNull(result.ErrorMessage);
         }
@@ -85,7 +85,7 @@ namespace MongoDB.DriverUnitTests
         public void TestOkZeroPointZero()
         {
             var document = new BsonDocument("ok", 0.0);
-            var result = new CommandResult(null, document);
+            var result = new CommandResult(SerializationConfig.Default, null, document);
             Assert.IsFalse(result.Ok);
             Assert.IsNotNull(result.ErrorMessage);
         }
@@ -94,7 +94,7 @@ namespace MongoDB.DriverUnitTests
         public void TestOkOne()
         {
             var document = new BsonDocument("ok", 1);
-            var result = new CommandResult(null, document);
+            var result = new CommandResult(SerializationConfig.Default, null, document);
             Assert.IsTrue(result.Ok);
             Assert.IsNull(result.ErrorMessage);
         }
@@ -103,7 +103,7 @@ namespace MongoDB.DriverUnitTests
         public void TestOkOnePointZero()
         {
             var document = new BsonDocument("ok", 1.0);
-            var result = new CommandResult(null, document);
+            var result = new CommandResult(SerializationConfig.Default, null, document);
             Assert.IsTrue(result.Ok);
             Assert.IsNull(result.ErrorMessage);
         }
@@ -112,7 +112,7 @@ namespace MongoDB.DriverUnitTests
         public void TestErrorMessageMissing()
         {
             var document = new BsonDocument();
-            var result = new CommandResult(null, document);
+            var result = new CommandResult(SerializationConfig.Default, null, document);
             Assert.AreEqual("Unknown error", result.ErrorMessage);
         }
 
@@ -120,7 +120,7 @@ namespace MongoDB.DriverUnitTests
         public void TestErrorMessagePresent()
         {
             var document = new BsonDocument("errmsg", "An error message");
-            var result = new CommandResult(null, document);
+            var result = new CommandResult(SerializationConfig.Default, null, document);
             Assert.AreEqual("An error message", result.ErrorMessage);
         }
 
@@ -128,7 +128,7 @@ namespace MongoDB.DriverUnitTests
         public void TestErrorMessageNotString()
         {
             var document = new BsonDocument("errmsg", 3.14159);
-            var result = new CommandResult(null, document);
+            var result = new CommandResult(SerializationConfig.Default, null, document);
             Assert.AreEqual("3.14159", result.ErrorMessage);
         }
 

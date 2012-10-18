@@ -18,6 +18,9 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 
+using MongoDB.Bson;
+using MongoDB.Bson.Serialization;
+
 namespace MongoDB.Driver
 {
     /// <summary>
@@ -26,6 +29,18 @@ namespace MongoDB.Driver
     [Serializable]
     public class IsMasterResult : CommandResult
     {
+        // constructors
+        /// <summary>
+        /// Initializes a new instance of the IsMasterResult class.
+        /// </summary>
+        /// <param name="serializationConfig">The serialization config.</param>
+        /// <param name="command">The command.</param>
+        /// <param name="response">The response.</param>
+        public IsMasterResult(SerializationConfig serializationConfig, IMongoCommand command, BsonDocument response)
+            : base(serializationConfig, command, response)
+        {
+        }
+
         // public properties
         /// <summary>
         /// Gets the arbiters.

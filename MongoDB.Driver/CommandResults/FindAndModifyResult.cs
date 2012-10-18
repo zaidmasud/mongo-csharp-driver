@@ -34,7 +34,11 @@ namespace MongoDB.Driver
         /// <summary>
         /// Initializes a new instance of the FindAndModifyResult class.
         /// </summary>
-        public FindAndModifyResult()
+        /// <param name="serializationConfig">The serialization config.</param>
+        /// <param name="command">The command.</param>
+        /// <param name="response">The response.</param>
+        public FindAndModifyResult(SerializationConfig serializationConfig, IMongoCommand command, BsonDocument response)
+            : base(serializationConfig, command, response)
         {
         }
 
@@ -70,7 +74,7 @@ namespace MongoDB.Driver
         public object GetModifiedDocumentAs(Type documentType)
         {
             var document = ModifiedDocument;
-            return (document == null) ? null : SerializationConfig.Default.Deserialize(document, documentType);
+            return (document == null) ? null : SerializationConfig.Deserialize(document, documentType);
         }
     }
 }

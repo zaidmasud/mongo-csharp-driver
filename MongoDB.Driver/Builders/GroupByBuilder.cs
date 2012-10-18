@@ -153,8 +153,16 @@ namespace MongoDB.Driver
         /// Initializes a new instance of the <see cref="GroupByBuilder&lt;TDocument&gt;"/> class.
         /// </summary>
         public GroupByBuilder()
+            : this(SerializationConfig.Default)
         {
-            _serializationInfoHelper = new BsonSerializationInfoHelper();
+        }
+
+        /// <summary>
+        /// Initializes a new instance of the <see cref="GroupByBuilder&lt;TDocument&gt;"/> class.
+        /// </summary>
+        public GroupByBuilder(SerializationConfig serializationConfig)
+        {
+            _serializationInfoHelper = new BsonSerializationInfoHelper(serializationConfig);
             _groupByBuilder = new GroupByBuilder();
         }
 

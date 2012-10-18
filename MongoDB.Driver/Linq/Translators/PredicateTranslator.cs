@@ -34,15 +34,18 @@ namespace MongoDB.Driver.Linq
     internal class PredicateTranslator
     {
         // private fields
+        private readonly SerializationConfig _serializationConfig;
         private readonly BsonSerializationInfoHelper _serializationInfoHelper;
 
         // constructors
         /// <summary>
         /// Initializes a new instance of the <see cref="PredicateTranslator"/> class.
         /// </summary>
+        /// <param name="serializationConfig">The serialization config.</param>
         /// <param name="serializationHelper">The serialization helper.</param>
-        public PredicateTranslator(BsonSerializationInfoHelper serializationHelper)
+        public PredicateTranslator(SerializationConfig serializationConfig, BsonSerializationInfoHelper serializationHelper)
         {
+            _serializationConfig = serializationConfig;
             _serializationInfoHelper = serializationHelper;
         }
 
@@ -469,7 +472,7 @@ namespace MongoDB.Driver.Linq
             var dictionarySerializationOptions = (DictionarySerializationOptions)serializationInfo.SerializationOptions ?? DictionarySerializationOptions.Defaults;
 
             var keyActualType = (key != null) ? key.GetType() : keyNominalType;
-            var keySerializer = SerializationConfig.Default.LookupSerializer(keyActualType);
+            var keySerializer = _serializationConfig.LookupSerializer(keyActualType);
             var keySerializationInfo = new BsonSerializationInfo(
                 null, // elementName
                 keySerializer,
@@ -1299,7 +1302,7 @@ namespace MongoDB.Driver.Linq
             var serializationInfo = _serializationInfoHelper.GetSerializationInfo(parameterExpression);
             var nominalType = serializationInfo.NominalType;
 
-            var discriminatorConvention = SerializationConfig.Default.LookupDiscriminatorConvention(nominalType);
+            var discriminatorConvention = _serializationConfig.LookupDiscriminatorConvention(nominalType);
             var discriminator = discriminatorConvention.GetDiscriminator(nominalType, actualType);
             if (discriminator == null)
             {
@@ -1330,7 +1333,7 @@ namespace MongoDB.Driver.Linq
             var nominalType = typeBinaryExpression.Expression.Type;
             var actualType = typeBinaryExpression.TypeOperand;
 
-            var discriminatorConvention = SerializationConfig.Default.LookupDiscriminatorConvention(nominalType);
+            var discriminatorConvention = _serializationConfig.LookupDiscriminatorConvention(nominalType);
             var discriminator = discriminatorConvention.GetDiscriminator(nominalType, actualType);
             if (discriminator == null)
             {

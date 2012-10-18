@@ -36,11 +36,12 @@ namespace MongoDB.Driver
 
         // constructors
         internal MongoInsertMessage(
+            SerializationConfig serializationConfig,
             BsonBinaryWriterSettings writerSettings,
             string collectionFullName,
             bool checkElementNames,
             InsertFlags flags)
-            : base(MessageOpcode.Insert, null, writerSettings)
+            : base(serializationConfig, MessageOpcode.Insert, null, writerSettings)
         {
             _collectionFullName = collectionFullName;
             _checkElementNames = checkElementNames;
@@ -54,7 +55,7 @@ namespace MongoDB.Driver
             using (var bsonWriter = BsonWriter.Create(Buffer, WriterSettings))
             {
                 bsonWriter.CheckElementNames = _checkElementNames;
-                SerializationConfig.Default.Serialize(bsonWriter, nominalType, document, DocumentSerializationOptions.SerializeIdFirstInstance);
+                SerializationConfig.Serialize(bsonWriter, nominalType, document, DocumentSerializationOptions.SerializeIdFirstInstance);
             }
             BackpatchMessageLength();
         }

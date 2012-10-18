@@ -22,6 +22,7 @@ using System.Threading;
 
 using MongoDB.Bson;
 using MongoDB.Bson.IO;
+using MongoDB.Bson.Serialization;
 
 namespace MongoDB.Driver
 {
@@ -39,10 +40,11 @@ namespace MongoDB.Driver
 
         // constructors
         protected MongoRequestMessage(
+            SerializationConfig serializationConfig,
             MessageOpcode opcode,
             BsonBuffer buffer,
             BsonBinaryWriterSettings writerSettings)
-            : base(opcode)
+            : base(serializationConfig, opcode)
         {
             // buffer is not null if piggybacking this message onto an existing buffer
             if (buffer == null)

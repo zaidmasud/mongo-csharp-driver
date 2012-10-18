@@ -20,6 +20,7 @@ using System.Text;
 using System.Text.RegularExpressions;
 
 using MongoDB.Bson;
+using MongoDB.Bson.Serialization;
 
 namespace MongoDB.Driver
 {
@@ -30,26 +31,20 @@ namespace MongoDB.Driver
     public class CommandResult
     {
         // private fields
-        private IMongoCommand _command;
-        private BsonDocument _response;
+        private readonly SerializationConfig _serializationConfig;
+        private readonly IMongoCommand _command;
+        private readonly BsonDocument _response;
 
         // constructors
         /// <summary>
         /// Initializes a new instance of the CommandResult class.
         /// </summary>
-        // since we often create instances of CommandResult using a generic type parameter
-        // we need a constructor with no arguments (see also the Initialize method below)
-        public CommandResult()
-        {
-        }
-
-        /// <summary>
-        /// Initializes a new instance of the CommandResult class.
-        /// </summary>
+        /// <param name="serializationConfig">The serialization config.</param>
         /// <param name="command">The command.</param>
         /// <param name="response">The response.</param>
-        public CommandResult(IMongoCommand command, BsonDocument response)
+        public CommandResult(SerializationConfig serializationConfig, IMongoCommand command, BsonDocument response)
         {
+            _serializationConfig = serializationConfig;
             _command = command;
             _response = response;
         }
@@ -126,22 +121,10 @@ namespace MongoDB.Driver
             }
         }
 
-        // public methods
-        /// <summary>
-        /// Initializes an existing instance of the CommandResult class.
-        /// </summary>
-        /// <param name="command">The command.</param>
-        /// <param name="response">The response.</param>
-        // used after a constructor with no arguments (when creating a CommandResult from a generic type parameter)
-        public void Initialize(IMongoCommand command, BsonDocument response)
+        // internal properties
+        internal SerializationConfig SerializationConfig
         {
-            if (_command != null || _response != null)
-            {
-                var message = string.Format("{0} has already been initialized.", this.GetType().Name);
-                throw new InvalidOperationException(message);
-            }
-            _command = command;
-            _response = response;
+            get { return _serializationConfig; }
         }
     }
 }

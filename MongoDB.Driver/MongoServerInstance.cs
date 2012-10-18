@@ -568,8 +568,7 @@ namespace MongoDB.Driver
             {
                 var isMasterCommand = new CommandDocument("ismaster", 1);
                 var tempResult = connection.RunCommand("admin", QueryFlags.SlaveOk, isMasterCommand, false);
-                isMasterResult = new IsMasterResult();
-                isMasterResult.Initialize(isMasterCommand, tempResult.Response);
+                isMasterResult = new IsMasterResult(_settings.SerializationConfig, isMasterCommand, tempResult.Response);
                 if (!isMasterResult.Ok)
                 {
                     throw new MongoCommandException(isMasterResult);
