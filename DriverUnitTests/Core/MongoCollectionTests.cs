@@ -1010,6 +1010,15 @@ namespace MongoDB.DriverUnitTests
         }
 
         [Test]
+        public void TestInsertBatchEmpty()
+        {
+            var emptyBatch = new BsonDocument[0];
+            var collection = Configuration.TestCollection;
+            var result = collection.InsertBatch(emptyBatch);
+            Assert.AreEqual(0, result.Count());
+        }
+
+        [Test]
         public void TestIsCappedFalse()
         {
             var collection = _database["notcappedcollection"];

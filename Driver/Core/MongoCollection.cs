@@ -1139,12 +1139,14 @@ namespace MongoDB.Driver
                 {
                     message.WriteToBuffer(); // must be called before AddDocument
 
+                    var count = 0;
                     foreach (var document in documents)
                     {
                         if (document == null)
                         {
                             throw new ArgumentException("Batch contains one or more null documents.");
                         }
+                        count++;
 
                         if (_settings.AssignIdOnInsert)
                         {
@@ -1176,8 +1178,11 @@ namespace MongoDB.Driver
                         }
                     }
 
-                    var finalResult = connection.SendMessage(message, safeMode, _database.Name);
-                    if (safeMode.Enabled) { results.Add(finalResult); }
+                    if (count != 0)
+                    {
+                        var finalResult = connection.SendMessage(message, safeMode, _database.Name);
+                        if (safeMode.Enabled) { results.Add(finalResult); }
+                    }
 
                     return results;
                 }
