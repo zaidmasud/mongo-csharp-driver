@@ -35,8 +35,8 @@ namespace MongoDB.Driver
         /// Initializes a new instance of the <see cref="ShardedMongoServerProxy"/> class.
         /// </summary>
         /// <param name="settings">The settings.</param>
-        public ShardedMongoServerProxy(MongoServerSettings settings)
-            : base(settings)
+        public ShardedMongoServerProxy(MongoServerSettings settings, int sequentialId)
+            : base(settings, sequentialId)
         { }
 
         /// <summary>
@@ -46,8 +46,8 @@ namespace MongoDB.Driver
         /// <param name="instances">The instances.</param>
         /// <param name="stateChangedQueue">The state changed queue.</param>
         /// <param name="connectionAttempt">The connection attempt.</param>
-        public ShardedMongoServerProxy(MongoServerSettings settings, IEnumerable<MongoServerInstance> instances, BlockingQueue<MongoServerInstance> stateChangedQueue, int connectionAttempt)
-            : base(settings, instances, stateChangedQueue, connectionAttempt)
+        public ShardedMongoServerProxy(MongoServerSettings settings, int sequentialId, IEnumerable<MongoServerInstance> instances, BlockingQueue<MongoServerInstance> stateChangedQueue, int connectionAttempt)
+            : base(settings, sequentialId, instances, stateChangedQueue, connectionAttempt)
         { }
 
         // protected methods

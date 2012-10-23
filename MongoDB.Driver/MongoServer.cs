@@ -33,9 +33,6 @@ namespace MongoDB.Driver
     {
         // private static fields
         private readonly static object __staticLock = new object();
-        private readonly static Dictionary<MongoServerSettings, MongoServer> __servers = new Dictionary<MongoServerSettings, MongoServer>();
-        private static int __nextSequentialId;
-        private static int __maxServerCount = 100;
         private static HashSet<char> __invalidDatabaseNameChars;
 
         // private fields
@@ -44,7 +41,6 @@ namespace MongoDB.Driver
         private readonly MongoServerSettings _settings;
         private readonly Dictionary<int, Request> _requests = new Dictionary<int, Request>(); // tracks threads that have called RequestStart
         private readonly IndexCache _indexCache = new IndexCache();
-        private int _sequentialId;
 
         // static constructor
         static MongoServer()
@@ -63,12 +59,16 @@ namespace MongoDB.Driver
         /// </summary>
         /// <param name="settings">The settings for this instance of MongoServer.</param>
         public MongoServer(MongoServerSettings settings)
+            : this(settings, MongoServerProxyFactory.Instance.GetServerProxy(settings))
+        {
+        }
+
+        internal MongoServer(MongoServerSettings settings, IMongoServerProxy serverProxy)
         {
             _settings = settings.FrozenCopy();
-            _sequentialId = Interlocked.Increment(ref __nextSequentialId);
             // Console.WriteLine("MongoServer[{0}]: {1}", sequentialId, settings);
 
-            _serverProxy = new MongoServerProxyFactory().Create(_settings);
+            _serverProxy = serverProxy;
         }
 
         // factory methods
@@ -94,21 +94,8 @@ namespace MongoDB.Driver
         /// </returns>
         public static MongoServer Create(MongoServerSettings settings)
         {
-            lock (__staticLock)
-            {
-                MongoServer server;
-                if (!__servers.TryGetValue(settings, out server))
-                {
-                    if (__servers.Count >= __maxServerCount)
-                    {
-                        var message = string.Format("MongoServer.Create has already created {0} servers which is the maximum number of servers allowed.", __maxServerCount);
-                        throw new MongoException(message);
-                    }
-                    server = new MongoServer(settings);
-                    __servers.Add(settings, server);
-                }
-                return server;
-            }
+            var serverProxy = MongoServerProxyFactory.Instance.GetServerProxy(settings);
+            return new MongoServer(settings, serverProxy);
         }
 
         /// <summary>
@@ -158,8 +145,8 @@ namespace MongoDB.Driver
         /// </summary>
         public static int MaxServerCount
         {
-            get { return __maxServerCount; }
-            set { __maxServerCount = value; }
+            get { return MongoServerProxyFactory.Instance.MaxProxyCount; }
+            set { MongoServerProxyFactory.Instance.MaxProxyCount = value; }
         }
 
         /// <summary>
@@ -167,13 +154,7 @@ namespace MongoDB.Driver
         /// </summary>
         public static int ServerCount
         {
-            get
-            {
-                lock (__staticLock)
-                {
-                    return __servers.Count;
-                }
-            }
+            get { return MongoServerProxyFactory.Instance.ProxyCount; }
         }
 
         // public properties
@@ -342,7 +323,7 @@ namespace MongoDB.Driver
         /// </summary>
         public virtual int SequentialId
         {
-            get { return _sequentialId; }
+            get { return _serverProxy.SequentialId; }
         }
 
         /// <summary>
@@ -429,10 +410,7 @@ namespace MongoDB.Driver
         /// <returns>An array containing a snapshot of the set of all servers that have been created so far.</returns>
         public static MongoServer[] GetAllServers()
         {
-            lock (__staticLock)
-            {
-                return __servers.Values.ToArray();
-            }
+            return MongoServerProxyFactory.Instance.GetAllProxies().Select(p => new MongoServer(p.Settings, p)).ToArray();
         }
 
         /// <summary>
@@ -440,14 +418,7 @@ namespace MongoDB.Driver
         /// </summary>
         public static void UnregisterAllServers()
         {
-            lock (__staticLock)
-            {
-                var serverList = __servers.Values.ToList();
-                foreach (var server in serverList)
-                {
-                    UnregisterServer(server);
-                }
-            }
+            MongoServerProxyFactory.Instance.UnregisterAllProxies();
         }
 
         /// <summary>
@@ -456,12 +427,7 @@ namespace MongoDB.Driver
         /// <param name="server">The server to unregister.</param>
         public static void UnregisterServer(MongoServer server)
         {
-            lock (__staticLock)
-            {
-                try { server.Disconnect(); }
-                catch { } // ignore exceptions
-                __servers.Remove(server._settings);
-            }
+            MongoServerProxyFactory.Instance.UnregisterProxy(server._serverProxy);
         }
 
         // public methods

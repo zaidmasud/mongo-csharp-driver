@@ -31,6 +31,7 @@ namespace MongoDB.Driver
         private readonly ConnectedInstanceCollection _connectedInstances;
         private readonly List<MongoServerInstance> _instances;
         private readonly MongoServerSettings _settings;
+        private readonly int _sequentialId;
         private int _connectionAttempt;
         private int _outstandingInstanceConnections;
         private MongoServerState _state;
@@ -39,9 +40,10 @@ namespace MongoDB.Driver
         /// Initializes a new instance of the <see cref="MultipleInstanceMongoServerProxy"/> class.
         /// </summary>
         /// <param name="settings">The settings.</param>
-        protected MultipleInstanceMongoServerProxy(MongoServerSettings settings)
+        protected MultipleInstanceMongoServerProxy(MongoServerSettings settings, int sequentialId)
         {
             _settings = settings;
+            _sequentialId = sequentialId;
             _connectedInstances = new ConnectedInstanceCollection();
             _instances = new List<MongoServerInstance>();
 
@@ -56,10 +58,11 @@ namespace MongoDB.Driver
         /// <param name="connectionQueue">The state change queue.</param>
         /// <param name="connectionAttempt">The connection attempt.</param>
         /// <remarks>This constructor is used when the instances have already been instructed to connect.</remarks>
-        protected MultipleInstanceMongoServerProxy(MongoServerSettings settings, IEnumerable<MongoServerInstance> instances, BlockingQueue<MongoServerInstance> connectionQueue, int connectionAttempt)
+        protected MultipleInstanceMongoServerProxy(MongoServerSettings settings, int sequentialId, IEnumerable<MongoServerInstance> instances, BlockingQueue<MongoServerInstance> connectionQueue, int connectionAttempt)
         {
             _state = MongoServerState.Connecting;
             _settings = settings;
+            _sequentialId = sequentialId;
             _connectedInstances = new ConnectedInstanceCollection();
             _connectionAttempt = connectionAttempt;
 
@@ -126,6 +129,22 @@ namespace MongoDB.Driver
         }
 
         /// <summary>
+        /// Gets the unique sequential Id for this proxy.
+        /// </summary>
+        public int SequentialId
+        {
+            get { return _sequentialId; }
+        }
+
+        /// <summary>
+        /// Gets the settings.
+        /// </summary>
+        public MongoServerSettings Settings
+        {
+            get { return _settings; }
+        }
+
+        /// <summary>
         /// Gets the state.
         /// </summary>
         public MongoServerState State
@@ -137,15 +156,6 @@ namespace MongoDB.Driver
                     return _state;
                 }
             }
-        }
-
-        // protected properties
-        /// <summary>
-        /// Gets the server settings.
-        /// </summary>
-        protected MongoServerSettings Settings
-        {
-            get { return _settings; }
         }
 
         // public methods

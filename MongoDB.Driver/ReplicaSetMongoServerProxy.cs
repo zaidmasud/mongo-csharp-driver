@@ -36,8 +36,8 @@ namespace MongoDB.Driver
         /// Initializes a new instance of the <see cref="ReplicaSetMongoServerProxy"/> class.
         /// </summary>
         /// <param name="settings">The settings.</param>
-        public ReplicaSetMongoServerProxy(MongoServerSettings settings)
-            : base(settings)
+        public ReplicaSetMongoServerProxy(MongoServerSettings settings, int sequentialId)
+            : base(settings, sequentialId)
         {
             _replicaSetName = settings.ReplicaSetName;
         }
@@ -49,8 +49,8 @@ namespace MongoDB.Driver
         /// <param name="instances">The instances.</param>
         /// <param name="stateChangeQueue">The state change queue.</param>
         /// <param name="connectionAttempt">The connection attempt.</param>
-        public ReplicaSetMongoServerProxy(MongoServerSettings serverSettings, IEnumerable<MongoServerInstance> instances, BlockingQueue<MongoServerInstance> stateChangeQueue, int connectionAttempt)
-            : base(serverSettings, instances, stateChangeQueue, connectionAttempt)
+        public ReplicaSetMongoServerProxy(MongoServerSettings serverSettings, int sequentialId, IEnumerable<MongoServerInstance> instances, BlockingQueue<MongoServerInstance> stateChangeQueue, int connectionAttempt)
+            : base(serverSettings, sequentialId, instances, stateChangeQueue, connectionAttempt)
         { }
 
         // public properties

@@ -70,8 +70,7 @@ namespace MongoDB.DriverUnitTests
             };
             var server1 = MongoServer.Create(settings);
             var server2 = MongoServer.Create(settings);
-            Assert.AreSame(server1, server2);
-            Assert.AreEqual(settings, server1.Settings);
+            Assert.AreEqual(server1.Settings, server2.Settings);
         }
 
         [Test]
@@ -131,12 +130,12 @@ namespace MongoDB.DriverUnitTests
             var server = MongoServer.Create("mongodb://newhostnamethathasnotbeenusedbefore");
             var snapshot2 = MongoServer.GetAllServers();
             Assert.AreEqual(snapshot1.Length + 1, snapshot2.Length);
-            Assert.IsFalse(snapshot1.Contains(server));
-            Assert.IsTrue(snapshot2.Contains(server));
+            Assert.IsFalse(snapshot1.Any(s => s.Settings == server.Settings));
+            Assert.IsTrue(snapshot2.Any(s => s.Settings == server.Settings));
             MongoServer.UnregisterServer(server);
             var snapshot3 = MongoServer.GetAllServers();
             Assert.AreEqual(snapshot1.Length, snapshot3.Length);
-            Assert.IsFalse(snapshot3.Contains(server));
+            Assert.IsFalse(snapshot3.Any(s => s.Settings == server.Settings));
         }
 
         [Test]

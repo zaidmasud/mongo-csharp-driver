@@ -28,6 +28,7 @@ namespace MongoDB.Driver
         // private fields
         private readonly object _stateLock = new object();
         private readonly MongoServerSettings _settings;
+        private readonly int _sequentialId;
         private readonly MongoServerInstance _instance;
         private int _connectionAttempt;
 
@@ -36,9 +37,10 @@ namespace MongoDB.Driver
         /// Initializes a new instance of the <see cref="DirectMongoServerProxy"/> class.
         /// </summary>
         /// <param name="settings">The settings.</param>
-        public DirectMongoServerProxy(MongoServerSettings settings)
+        public DirectMongoServerProxy(MongoServerSettings settings, int sequentialId)
         {
             _settings = settings;
+            _sequentialId = sequentialId;
             _instance = new MongoServerInstance(settings, settings.Servers.First());
         }
 
@@ -48,9 +50,10 @@ namespace MongoDB.Driver
         /// <param name="serverSettings">The server settings.</param>
         /// <param name="instance">The instance.</param>
         /// <param name="connectionAttempt">The connection attempt.</param>
-        public DirectMongoServerProxy(MongoServerSettings serverSettings, MongoServerInstance instance, int connectionAttempt)
+        public DirectMongoServerProxy(MongoServerSettings serverSettings, int sequentialId, MongoServerInstance instance, int connectionAttempt)
         {
             _settings = serverSettings;
+            _sequentialId = sequentialId;
             _instance = instance;
             _connectionAttempt = connectionAttempt;
         }
@@ -84,6 +87,22 @@ namespace MongoDB.Driver
         public ReadOnlyCollection<MongoServerInstance> Instances
         {
             get { return new List<MongoServerInstance> { _instance }.AsReadOnly(); }
+        }
+
+        /// <summary>
+        /// Gets the unique sequential Id for this proxy.
+        /// </summary>
+        public int SequentialId
+        {
+            get { return _sequentialId; }
+        }
+
+        /// <summary>
+        /// Gets the settings.
+        /// </summary>
+        public MongoServerSettings Settings
+        {
+            get { return _settings; }
         }
 
         /// <summary>

@@ -28,6 +28,7 @@ namespace MongoDB.Driver
     {
         private readonly object _lock = new object();
         private readonly MongoServerSettings _settings;
+        private readonly int _sequentialId;
         private readonly ReadOnlyCollection<MongoServerInstance> _instances;
 
         // volatile will ensure that our reads are not reordered such one could get placed before a write.  This 
@@ -42,9 +43,10 @@ namespace MongoDB.Driver
         /// Initializes a new instance of the <see cref="DiscoveringMongoServerProxy"/> class.
         /// </summary>
         /// <param name="settings">The settings.</param>
-        public DiscoveringMongoServerProxy(MongoServerSettings settings)
+        public DiscoveringMongoServerProxy(MongoServerSettings settings, int sequentialId)
         {
             _state = MongoServerState.Disconnected;
+            _sequentialId = sequentialId;
             _settings = settings;
             _instances = settings.Servers.Select(a => new MongoServerInstance(settings, a)).ToList().AsReadOnly();
         }
@@ -96,6 +98,22 @@ namespace MongoDB.Driver
 
                 return _serverProxy.Instances;
             }
+        }
+
+        /// <summary>
+        /// Gets the unique sequential Id for this proxy.
+        /// </summary>
+        public int SequentialId
+        {
+            get { return _sequentialId; }
+        }
+
+        /// <summary>
+        /// Gets the settings.
+        /// </summary>
+        public MongoServerSettings Settings
+        {
+            get { return _settings; }
         }
 
         /// <summary>
@@ -248,11 +266,11 @@ namespace MongoDB.Driver
             {
                 if (instance.InstanceType == MongoServerInstanceType.ReplicaSetMember)
                 {
-                    _serverProxy = new ReplicaSetMongoServerProxy(_settings, _instances, connectionQueue, _connectionAttempt);
+                    _serverProxy = new ReplicaSetMongoServerProxy(_settings, _sequentialId, _instances, connectionQueue, _connectionAttempt);
                 }
                 else if (instance.InstanceType == MongoServerInstanceType.ShardRouter)
                 {
-                    _serverProxy = new ShardedMongoServerProxy(_settings, _instances, connectionQueue, _connectionAttempt);
+                    _serverProxy = new ShardedMongoServerProxy(_settings, _sequentialId, _instances, connectionQueue, _connectionAttempt);
                 }
                 else if (instance.InstanceType == MongoServerInstanceType.StandAlone)
                 {
@@ -262,7 +280,7 @@ namespace MongoDB.Driver
                         otherInstance.Disconnect();
                     }
 
-                    _serverProxy = new DirectMongoServerProxy(_settings, instance, _connectionAttempt);
+                    _serverProxy = new DirectMongoServerProxy(_settings, _sequentialId, instance, _connectionAttempt);
                 }
                 else
                 {
