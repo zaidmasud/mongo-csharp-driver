@@ -810,7 +810,8 @@ namespace MongoDB.Driver
                 }
             }
 
-            if (Encoding.UTF8.GetBytes(databaseName).Length > 64)
+            var strictUtf8Encoding = new UTF8Encoding(false, true); // throwOnInvalidBytes
+            if (strictUtf8Encoding.GetBytes(databaseName).Length > 64)
             {
                 message = string.Format("Database name '{0}' exceeds 64 bytes (after encoding to UTF8).", databaseName);
                 return false;

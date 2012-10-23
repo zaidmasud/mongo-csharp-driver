@@ -34,6 +34,7 @@ namespace MongoDB.Bson.IO
         private bool _fixOldBinarySubTypeOnInput = true;
         private bool _fixOldDateTimeMaxValueOnInput = true;
         private int _maxDocumentSize = BsonDefaults.MaxDocumentSize;
+        private bool _strictUtf8 = true;
 
         // constructors
         /// <summary>
@@ -51,18 +52,21 @@ namespace MongoDB.Bson.IO
         /// <param name="fixOldDateTimeMaxValueOnInput">Whether to fix occurrences of the old representation of DateTime.MaxValue on input.</param>
         /// <param name="guidRepresentation">The representation for Guids.</param>
         /// <param name="maxDocumentSize">The max document size.</param>
+        /// <param name="strictUtf8">Whether to use strict UTF8 decoding.</param>
         public BsonBinaryReaderSettings(
             bool closeInput,
             bool fixOldBinarySubTypeOnInput,
             bool fixOldDateTimeMaxValueOnInput,
             GuidRepresentation guidRepresentation,
-            int maxDocumentSize)
+            int maxDocumentSize,
+            bool strictUtf8)
             : base(guidRepresentation)
         {
             _closeInput = closeInput;
             _fixOldBinarySubTypeOnInput = fixOldBinarySubTypeOnInput;
             _fixOldDateTimeMaxValueOnInput = fixOldDateTimeMaxValueOnInput;
             _maxDocumentSize = maxDocumentSize;
+            _strictUtf8 = strictUtf8;
         }
 
         // public static properties
@@ -135,6 +139,19 @@ namespace MongoDB.Bson.IO
             }
         }
 
+        /// <summary>
+        /// Gets or sets whether to throw an exception when invalid UTF8 bytes are detected.
+        /// </summary>
+        public bool StrictUtf8
+        {
+            get { return _strictUtf8; }
+            set
+            {
+                if (IsFrozen) { throw new InvalidOperationException("BsonBinaryReaderSettings is frozen."); }
+                _strictUtf8 = value;
+            }
+        }
+
         // public methods
         /// <summary>
         /// Creates a clone of the settings.
@@ -152,7 +169,7 @@ namespace MongoDB.Bson.IO
         /// <returns>A clone of the settings.</returns>
         protected override BsonReaderSettings CloneImplementation()
         {
-            return new BsonBinaryReaderSettings(_closeInput, _fixOldBinarySubTypeOnInput, _fixOldDateTimeMaxValueOnInput, GuidRepresentation, _maxDocumentSize);
+            return new BsonBinaryReaderSettings(_closeInput, _fixOldBinarySubTypeOnInput, _fixOldDateTimeMaxValueOnInput, GuidRepresentation, _maxDocumentSize, _strictUtf8);
         }
     }
 }

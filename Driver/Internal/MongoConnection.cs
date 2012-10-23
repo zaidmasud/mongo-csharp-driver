@@ -157,7 +157,7 @@ namespace MongoDB.Driver.Internal
             lock (_connectionLock)
             {
                 var nonceCommand = new CommandDocument("getnonce", 1);
-                var commandResult = RunCommand(databaseName, QueryFlags.None, nonceCommand, false);
+                var commandResult = RunCommand(databaseName, QueryFlags.None, nonceCommand, true, true, false);
                 if (!commandResult.Ok)
                 {
                     throw new MongoAuthenticationException(
@@ -176,7 +176,7 @@ namespace MongoDB.Driver.Internal
                     { "key", digest }
                 };
 
-                commandResult = RunCommand(databaseName, QueryFlags.None, authenticateCommand, false);
+                commandResult = RunCommand(databaseName, QueryFlags.None, authenticateCommand, true, true, false);
                 if (!commandResult.Ok)
                 {
                     var message = string.Format("Invalid credentials for database '{0}'.", databaseName);
@@ -346,7 +346,7 @@ namespace MongoDB.Driver.Internal
             lock (_connectionLock)
             {
                 var logoutCommand = new CommandDocument("logout", 1);
-                var commandResult = RunCommand(databaseName, QueryFlags.None, logoutCommand, false);
+                var commandResult = RunCommand(databaseName, QueryFlags.None, logoutCommand, true, true, false);
                 if (!commandResult.Ok)
                 {
                     throw new MongoAuthenticationException(
@@ -411,6 +411,8 @@ namespace MongoDB.Driver.Internal
             string databaseName,
             QueryFlags queryFlags,
             CommandDocument command,
+            bool strictUtf8Decoding,
+            bool strictUtf8Encoding,
             bool throwOnError)
         {
             var commandName = command.GetElement(0).Name;
@@ -418,7 +420,8 @@ namespace MongoDB.Driver.Internal
             var writerSettings = new BsonBinaryWriterSettings
             {
                 GuidRepresentation = GuidRepresentation.Unspecified,
-                MaxDocumentSize = _serverInstance.MaxDocumentSize
+                MaxDocumentSize = _serverInstance.MaxDocumentSize,
+                StrictUtf8 = strictUtf8Encoding
             };
             using (var message = new MongoQueryMessage(writerSettings, databaseName + ".$cmd", queryFlags, 0, 1, command, null))
             {
@@ -428,7 +431,8 @@ namespace MongoDB.Driver.Internal
             var readerSettings = new BsonBinaryReaderSettings
             {
                 GuidRepresentation = GuidRepresentation.Unspecified,
-                MaxDocumentSize = _serverInstance.MaxDocumentSize
+                MaxDocumentSize = _serverInstance.MaxDocumentSize,
+                StrictUtf8 = strictUtf8Decoding
             };
             var reply = ReceiveMessage<BsonDocument>(readerSettings, null);
             if (reply.NumberReturned == 0)
@@ -527,7 +531,8 @@ namespace MongoDB.Driver.Internal
                     var readerSettings = new BsonBinaryReaderSettings
                     {
                         GuidRepresentation = message.WriterSettings.GuidRepresentation,
-                        MaxDocumentSize = _serverInstance.MaxDocumentSize
+                        MaxDocumentSize = _serverInstance.MaxDocumentSize,
+                        StrictUtf8 = true
                     };
                     var replyMessage = ReceiveMessage<BsonDocument>(readerSettings, null);
                     var safeModeResponse = replyMessage.Documents[0];

@@ -31,10 +31,12 @@ namespace MongoDB.Bson.IO
         private static int __maxChunkPoolSize = 64;
         private const int __chunkSize = 16 * 1024; // 16KiB
         private static readonly string[] __asciiStringTable = BuildAsciiStringTable();
-        private static readonly UTF8Encoding __utf8Encoding = new UTF8Encoding(false, true); // throw on invalid bytes
         private static readonly bool[] __validBsonTypes = new bool[256];
 
         // private fields
+        private readonly UTF8Encoding _lenientUtf8Encoding = new UTF8Encoding(false, false);
+        private readonly UTF8Encoding _strictUtf8Encoding = new UTF8Encoding(false, true);
+
         private bool _disposed = false;
         private List<byte[]> _chunks = new List<byte[]>(4);
         private int _capacity;
@@ -514,10 +516,13 @@ namespace MongoDB.Bson.IO
         /// <summary>
         /// Reads a BSON string from the reader.
         /// </summary>
+        /// <param name="strictUtf8">Whether to use strict UTF8 decoding.</param>
         /// <returns>A String.</returns>
-        public string ReadString()
+        public string ReadString(bool strictUtf8)
         {
             if (_disposed) { throw new ObjectDisposedException("BsonBuffer"); }
+            var utf8Encoding = strictUtf8 ? _strictUtf8Encoding : _lenientUtf8Encoding;
+
             var length = ReadInt32(); // length including the null terminator
             if (length <= 0)
             {
@@ -533,7 +538,7 @@ namespace MongoDB.Bson.IO
                 {
                     throw new FileFormatException("String is missing null terminator.");
                 }
-                value = DecodeUtf8String(_chunk, _chunkOffset, length - 1); // don't decode the null terminator
+                value = DecodeUtf8String(utf8Encoding, _chunk, _chunkOffset, length - 1); // don't decode the null terminator
                 Position += length;
             }
             else
@@ -544,7 +549,7 @@ namespace MongoDB.Bson.IO
                 {
                     throw new FileFormatException("String is missing null terminator.");
                 }
-                value = __utf8Encoding.GetString(bytes, 0, length - 1); // don't decode the null terminator
+                value = utf8Encoding.GetString(bytes, 0, length - 1); // don't decode the null terminator
             }
 
             return value;
@@ -599,7 +604,7 @@ namespace MongoDB.Bson.IO
                 }
                 else
                 {
-                    cstring = DecodeUtf8String(_chunk, _chunkOffset, stringLength);
+                    cstring = DecodeUtf8String(_strictUtf8Encoding, _chunk, _chunkOffset, stringLength);
                 }
                 Position += stringLength + 1;
                 return cstring;
@@ -634,7 +639,7 @@ namespace MongoDB.Bson.IO
                     }
                     else
                     {
-                        cstring = __utf8Encoding.GetString(ReadBytes(stringLength)); // ReadBytes advances over string
+                        cstring = _strictUtf8Encoding.GetString(ReadBytes(stringLength)); // ReadBytes advances over string
                         Position += 1; // skip over null byte at end
                     }
                     return cstring;
@@ -775,18 +780,18 @@ namespace MongoDB.Bson.IO
         public void WriteCString(string value)
         {
             if (_disposed) { throw new ObjectDisposedException("BsonBuffer"); }
-            int maxLength = __utf8Encoding.GetMaxByteCount(value.Length) + 1;
+            int maxLength = _strictUtf8Encoding.GetMaxByteCount(value.Length) + 1;
             EnsureSpaceAvailable(maxLength);
             if (__chunkSize - _chunkOffset >= maxLength)
             {
-                int length = __utf8Encoding.GetBytes(value, 0, value.Length, _chunk, _chunkOffset);
+                int length = _strictUtf8Encoding.GetBytes(value, 0, value.Length, _chunk, _chunkOffset);
                 _chunk[_chunkOffset + length] = 0;
                 Position += length + 1;
             }
             else
             {
                 // straddles chunk boundary
-                byte[] bytes = __utf8Encoding.GetBytes(value);
+                byte[] bytes = _strictUtf8Encoding.GetBytes(value);
                 WriteBytes(bytes);
                 WriteByte(0);
             }
@@ -890,14 +895,17 @@ namespace MongoDB.Bson.IO
         /// Writes a BSON String to the buffer.
         /// </summary>
         /// <param name="value">The String value.</param>
-        public void WriteString(string value)
+        /// <param name="strictUtf8">Whether to use strict UTF8 encoding.</param>
+        public void WriteString(string value, bool strictUtf8)
         {
             if (_disposed) { throw new ObjectDisposedException("BsonBuffer"); }
-            int maxLength = __utf8Encoding.GetMaxByteCount(value.Length) + 5;
+            var utf8Encoding = strictUtf8 ? _strictUtf8Encoding : _lenientUtf8Encoding;
+
+            int maxLength = utf8Encoding.GetMaxByteCount(value.Length) + 5;
             EnsureSpaceAvailable(maxLength);
             if (__chunkSize - _chunkOffset >= maxLength)
             {
-                int length = __utf8Encoding.GetBytes(value, 0, value.Length, _chunk, _chunkOffset + 4); // write string first
+                int length = utf8Encoding.GetBytes(value, 0, value.Length, _chunk, _chunkOffset + 4); // write string first
                 int lengthPlusOne = length + 1;
                 _chunk[_chunkOffset + 0] = (byte)(lengthPlusOne); // now we know the length
                 _chunk[_chunkOffset + 1] = (byte)(lengthPlusOne >> 8);
@@ -909,7 +917,7 @@ namespace MongoDB.Bson.IO
             else
             {
                 // straddles chunk boundary
-                byte[] bytes = __utf8Encoding.GetBytes(value);
+                byte[] bytes = utf8Encoding.GetBytes(value);
                 WriteInt32(bytes.Length + 1);
                 WriteBytes(bytes);
                 WriteByte(0);
@@ -962,7 +970,7 @@ namespace MongoDB.Bson.IO
         }
 
         // private static methods
-        private static string DecodeUtf8String(byte[] buffer, int index, int count)
+        private static string DecodeUtf8String(UTF8Encoding utf8Encoding, byte[] buffer, int index, int count)
         {
             switch (count)
             {
@@ -980,7 +988,7 @@ namespace MongoDB.Bson.IO
                     break;
             }
 
-            return __utf8Encoding.GetString(buffer, index, count);
+            return utf8Encoding.GetString(buffer, index, count);
         }
 
         private static int IndexOfNull<TValue>(

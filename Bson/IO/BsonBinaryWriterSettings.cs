@@ -33,6 +33,7 @@ namespace MongoDB.Bson.IO
         private bool _closeOutput = false;
         private bool _fixOldBinarySubTypeOnOutput = true;
         private int _maxDocumentSize = BsonDefaults.MaxDocumentSize;
+        private bool _strictUtf8 = true;
 
         // constructors
         /// <summary>
@@ -49,16 +50,19 @@ namespace MongoDB.Bson.IO
         /// <param name="fixOldBinarySubTypeOnOutput">Whether to fix old binary data subtype on output.</param>
         /// <param name="guidRepresentation">The representation for Guids.</param>
         /// <param name="maxDocumentSize">The max document size.</param>
+        /// <param name="strictUtf8">Whether to use strict UTF8 encoding.</param>
         public BsonBinaryWriterSettings(
             bool closeOutput,
             bool fixOldBinarySubTypeOnOutput,
             GuidRepresentation guidRepresentation,
-            int maxDocumentSize)
+            int maxDocumentSize,
+            bool strictUtf8)
             : base(guidRepresentation)
         {
             _closeOutput = closeOutput;
             _fixOldBinarySubTypeOnOutput = fixOldBinarySubTypeOnOutput;
             _maxDocumentSize = maxDocumentSize;
+            _strictUtf8 = strictUtf8;
         }
 
         // public static properties
@@ -118,6 +122,19 @@ namespace MongoDB.Bson.IO
             }
         }
 
+        /// <summary>
+        /// Gets or sets whether to throw an exception when invalid UTF8 bytes are detected.
+        /// </summary>
+        public bool StrictUtf8
+        {
+            get { return _strictUtf8; }
+            set
+            {
+                if (IsFrozen) { throw new InvalidOperationException("BsonBinaryWriterSettings is frozen."); }
+                _strictUtf8 = value;
+            }
+        }
+
         // public methods
         /// <summary>
         /// Creates a clone of the settings.
@@ -135,7 +152,7 @@ namespace MongoDB.Bson.IO
         /// <returns>A clone of the settings.</returns>
         protected override BsonWriterSettings CloneImplementation()
         {
-            return new BsonBinaryWriterSettings(_closeOutput, _fixOldBinarySubTypeOnOutput, GuidRepresentation, _maxDocumentSize);
+            return new BsonBinaryWriterSettings(_closeOutput, _fixOldBinarySubTypeOnOutput, GuidRepresentation, _maxDocumentSize, _strictUtf8);
         }
     }
 }

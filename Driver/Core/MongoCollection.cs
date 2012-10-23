@@ -1626,7 +1626,8 @@ namespace MongoDB.Driver
             return new BsonBinaryReaderSettings
             {
                 GuidRepresentation = _settings.GuidRepresentation,
-                MaxDocumentSize = connection.ServerInstance.MaxDocumentSize
+                MaxDocumentSize = connection.ServerInstance.MaxDocumentSize,
+                StrictUtf8 = _settings.StrictUtf8Decoding
             };
         }
 
@@ -1635,7 +1636,8 @@ namespace MongoDB.Driver
             return new BsonBinaryWriterSettings
             {
                 GuidRepresentation = _settings.GuidRepresentation,
-                MaxDocumentSize = connection.ServerInstance.MaxDocumentSize
+                MaxDocumentSize = connection.ServerInstance.MaxDocumentSize,
+                StrictUtf8 = _settings.StrictUtf8Encoding
             };
         }
 

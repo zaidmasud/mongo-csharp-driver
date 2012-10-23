@@ -348,7 +348,7 @@ namespace MongoDB.Bson.IO
             if (Disposed) { ThrowObjectDisposedException(); }
             VerifyBsonType("ReadJavaScript", BsonType.JavaScript);
             State = GetNextState();
-            return _buffer.ReadString();
+            return _buffer.ReadString(_binaryReaderSettings.StrictUtf8);
         }
 
         /// <summary>
@@ -363,7 +363,7 @@ namespace MongoDB.Bson.IO
             var startPosition = _buffer.Position; // position of size field
             var size = ReadSize();
             _context = new BsonBinaryReaderContext(_context, ContextType.JavaScriptWithScope, startPosition, size);
-            var code = _buffer.ReadString();
+            var code = _buffer.ReadString(_binaryReaderSettings.StrictUtf8);
 
             State = BsonReaderState.ScopeDocument;
             return code;
@@ -466,7 +466,7 @@ namespace MongoDB.Bson.IO
             if (Disposed) { ThrowObjectDisposedException(); }
             VerifyBsonType("ReadString", BsonType.String);
             State = GetNextState();
-            return _buffer.ReadString();
+            return _buffer.ReadString(_binaryReaderSettings.StrictUtf8);
         }
 
         /// <summary>
@@ -478,7 +478,7 @@ namespace MongoDB.Bson.IO
             if (Disposed) { ThrowObjectDisposedException(); }
             VerifyBsonType("ReadSymbol", BsonType.Symbol);
             State = GetNextState();
-            return _buffer.ReadString();
+            return _buffer.ReadString(_binaryReaderSettings.StrictUtf8);
         }
 
         /// <summary>

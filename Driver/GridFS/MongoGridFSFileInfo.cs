@@ -276,7 +276,8 @@ namespace MongoDB.Driver.GridFS
         public StreamWriter AppendText()
         {
             Stream stream = Open(FileMode.Append, FileAccess.Write);
-            return new StreamWriter(stream, Encoding.UTF8);
+            var strictUtf8Encoding = new UTF8Encoding(false, true); // throwOnInvalidBytes
+            return new StreamWriter(stream, strictUtf8Encoding);
         }
 
         /// <summary>
@@ -328,7 +329,8 @@ namespace MongoDB.Driver.GridFS
         public StreamWriter CreateText()
         {
             var stream = Create();
-            return new StreamWriter(stream, Encoding.UTF8);
+            var strictUtf8Encoding = new UTF8Encoding(false, true); // throwOnInvalidBytes
+            return new StreamWriter(stream, strictUtf8Encoding);
         }
 
         /// <summary>
@@ -446,7 +448,8 @@ namespace MongoDB.Driver.GridFS
         public StreamReader OpenText()
         {
             Stream stream = Open(FileMode.Open, FileAccess.Read);
-            return new StreamReader(stream, Encoding.UTF8);
+            var strictUtf8Encoding = new UTF8Encoding(false, true); // throwOnInvalidBytes
+            return new StreamReader(stream, strictUtf8Encoding);
         }
 
         /// <summary>

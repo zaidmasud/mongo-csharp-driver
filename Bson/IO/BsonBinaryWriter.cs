@@ -349,7 +349,7 @@ namespace MongoDB.Bson.IO
 
             _buffer.WriteByte((byte)BsonType.JavaScript);
             WriteNameHelper();
-            _buffer.WriteString(code);
+            _buffer.WriteString(code, _binaryWriterSettings.StrictUtf8);
 
             State = GetNextState();
         }
@@ -370,7 +370,7 @@ namespace MongoDB.Bson.IO
             WriteNameHelper();
             _context = new BsonBinaryWriterContext(_context, ContextType.JavaScriptWithScope, _buffer.Position);
             _buffer.WriteInt32(0); // reserve space for size of JavaScript with scope value
-            _buffer.WriteString(code);
+            _buffer.WriteString(code, _binaryWriterSettings.StrictUtf8);
 
             State = BsonWriterState.ScopeDocument;
         }
@@ -527,7 +527,7 @@ namespace MongoDB.Bson.IO
 
             _buffer.WriteByte((byte)BsonType.String);
             WriteNameHelper();
-            _buffer.WriteString(value);
+            _buffer.WriteString(value, _binaryWriterSettings.StrictUtf8);
 
             State = GetNextState();
         }
@@ -546,7 +546,7 @@ namespace MongoDB.Bson.IO
 
             _buffer.WriteByte((byte)BsonType.Symbol);
             WriteNameHelper();
-            _buffer.WriteString(value);
+            _buffer.WriteString(value, _binaryWriterSettings.StrictUtf8);
 
             State = GetNextState();
         }

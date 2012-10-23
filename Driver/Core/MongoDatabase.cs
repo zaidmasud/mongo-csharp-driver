@@ -756,7 +756,8 @@ namespace MongoDB.Driver
                 return false;
             }
 
-            if (Encoding.UTF8.GetBytes(collectionName).Length > 121)
+            var strictUtf8Encoding = new UTF8Encoding(false, true); // throwOnInvalidBytes
+            if (strictUtf8Encoding.GetBytes(collectionName).Length > 121)
             {
                 message = "Collection name cannot exceed 121 bytes (after encoding to UTF-8).";
                 return false;

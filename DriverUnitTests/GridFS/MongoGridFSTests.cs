@@ -108,10 +108,7 @@ namespace MongoDB.DriverUnitTests.GridFS
             var memoryStream = new MemoryStream();
             _gridFS.Download(memoryStream, "HelloWorld.txt");
             var bytes = memoryStream.ToArray();
-            Assert.AreEqual(0xEF, bytes[0]); // the BOM
-            Assert.AreEqual(0xBB, bytes[1]);
-            Assert.AreEqual(0xBF, bytes[2]);
-            var text = Encoding.UTF8.GetString(bytes, 3, bytes.Length - 3);
+            var text = Encoding.UTF8.GetString(bytes);
             Assert.AreEqual("Hello World", text);
         }
 

@@ -31,7 +31,7 @@ namespace MongoDB.Bson.IO
 
         // private fields
         private bool _closeOutput = false;
-        private Encoding _encoding = Encoding.UTF8;
+        private Encoding _encoding = new UTF8Encoding(false, true); // throwOnInvalidBytes
         private bool _indent = false;
         private string _indentChars = "  ";
         private string _newLineChars = "\r\n";

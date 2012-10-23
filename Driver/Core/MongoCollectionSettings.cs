@@ -34,6 +34,8 @@ namespace MongoDB.Driver
         private GuidRepresentation _guidRepresentation;
         private ReadPreference _readPreference;
         private SafeMode _safeMode;
+        private bool _strictUtf8Decoding;
+        private bool _strictUtf8Encoding;
 
         // the following fields are set when Freeze is called
         private bool _isFrozen;
@@ -69,6 +71,8 @@ namespace MongoDB.Driver
             _guidRepresentation = databaseSettings.GuidRepresentation;
             _readPreference = databaseSettings.ReadPreference;
             _safeMode = databaseSettings.SafeMode;
+            _strictUtf8Decoding = true;
+            _strictUtf8Encoding = true;
         }
 
         /// <summary>
@@ -80,13 +84,17 @@ namespace MongoDB.Driver
         /// <param name="guidRepresentation">The GUID representation to use with this collection.</param>
         /// <param name="readPreference">The read preference.</param>
         /// <param name="safeMode">The SafeMode to use with this collection.</param>
+        /// <param name="strictUtf8Decoding">Whether to use strict UTF8 decoding.</param>
+        /// <param name="strictUtf8Encoding">Whether to use strict UTF8 encoding.</param>
         protected MongoCollectionSettings(
             string collectionName,
             bool assignIdOnInsert,
             Type defaultDocumentType,
             GuidRepresentation guidRepresentation,
             ReadPreference readPreference,
-            SafeMode safeMode)
+            SafeMode safeMode,
+            bool strictUtf8Decoding,
+            bool strictUtf8Encoding)
         {
             if (collectionName == null)
             {
@@ -111,6 +119,8 @@ namespace MongoDB.Driver
             _guidRepresentation = guidRepresentation;
             _readPreference = readPreference;
             _safeMode = safeMode;
+            _strictUtf8Decoding = strictUtf8Decoding;
+            _strictUtf8Encoding = strictUtf8Encoding;
         }
 
         // public properties
@@ -215,6 +225,32 @@ namespace MongoDB.Driver
             }
         }
 
+        /// <summary>
+        /// Gets or sets whether to use strict UTF8 decoding.
+        /// </summary>
+        public bool StrictUtf8Decoding
+        {
+            get { return _strictUtf8Decoding; }
+            set
+            {
+                if (_isFrozen) { throw new InvalidOperationException("MongoCollectionSettings is frozen."); }
+                _strictUtf8Decoding = value;
+            }
+        }
+
+        /// <summary>
+        /// Gets or sets whether to use strict UTF8 encoding.
+        /// </summary>
+        public bool StrictUtf8Encoding
+        {
+            get { return _strictUtf8Encoding; }
+            set
+            {
+                if (_isFrozen) { throw new InvalidOperationException("MongoCollectionSettings is frozen."); }
+                _strictUtf8Encoding = value;
+            }
+        }
+
         // public methods
         /// <summary>
         /// Creates a clone of the settings.
@@ -248,7 +284,9 @@ namespace MongoDB.Driver
                         _defaultDocumentType == rhs._defaultDocumentType &&
                         _guidRepresentation == rhs._guidRepresentation &&
                         _readPreference == rhs._readPreference &&
-                        _safeMode == rhs._safeMode;
+                        _safeMode == rhs._safeMode &&
+                        _strictUtf8Decoding == rhs._strictUtf8Decoding &&
+                        _strictUtf8Encoding == rhs._strictUtf8Encoding;
                 }
             }
         }
@@ -305,6 +343,8 @@ namespace MongoDB.Driver
             hash = 37 * hash + _guidRepresentation.GetHashCode();
             hash = 37 * hash + _readPreference.GetHashCode();
             hash = 37 * hash + _safeMode.GetHashCode();
+            hash = 37 * hash + _strictUtf8Decoding.GetHashCode();
+            hash = 37 * hash + _strictUtf8Encoding.GetHashCode();
             return hash;
         }
 
@@ -320,8 +360,8 @@ namespace MongoDB.Driver
             }
 
             return string.Format(
-                "CollectionName={0};AssignIdOnInsert={1};DefaultDocumentType={2};GuidRepresentation={3};ReadPreference={4};SafeMode={5}",
-                _collectionName, _assignIdOnInsert, _defaultDocumentType, _guidRepresentation, _readPreference, _safeMode);
+                "CollectionName={0};AssignIdOnInsert={1};DefaultDocumentType={2};GuidRepresentation={3};ReadPreference={4};SafeMode={5};StrictUtf8Decoding={6};StrictUtf8Encoding={7}",
+                _collectionName, _assignIdOnInsert, _defaultDocumentType, _guidRepresentation, _readPreference, _safeMode, _strictUtf8Decoding, _strictUtf8Encoding);
         }
     }
 
@@ -350,13 +390,17 @@ namespace MongoDB.Driver
         /// <param name="guidRepresentation">The representation for Guids.</param>
         /// <param name="readPreference">The read preference.</param>
         /// <param name="safeMode">The safe mode to use.</param>
+        /// <param name="strictUtf8Decoding">Whether to use strict UTF8 decoding.</param>
+        /// <param name="strictUtf8Encoding">Whether to use strict UTF8 encoding.</param>
         private MongoCollectionSettings(
             string collectionName,
             bool assignIdOnInsert,
             GuidRepresentation guidRepresentation,
             ReadPreference readPreference,
-            SafeMode safeMode)
-            : base(collectionName, assignIdOnInsert, typeof(TDefaultDocument), guidRepresentation, readPreference, safeMode)
+            SafeMode safeMode,
+            bool strictUtf8Decoding,
+            bool strictUtf8Encoding)
+            : base(collectionName, assignIdOnInsert, typeof(TDefaultDocument), guidRepresentation, readPreference, safeMode, strictUtf8Decoding, strictUtf8Encoding)
         {
         }
 
@@ -367,7 +411,7 @@ namespace MongoDB.Driver
         /// <returns>A clone of the settings.</returns>
         public override MongoCollectionSettings Clone()
         {
-            return new MongoCollectionSettings<TDefaultDocument>(CollectionName, AssignIdOnInsert, GuidRepresentation, ReadPreference, SafeMode);
+            return new MongoCollectionSettings<TDefaultDocument>(CollectionName, AssignIdOnInsert, GuidRepresentation, ReadPreference, SafeMode, StrictUtf8Decoding, StrictUtf8Encoding);
         }
     }
 }
