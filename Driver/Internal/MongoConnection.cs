@@ -422,7 +422,7 @@ namespace MongoDB.Driver.Internal
             };
             using (var message = new MongoQueryMessage(writerSettings, databaseName + ".$cmd", queryFlags, 0, 1, command, null))
             {
-                SendMessage(message, WriteConcern.NetworkErrorsOnly, databaseName);
+                SendMessage(message, WriteConcern.None, databaseName);
             }
 
             var readerSettings = new BsonBinaryReaderSettings
@@ -477,7 +477,7 @@ namespace MongoDB.Driver.Internal
             }
         }
 
-        internal WriteResult SendMessage(MongoRequestMessage message, WriteConcern writeConcern, string databaseName)
+        internal GetLastErrorResult SendMessage(MongoRequestMessage message, WriteConcern writeConcern, string databaseName)
         {
             if (_state == MongoConnectionState.Closed) { throw new InvalidOperationException("Connection is closed."); }
             lock (_connectionLock)
@@ -521,7 +521,7 @@ namespace MongoDB.Driver.Internal
                     throw;
                 }
 
-                WriteResult writeResult = null;
+                GetLastErrorResult getLastErrorResult = null;
                 if (writeConcern.Enabled)
                 {
                     var readerSettings = new BsonBinaryReaderSettings
@@ -531,26 +531,26 @@ namespace MongoDB.Driver.Internal
                     };
                     var replyMessage = ReceiveMessage<BsonDocument>(readerSettings, null);
                     var getLastErrorResponse = replyMessage.Documents[0];
-                    writeResult = new WriteResult();
-                    writeResult.Initialize(getLastErrorCommand, getLastErrorResponse);
+                    getLastErrorResult = new GetLastErrorResult();
+                    getLastErrorResult.Initialize(getLastErrorCommand, getLastErrorResponse);
 
-                    if (!writeResult.Ok)
+                    if (!getLastErrorResult.Ok)
                     {
                         var errorMessage = string.Format(
                             "GetLastError reported an error '{0}'. (response was {1}).",
-                            writeResult.ErrorMessage, getLastErrorResponse.ToJson());
-                        throw new MongoWriteConcernException(errorMessage, writeResult);
+                            getLastErrorResult.ErrorMessage, getLastErrorResponse.ToJson());
+                        throw new GetLastErrorException(errorMessage, getLastErrorResult);
                     }
-                    if (writeResult.HasLastErrorMessage)
+                    if (getLastErrorResult.HasLastErrorMessage)
                     {
                         var errorMessage = string.Format(
                             "GetLastError reported an error '{0}'. (Response was {1}).",
-                            writeResult.LastErrorMessage, getLastErrorResponse.ToJson());
-                        throw new MongoWriteConcernException(errorMessage, writeResult);
+                            getLastErrorResult.LastErrorMessage, getLastErrorResponse.ToJson());
+                        throw new GetLastErrorException(errorMessage, getLastErrorResult);
                     }
                 }
 
-                return writeResult;
+                return getLastErrorResult;
             }
         }
 

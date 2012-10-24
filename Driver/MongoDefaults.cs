@@ -150,7 +150,7 @@ namespace MongoDB.Driver
         /// <summary>
         /// Gets or sets the safe mode.
         /// </summary>
-        [Obsolete]
+        [Obsolete("SafeMode has been replaced by WriteConcern and the default for WriteConcern is always Errors and is not configurable.")]
         public static SafeMode SafeMode
         {
             get { return __safeMode; }

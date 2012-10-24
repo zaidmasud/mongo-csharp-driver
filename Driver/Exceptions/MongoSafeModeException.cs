@@ -25,7 +25,7 @@ namespace MongoDB.Driver
     /// Represents a MongoDB safe mode exception.
     /// </summary>
     [Serializable]
-    [Obsolete("Use MongoWriteConcernException instead.")]
+    [Obsolete("Use GetLastErrorException instead.")]
     public class MongoSafeModeException : MongoCommandException
     {
         // constructors

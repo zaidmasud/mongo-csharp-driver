@@ -24,8 +24,8 @@ namespace MongoDB.Driver
     /// Represents the results of an operation performed with a safe mode.
     /// </summary>
     [Serializable]
-    [Obsolete("Use WriteResult instead.")]
-    public class SafeModeResult : GetLastErrorResult
+    [Obsolete("Use GetLastErrorResult instead.")]
+    public class SafeModeResult : CommandResult
     {
         // constructors
         /// <summary>

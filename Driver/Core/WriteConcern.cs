@@ -28,19 +28,15 @@ namespace MongoDB.Driver
     {
         // private static fields
         private readonly static WriteConcern __errors = new WriteConcern { Enabled = true }.Freeze();
-        private readonly static WriteConcern __fsyncTrue = new WriteConcern { Enabled = true, FSync = true }.Freeze();
-        private readonly static WriteConcern __journalTrue = new WriteConcern { Enabled = true, Journal = true }.Freeze();
-        private readonly static WriteConcern __majority = new WriteConcern { Enabled = true, WMode = "majority" }.Freeze();
-        private readonly static WriteConcern __networkErrorsOnly = new WriteConcern { Enabled = false }.Freeze();
-        private readonly static WriteConcern __none = new WriteConcern { Enabled = false, IgnoreNetworkErrors = true }.Freeze();
+        private readonly static WriteConcern __none = new WriteConcern { Enabled = false }.Freeze();
         private readonly static WriteConcern __w2 = new WriteConcern { Enabled = true, W = 2 }.Freeze();
         private readonly static WriteConcern __w3 = new WriteConcern { Enabled = true, W = 3 }.Freeze();
         private readonly static WriteConcern __w4 = new WriteConcern { Enabled = true, W = 4 }.Freeze();
+        private readonly static WriteConcern __wmajority = new WriteConcern { Enabled = true, WMode = "majority" }.Freeze();
 
         // private fields
         private bool _enabled;
         private bool _fsync;
-        private bool _ignoreNetworkErrors;
         private bool _journal;
         private int _w;
         private string _wmode;
@@ -68,39 +64,7 @@ namespace MongoDB.Driver
         }
 
         /// <summary>
-        /// Gets an instance of WriteConcern that waits for an fsync.
-        /// </summary>
-        public static WriteConcern FSyncTrue
-        {
-            get { return __fsyncTrue; }
-        }
-
-        /// <summary>
-        /// Gets an instance of WriteConcern that waits for the journal to be written.
-        /// </summary>
-        public static WriteConcern JournalTrue
-        {
-            get { return __journalTrue; }
-        }
-
-        /// <summary>
-        /// Gets an instance of WriteConcern where w="majority".
-        /// </summary>
-        public static WriteConcern Majority
-        {
-            get { return __majority; }
-        }
-
-        /// <summary>
-        /// Gets an instance of WriteConcern that checks for network errors only.
-        /// </summary>
-        public static WriteConcern NetworkErrorsOnly
-        {
-            get { return __networkErrorsOnly; }
-        }
-
-        /// <summary>
-        /// Gets an instance of WriteConcern that doesn't check for any errors (not even network errors).
+        /// Gets an instance of WriteConcern that doesn't check for errors.
         /// </summary>
         public static WriteConcern None
         {
@@ -131,6 +95,14 @@ namespace MongoDB.Driver
             get { return __w4; }
         }
 
+        /// <summary>
+        /// Gets an instance of WriteConcern where w="majority".
+        /// </summary>
+        public static WriteConcern WMajority
+        {
+            get { return __wmajority; }
+        }
+
         // public properties
         /// <summary>
         /// Gets or sets whether WriteConcern is enabled.
@@ -157,19 +129,6 @@ namespace MongoDB.Driver
                 if (_isFrozen) { ThrowFrozenException(); }
                 _fsync = value;
                 _enabled |= value;
-            }
-        }
-
-        /// <summary>
-        /// Gets or sets whether to ignore network errors.
-        /// </summary>
-        public bool IgnoreNetworkErrors
-        {
-            get { return _ignoreNetworkErrors; }
-            set
-            {
-                if (_isFrozen) { ThrowFrozenException(); }
-               _ignoreNetworkErrors = value;
             }
         }
 
@@ -204,6 +163,10 @@ namespace MongoDB.Driver
             set
             {
                 if (_isFrozen) { ThrowFrozenException(); }
+                if (value < 0)
+                {
+                    throw new ArgumentOutOfRangeException("Value for W cannot be negative.", "value");
+                }
                 _w = value;
                 _wmode = null;
                 _enabled |= (value != 0);
@@ -285,7 +248,6 @@ namespace MongoDB.Driver
             var clone = new WriteConcern();
             clone._enabled = _enabled;
             clone._fsync = _fsync;
-            clone._ignoreNetworkErrors = _ignoreNetworkErrors;
             clone._journal = _journal;
             clone._w = _w;
             clone._wmode = _wmode;
@@ -315,7 +277,6 @@ namespace MongoDB.Driver
             return
                 _enabled == rhs._enabled &&
                 _fsync == rhs._fsync &&
-                _ignoreNetworkErrors == rhs._ignoreNetworkErrors &&
                 _journal == rhs._journal &&
                 _w == rhs._w &&
                 _wmode == rhs._wmode &&
@@ -367,7 +328,6 @@ namespace MongoDB.Driver
             int hash = 17;
             hash = 37 * hash + _enabled.GetHashCode();
             hash = 37 * hash + _fsync.GetHashCode();
-            hash = 37 * hash + _ignoreNetworkErrors.GetHashCode();
             hash = 37 * hash + _journal.GetHashCode();
             hash = 37 * hash + _w.GetHashCode();
             hash = 37 * hash + ((_wmode == null) ? 0 : _wmode.GetHashCode());
@@ -390,10 +350,6 @@ namespace MongoDB.Driver
             if (_journal)
             {
                 sb.Append(",journal=true");
-            }
-            if (_ignoreNetworkErrors)
-            {
-                sb.Append(",ignoreNetworkErrors=true");
             }
             if (_w != 0)
             {

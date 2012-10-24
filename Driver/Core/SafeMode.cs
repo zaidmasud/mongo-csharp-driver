@@ -28,8 +28,8 @@ namespace MongoDB.Driver
     public class SafeMode : IEquatable<SafeMode>
     {
         // private static fields
-        private static SafeMode __false = new SafeMode(WriteConcern.NetworkErrorsOnly);
-        private static SafeMode __fsyncTrue = new SafeMode(WriteConcern.FSyncTrue);
+        private static SafeMode __false = new SafeMode(WriteConcern.None);
+        private static SafeMode __fsyncTrue = new SafeMode(new WriteConcern { FSync = true }.Freeze());
         private static SafeMode __true = new SafeMode(WriteConcern.Errors);
         private static SafeMode __w2 = new SafeMode(WriteConcern.W2);
         private static SafeMode __w3 = new SafeMode(WriteConcern.W3);

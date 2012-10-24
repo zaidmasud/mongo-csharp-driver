@@ -442,7 +442,7 @@ namespace MongoDB.Driver
             clientSettings.MaxConnectionLifeTime = url.MaxConnectionLifeTime;
             clientSettings.MaxConnectionPoolSize = url.MaxConnectionPoolSize;
             clientSettings.MinConnectionPoolSize = url.MinConnectionPoolSize;
-            clientSettings.ReadPreference = (url.ReadPreference == null) ? ReadPreference.Primary : url.ReadPreference.Clone();
+            clientSettings.ReadPreference = (url.ReadPreference == null) ? ReadPreference.Primary : url.ReadPreference;
             clientSettings.ReplicaSetName = url.ReplicaSetName;
             clientSettings.SecondaryAcceptableLatency = url.SecondaryAcceptableLatency;
             clientSettings.Servers = new List<MongoServerAddress>(url.Servers);
@@ -451,7 +451,7 @@ namespace MongoDB.Driver
             clientSettings.VerifySslCertificate = url.VerifySslCertificate;
             clientSettings.WaitQueueSize = url.ComputedWaitQueueSize;
             clientSettings.WaitQueueTimeout = url.WaitQueueTimeout;
-            clientSettings.WriteConcern = (url.WriteConcern == null) ? WriteConcern.Errors : url.WriteConcern.Clone();
+            clientSettings.WriteConcern = (url.WriteConcern == null) ? WriteConcern.Errors : url.WriteConcern;
             return clientSettings;
         }
 

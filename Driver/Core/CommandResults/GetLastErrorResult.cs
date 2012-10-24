@@ -27,7 +27,9 @@ namespace MongoDB.Driver
     /// Represents the results of a GetLastError command.
     /// </summary>
     [Serializable]
-    public class GetLastErrorResult : CommandResult
+#pragma warning disable 618
+    public class GetLastErrorResult : SafeModeResult
+#pragma warning restore
     {
         // constructors
         /// <summary>
