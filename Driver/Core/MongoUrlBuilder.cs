@@ -46,7 +46,6 @@ namespace MongoDB.Driver
         private int _minConnectionPoolSize;
         private ReadPreference _readPreference;
         private string _replicaSetName;
-        private SafeMode _safeMode;
         private TimeSpan _secondaryAcceptableLatency;
         private IEnumerable<MongoServerAddress> _servers;
         private bool? _slaveOk;
@@ -56,6 +55,7 @@ namespace MongoDB.Driver
         private double _waitQueueMultiple;
         private int _waitQueueSize;
         private TimeSpan _waitQueueTimeout;
+        private WriteConcern _writeConcern;
 
         // constructors
         /// <summary>
@@ -226,10 +226,11 @@ namespace MongoDB.Driver
         /// <summary>
         /// Gets or sets the SafeMode to use.
         /// </summary>
+        [Obsolete("Use WriteConcern instead.")]
         public SafeMode SafeMode
         {
-            get { return _safeMode; }
-            set { _safeMode = value; }
+            get { return (_writeConcern == null) ? null : new SafeMode(_writeConcern); }
+            set { _writeConcern = (value == null) ? null : value.WriteConcern; }
         }
 
         /// <summary>
@@ -351,6 +352,15 @@ namespace MongoDB.Driver
         {
             get { return _waitQueueTimeout; }
             set { _waitQueueTimeout = value; }
+        }
+
+        /// <summary>
+        /// Gets or sets the WriteConcern to use.
+        /// </summary>
+        public WriteConcern WriteConcern
+        {
+            get { return _writeConcern; }
+            set { _writeConcern = value; }
         }
 
         // internal static methods
@@ -604,8 +614,8 @@ namespace MongoDB.Driver
                                 _connectTimeout = ParseTimeSpan(name, value);
                                 break;
                             case "fsync":
-                                if (_safeMode == null) { _safeMode = new SafeMode(false); }
-                                _safeMode.FSync = ParseBoolean(name, value);
+                                if (_writeConcern == null) { _writeConcern = new WriteConcern { Enabled = false }; }
+                                _writeConcern.FSync = ParseBoolean(name, value);
                                 break;
                             case "guids":
                             case "uuidrepresentation":
@@ -616,8 +626,8 @@ namespace MongoDB.Driver
                                 break;
                             case "j":
                             case "journal":
-                                if (_safeMode == null) { _safeMode = new SafeMode(false); }
-                                SafeMode.Journal = ParseBoolean(name, value);
+                                if (_writeConcern == null) { _writeConcern = new WriteConcern { Enabled = false }; }
+                                _writeConcern.Journal = ParseBoolean(name, value);
                                 break;
                             case "maxidletime":
                             case "maxidletimems":
@@ -645,8 +655,8 @@ namespace MongoDB.Driver
                                 _replicaSetName = value;
                                 break;
                             case "safe":
-                                if (_safeMode == null) { _safeMode = new SafeMode(false); }
-                                SafeMode.Enabled = ParseBoolean(name, value);
+                                if (_writeConcern == null) { _writeConcern = new WriteConcern { Enabled = false }; }
+                                _writeConcern.Enabled = ParseBoolean(name, value);
                                 break;
                             case "secondaryacceptablelatency":
                             case "secondaryacceptablelatencyms":
@@ -666,14 +676,14 @@ namespace MongoDB.Driver
                                 _verifySslCertificate = ParseBoolean(name, value);
                                 break;
                             case "w":
-                                if (_safeMode == null) { _safeMode = new SafeMode(false); }
+                                if (_writeConcern == null) { _writeConcern = new WriteConcern { Enabled = false }; }
                                 try
                                 {
-                                    SafeMode.W = ParseInt32(name, value);
+                                    _writeConcern.W = ParseInt32(name, value);
                                 }
                                 catch (FormatException)
                                 {
-                                    SafeMode.WMode = value;
+                                    _writeConcern.WMode = value;
                                 }
                                 break;
                             case "waitqueuemultiple":
@@ -690,8 +700,8 @@ namespace MongoDB.Driver
                                 break;
                             case "wtimeout":
                             case "wtimeoutms":
-                                if (_safeMode == null) { _safeMode = new SafeMode(false); }
-                                SafeMode.WTimeout = ParseTimeSpan(name, value);
+                                if (_writeConcern == null) { _writeConcern = new WriteConcern { Enabled = false }; }
+                                _writeConcern.WTimeout = ParseTimeSpan(name, value);
                                 break;
                         }
                     }
@@ -716,13 +726,10 @@ namespace MongoDB.Driver
         /// Creates a new instance of MongoServerSettings based on the settings in this MongoUrlBuilder.
         /// </summary>
         /// <returns>A new instance of MongoServerSettings.</returns>
+        [Obsolete("Use MongoServerSettings.FromUrlBuilder instead.")]
         public MongoServerSettings ToServerSettings()
         {
-            var readPreference = ReadPreference ?? ReadPreference.Primary;
-            return new MongoServerSettings(_connectionMode, _connectTimeout, null, _defaultCredentials, _guidRepresentation, _ipv6,
-                _maxConnectionIdleTime, _maxConnectionLifeTime, _maxConnectionPoolSize, _minConnectionPoolSize, readPreference, _replicaSetName,
-                _safeMode ?? MongoDefaults.SafeMode, _secondaryAcceptableLatency, _servers, _socketTimeout, _useSsl, _verifySslCertificate, 
-                ComputedWaitQueueSize, _waitQueueTimeout);
+            return MongoServerSettings.FromUrlBuilder(this);
         }
 
         /// <summary>
@@ -796,30 +803,30 @@ namespace MongoDB.Driver
                     }
                 }
             }
-            if (_safeMode != null && _safeMode.Enabled)
+            if (_writeConcern != null && _writeConcern.Enabled)
             {
-                query.AppendFormat("safe=true;");
-                if (_safeMode.FSync)
+                query.AppendFormat("safe=true;"); // TODO: how is WriteConcern supposed to be represented on the connection string?
+                if (_writeConcern.FSync)
                 {
                     query.Append("fsync=true;");
                 }
-                if (_safeMode.Journal)
+                if (_writeConcern.Journal)
                 {
                     query.Append("journal=true;");
                 }
-                if (_safeMode.W != 0 || _safeMode.WMode != null)
+                if (_writeConcern.W != 0 || _writeConcern.WMode != null)
                 {
-                    if (_safeMode.W != 0)
+                    if (_writeConcern.W != 0)
                     {
-                        query.AppendFormat("w={0};", _safeMode.W);
+                        query.AppendFormat("w={0};", _writeConcern.W);
                     }
                     else
                     {
-                        query.AppendFormat("w={0};", _safeMode.WMode);
+                        query.AppendFormat("w={0};", _writeConcern.WMode);
                     }
-                    if (_safeMode.WTimeout != TimeSpan.Zero)
+                    if (_writeConcern.WTimeout != TimeSpan.Zero)
                     {
-                        query.AppendFormat("wtimeout={0};", FormatTimeSpan(_safeMode.WTimeout));
+                        query.AppendFormat("wtimeout={0};", FormatTimeSpan(_writeConcern.WTimeout));
                     }
                 }
             }
@@ -895,7 +902,6 @@ namespace MongoDB.Driver
             _minConnectionPoolSize = MongoDefaults.MinConnectionPoolSize;
             _readPreference = null;
             _replicaSetName = null;
-            _safeMode = null;
             _secondaryAcceptableLatency = MongoDefaults.SecondaryAcceptableLatency;
             _servers = null;
             _slaveOk = null;
@@ -905,6 +911,7 @@ namespace MongoDB.Driver
             _waitQueueMultiple = MongoDefaults.WaitQueueMultiple;
             _waitQueueSize = MongoDefaults.WaitQueueSize;
             _waitQueueTimeout = MongoDefaults.WaitQueueTimeout;
+            _writeConcern = null;
         }
     }
 }

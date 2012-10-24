@@ -214,7 +214,7 @@ namespace MongoDB.DriverUnitTests
 
         // CSHARP-386
         [Test]
-        [ExpectedException(typeof(InvalidOperationException), ExpectedMessage = "SafeMode has been frozen and no further changes are allowed.")]
+        [ExpectedException(typeof(InvalidOperationException), ExpectedMessage = "WriteConcern has been frozen and no further changes are allowed.")]
         public void TestSafeModeFalseIsFrozen()
         {
             var s = SafeMode.False;
@@ -223,7 +223,7 @@ namespace MongoDB.DriverUnitTests
 
         // CSHARP-386
         [Test]
-        [ExpectedException(typeof(InvalidOperationException), ExpectedMessage = "SafeMode has been frozen and no further changes are allowed.")]
+        [ExpectedException(typeof(InvalidOperationException), ExpectedMessage = "WriteConcern has been frozen and no further changes are allowed.")]
         public void TestSafeModeFSyncTrueIsFrozen()
         {
             var s = SafeMode.FSyncTrue;
@@ -232,7 +232,7 @@ namespace MongoDB.DriverUnitTests
 
         // CSHARP-386
         [Test]
-        [ExpectedException(typeof(InvalidOperationException), ExpectedMessage = "SafeMode has been frozen and no further changes are allowed.")]
+        [ExpectedException(typeof(InvalidOperationException), ExpectedMessage = "WriteConcern has been frozen and no further changes are allowed.")]
         public void TestSafeModeTrueIsFrozen()
         {
             var s = SafeMode.True;
@@ -241,7 +241,7 @@ namespace MongoDB.DriverUnitTests
 
         // CSHARP-386
         [Test]
-        [ExpectedException(typeof(InvalidOperationException), ExpectedMessage = "SafeMode has been frozen and no further changes are allowed.")]
+        [ExpectedException(typeof(InvalidOperationException), ExpectedMessage = "WriteConcern has been frozen and no further changes are allowed.")]
         public void TestSafeModeW2IsFrozen()
         {
             var s = SafeMode.W2;
@@ -250,7 +250,7 @@ namespace MongoDB.DriverUnitTests
 
         // CSHARP-386
         [Test]
-        [ExpectedException(typeof(InvalidOperationException), ExpectedMessage = "SafeMode has been frozen and no further changes are allowed.")]
+        [ExpectedException(typeof(InvalidOperationException), ExpectedMessage = "WriteConcern has been frozen and no further changes are allowed.")]
         public void TestSafeModeW3IsFrozen()
         {
             var s = SafeMode.W3;
@@ -259,7 +259,7 @@ namespace MongoDB.DriverUnitTests
 
         // CSHARP-386
         [Test]
-        [ExpectedException(typeof(InvalidOperationException), ExpectedMessage = "SafeMode has been frozen and no further changes are allowed.")]
+        [ExpectedException(typeof(InvalidOperationException), ExpectedMessage = "WriteConcern has been frozen and no further changes are allowed.")]
         public void TestSafeModeW4IsFrozen()
         {
             var s = SafeMode.W4;

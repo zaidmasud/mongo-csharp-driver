@@ -422,7 +422,7 @@ namespace MongoDB.Driver.Internal
             };
             using (var message = new MongoQueryMessage(writerSettings, databaseName + ".$cmd", queryFlags, 0, 1, command, null))
             {
-                SendMessage(message, SafeMode.False, databaseName);
+                SendMessage(message, WriteConcern.NetworkErrorsOnly, databaseName);
             }
 
             var readerSettings = new BsonBinaryReaderSettings
@@ -477,7 +477,7 @@ namespace MongoDB.Driver.Internal
             }
         }
 
-        internal SafeModeResult SendMessage(MongoRequestMessage message, SafeMode safeMode, string databaseName)
+        internal WriteResult SendMessage(MongoRequestMessage message, WriteConcern writeConcern, string databaseName)
         {
             if (_state == MongoConnectionState.Closed) { throw new InvalidOperationException("Connection is closed."); }
             lock (_connectionLock)
@@ -485,20 +485,20 @@ namespace MongoDB.Driver.Internal
                 _requestId = message.RequestId;
 
                 message.WriteToBuffer();
-                CommandDocument safeModeCommand = null;
-                if (safeMode.Enabled)
+                CommandDocument getLastErrorCommand = null;
+                if (writeConcern.Enabled)
                 {
-                    safeModeCommand = new CommandDocument
+                    getLastErrorCommand = new CommandDocument
                     {
                         { "getlasterror", 1 }, // use all lowercase for backward compatibility
-                        { "fsync", true, safeMode.FSync },
-                        { "j", true, safeMode.Journal },
-                        { "w", safeMode.W, safeMode.W > 1 },
-                        { "w", safeMode.WMode, safeMode.WMode != null },
-                        { "wtimeout", (int) safeMode.WTimeout.TotalMilliseconds, safeMode.W > 1 && safeMode.WTimeout != TimeSpan.Zero }
+                        { "fsync", true, writeConcern.FSync },
+                        { "j", true, writeConcern.Journal },
+                        { "w", writeConcern.W, writeConcern.W != 0 },
+                        { "w", writeConcern.WMode, writeConcern.WMode != null },
+                        { "wtimeout", (int) writeConcern.WTimeout.TotalMilliseconds, writeConcern.W != 0 && writeConcern.WTimeout != TimeSpan.Zero }
                     };
                     // piggy back on network transmission for message
-                    using (var getLastErrorMessage = new MongoQueryMessage(message.Buffer, message.WriterSettings, databaseName + ".$cmd", QueryFlags.None, 0, 1, safeModeCommand, null))
+                    using (var getLastErrorMessage = new MongoQueryMessage(message.Buffer, message.WriterSettings, databaseName + ".$cmd", QueryFlags.None, 0, 1, getLastErrorCommand, null))
                     {
                         getLastErrorMessage.WriteToBuffer();
                     }
@@ -521,8 +521,8 @@ namespace MongoDB.Driver.Internal
                     throw;
                 }
 
-                SafeModeResult safeModeResult = null;
-                if (safeMode.Enabled)
+                WriteResult writeResult = null;
+                if (writeConcern.Enabled)
                 {
                     var readerSettings = new BsonBinaryReaderSettings
                     {
@@ -530,27 +530,27 @@ namespace MongoDB.Driver.Internal
                         MaxDocumentSize = _serverInstance.MaxDocumentSize
                     };
                     var replyMessage = ReceiveMessage<BsonDocument>(readerSettings, null);
-                    var safeModeResponse = replyMessage.Documents[0];
-                    safeModeResult = new SafeModeResult();
-                    safeModeResult.Initialize(safeModeCommand, safeModeResponse);
+                    var getLastErrorResponse = replyMessage.Documents[0];
+                    writeResult = new WriteResult();
+                    writeResult.Initialize(getLastErrorCommand, getLastErrorResponse);
 
-                    if (!safeModeResult.Ok)
+                    if (!writeResult.Ok)
                     {
                         var errorMessage = string.Format(
-                            "Safemode detected an error '{0}'. (response was {1}).",
-                            safeModeResult.ErrorMessage, safeModeResponse.ToJson());
-                        throw new MongoSafeModeException(errorMessage, safeModeResult);
+                            "GetLastError reported an error '{0}'. (response was {1}).",
+                            writeResult.ErrorMessage, getLastErrorResponse.ToJson());
+                        throw new MongoWriteConcernException(errorMessage, writeResult);
                     }
-                    if (safeModeResult.HasLastErrorMessage)
+                    if (writeResult.HasLastErrorMessage)
                     {
                         var errorMessage = string.Format(
-                            "Safemode detected an error '{0}'. (Response was {1}).",
-                            safeModeResult.LastErrorMessage, safeModeResponse.ToJson());
-                        throw new MongoSafeModeException(errorMessage, safeModeResult);
+                            "GetLastError reported an error '{0}'. (Response was {1}).",
+                            writeResult.LastErrorMessage, getLastErrorResponse.ToJson());
+                        throw new MongoWriteConcernException(errorMessage, writeResult);
                     }
                 }
 
-                return safeModeResult;
+                return writeResult;
             }
         }
 

@@ -96,7 +96,7 @@ namespace MongoDB.Driver
         /// </returns>
         public static MongoServer Create(MongoConnectionStringBuilder builder)
         {
-            return Create(builder.ToServerSettings());
+            return Create(MongoServerSettings.FromConnectionStringBuilder(builder));
         }
 
         /// <summary>
@@ -136,7 +136,7 @@ namespace MongoDB.Driver
         /// </returns>
         public static MongoServer Create(MongoUrl url)
         {
-            return Create(url.ToServerSettings());
+            return Create(MongoServerSettings.FromUrl(url));
         }
 
         /// <summary>
@@ -425,11 +425,11 @@ namespace MongoDB.Driver
         /// </summary>
         /// <param name="databaseName">The name of the database.</param>
         /// <param name="credentials">The credentials to use with this database.</param>
-        /// <param name="safeMode">The safe mode to use with this database.</param>
+        /// <param name="writeConcern">The write concern to use with this database.</param>
         /// <returns>A new or existing instance of MongoDatabase.</returns>
-        public virtual MongoDatabase this[string databaseName, MongoCredentials credentials, SafeMode safeMode]
+        public virtual MongoDatabase this[string databaseName, MongoCredentials credentials, WriteConcern writeConcern]
         {
-            get { return GetDatabase(databaseName, credentials, safeMode); }
+            get { return GetDatabase(databaseName, credentials, writeConcern); }
         }
 
         /// <summary>
@@ -437,11 +437,11 @@ namespace MongoDB.Driver
         /// is created for each combination of database settings.
         /// </summary>
         /// <param name="databaseName">The name of the database.</param>
-        /// <param name="safeMode">The safe mode to use with this database.</param>
+        /// <param name="writeConcern">The write concern to use with this database.</param>
         /// <returns>A new or existing instance of MongoDatabase.</returns>
-        public virtual MongoDatabase this[string databaseName, SafeMode safeMode]
+        public virtual MongoDatabase this[string databaseName, WriteConcern writeConcern]
         {
-            get { return GetDatabase(databaseName, safeMode); }
+            get { return GetDatabase(databaseName, writeConcern); }
         }
 
         // public static methods
@@ -691,12 +691,12 @@ namespace MongoDB.Driver
         /// </summary>
         /// <param name="databaseName">The name of the database.</param>
         /// <param name="credentials">The credentials to use with this database.</param>
-        /// <param name="safeMode">The safe mode to use with this database.</param>
+        /// <param name="writeConcern">The write concern to use with this database.</param>
         /// <returns>A new or existing instance of MongoDatabase.</returns>
         public virtual MongoDatabase GetDatabase(
             string databaseName,
             MongoCredentials credentials,
-            SafeMode safeMode)
+            WriteConcern writeConcern)
         {
             if (databaseName == null)
             {
@@ -705,7 +705,7 @@ namespace MongoDB.Driver
             var databaseSettings = new MongoDatabaseSettings(this, databaseName)
             {
                 Credentials = credentials,
-                SafeMode = safeMode
+                WriteConcern = writeConcern
             };
             return GetDatabase(databaseSettings);
         }
@@ -715,9 +715,9 @@ namespace MongoDB.Driver
         /// is created for each combination of database settings.
         /// </summary>
         /// <param name="databaseName">The name of the database.</param>
-        /// <param name="safeMode">The safe mode to use with this database.</param>
+        /// <param name="writeConcern">The write concern to use with this database.</param>
         /// <returns>A new or existing instance of MongoDatabase.</returns>
-        public virtual MongoDatabase GetDatabase(string databaseName, SafeMode safeMode)
+        public virtual MongoDatabase GetDatabase(string databaseName, WriteConcern writeConcern)
         {
             if (databaseName == null)
             {
@@ -725,7 +725,7 @@ namespace MongoDB.Driver
             }
             var databaseSettings = new MongoDatabaseSettings(this, databaseName)
             {
-                SafeMode = safeMode
+                WriteConcern = writeConcern
             };
             return GetDatabase(databaseSettings);
         }

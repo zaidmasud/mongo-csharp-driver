@@ -21,17 +21,18 @@ using System.Text;
 namespace MongoDB.Driver
 {
     /// <summary>
-    /// Represents the results of an operation performed with a safe mode.
+    /// Represents the results of a write operation performed with write concern enabled.
     /// </summary>
     [Serializable]
-    [Obsolete("Use WriteResult instead.")]
-    public class SafeModeResult : GetLastErrorResult
+#pragma warning disable 618
+    public class WriteResult : SafeModeResult
+#pragma warning restore
     {
         // constructors
         /// <summary>
-        /// Initializes a new instance of the SafeModeResult class.
+        /// Initializes a new instance of the WriteResult class.
         /// </summary>
-        public SafeModeResult()
+        public WriteResult()
         {
         }
     }

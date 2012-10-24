@@ -45,7 +45,7 @@ namespace MongoDB.DriverUnitTests
             Assert.AreEqual(MongoDefaults.MaxConnectionLifeTime, url.MaxConnectionLifeTime);
             Assert.AreEqual(MongoDefaults.MaxConnectionPoolSize, url.MaxConnectionPoolSize);
             Assert.AreEqual(null, url.ReplicaSetName);
-            Assert.AreEqual(SafeMode.False, url.SafeMode);
+            Assert.AreEqual(null, url.SafeMode);
             Assert.AreEqual(MongoDefaults.SecondaryAcceptableLatency, url.SecondaryAcceptableLatency);
 #pragma warning disable 618
             Assert.AreEqual(false, url.SlaveOk);

@@ -59,11 +59,29 @@ namespace MongoDB.Driver
         private static Dictionary<string, MongoUrl> __cache = new Dictionary<string, MongoUrl>();
 
         // private fields
-        private MongoServerSettings _serverSettings;
-        private double _waitQueueMultiple;
-        private int _waitQueueSize;
-        private string _databaseName;
-        private string _url;
+        private readonly ConnectionMode _connectionMode;
+        private readonly TimeSpan _connectTimeout;
+        private readonly string _databaseName;
+        private readonly MongoCredentials _defaultCredentials;
+        private readonly GuidRepresentation _guidRepresentation;
+        private readonly bool _ipv6;
+        private readonly TimeSpan _maxConnectionIdleTime;
+        private readonly TimeSpan _maxConnectionLifeTime;
+        private readonly int _maxConnectionPoolSize;
+        private readonly int _minConnectionPoolSize;
+        private readonly ReadPreference _readPreference;
+        private readonly string _replicaSetName;
+        private readonly TimeSpan _secondaryAcceptableLatency;
+        private readonly IEnumerable<MongoServerAddress> _servers;
+        private readonly bool _slaveOk;
+        private readonly TimeSpan _socketTimeout;
+        private readonly bool _useSsl;
+        private readonly bool _verifySslCertificate;
+        private readonly double _waitQueueMultiple;
+        private readonly int _waitQueueSize;
+        private readonly TimeSpan _waitQueueTimeout;
+        private readonly WriteConcern _writeConcern;
+        private readonly string _url;
 
         // constructors
         /// <summary>
@@ -73,10 +91,30 @@ namespace MongoDB.Driver
         public MongoUrl(string url)
         {
             var builder = new MongoUrlBuilder(url); // parses url
-            _serverSettings = builder.ToServerSettings().FrozenCopy();
+            _connectionMode = builder.ConnectionMode;
+            _connectTimeout = builder.ConnectTimeout;
+            _databaseName = builder.DatabaseName;
+            _defaultCredentials = builder.DefaultCredentials;
+            _guidRepresentation = builder.GuidRepresentation;
+            _ipv6 = builder.IPv6;
+            _maxConnectionIdleTime = builder.MaxConnectionIdleTime;
+            _maxConnectionLifeTime = builder.MaxConnectionLifeTime;
+            _maxConnectionPoolSize = builder.MaxConnectionPoolSize;
+            _minConnectionPoolSize = builder.MinConnectionPoolSize;
+            _readPreference = builder.ReadPreference;
+            _replicaSetName = builder.ReplicaSetName;
+            _secondaryAcceptableLatency = builder.SecondaryAcceptableLatency;
+            _servers = builder.Servers;
+#pragma warning disable 618
+            _slaveOk = builder.SlaveOk;
+#pragma warning restore
+            _socketTimeout = builder.SocketTimeout;
+            _useSsl = builder.UseSsl;
+            _verifySslCertificate = builder.VerifySslCertificate;
             _waitQueueMultiple = builder.WaitQueueMultiple;
             _waitQueueSize = builder.WaitQueueSize;
-            _databaseName = builder.DatabaseName;
+            _waitQueueTimeout = builder.WaitQueueTimeout;
+            _writeConcern = builder.WriteConcern;
             _url = builder.ToString(); // keep canonical form
         }
 
@@ -94,7 +132,7 @@ namespace MongoDB.Driver
                 }
                 else
                 {
-                    return (int)(_waitQueueMultiple * _serverSettings.MaxConnectionPoolSize);
+                    return (int)(_waitQueueMultiple * _maxConnectionPoolSize);
                 }
             }
         }
@@ -104,7 +142,7 @@ namespace MongoDB.Driver
         /// </summary>
         public ConnectionMode ConnectionMode
         {
-            get { return _serverSettings.ConnectionMode; }
+            get { return _connectionMode; }
         }
 
         /// <summary>
@@ -112,7 +150,7 @@ namespace MongoDB.Driver
         /// </summary>
         public TimeSpan ConnectTimeout
         {
-            get { return _serverSettings.ConnectTimeout; }
+            get { return _connectTimeout; }
         }
 
         /// <summary>
@@ -128,7 +166,7 @@ namespace MongoDB.Driver
         /// </summary>
         public MongoCredentials DefaultCredentials
         {
-            get { return _serverSettings.DefaultCredentials; }
+            get { return _defaultCredentials; }
         }
 
         /// <summary>
@@ -136,7 +174,7 @@ namespace MongoDB.Driver
         /// </summary>
         public GuidRepresentation GuidRepresentation
         {
-            get { return _serverSettings.GuidRepresentation; }
+            get { return _guidRepresentation; }
         }
 
         /// <summary>
@@ -144,7 +182,7 @@ namespace MongoDB.Driver
         /// </summary>
         public bool IPv6
         {
-            get { return _serverSettings.IPv6; }
+            get { return _ipv6; }
         }
 
         /// <summary>
@@ -152,7 +190,7 @@ namespace MongoDB.Driver
         /// </summary>
         public TimeSpan MaxConnectionIdleTime
         {
-            get { return _serverSettings.MaxConnectionIdleTime; }
+            get { return _maxConnectionIdleTime; }
         }
 
         /// <summary>
@@ -160,7 +198,7 @@ namespace MongoDB.Driver
         /// </summary>
         public TimeSpan MaxConnectionLifeTime
         {
-            get { return _serverSettings.MaxConnectionLifeTime; }
+            get { return _maxConnectionLifeTime; }
         }
 
         /// <summary>
@@ -168,7 +206,7 @@ namespace MongoDB.Driver
         /// </summary>
         public int MaxConnectionPoolSize
         {
-            get { return _serverSettings.MaxConnectionPoolSize; }
+            get { return _maxConnectionPoolSize; }
         }
 
         /// <summary>
@@ -176,7 +214,7 @@ namespace MongoDB.Driver
         /// </summary>
         public int MinConnectionPoolSize
         {
-            get { return _serverSettings.MinConnectionPoolSize; }
+            get { return _minConnectionPoolSize; }
         }
 
         /// <summary>
@@ -184,7 +222,7 @@ namespace MongoDB.Driver
         /// </summary>
         public ReadPreference ReadPreference
         {
-            get { return _serverSettings.ReadPreference; }
+            get { return _readPreference; }
         }
 
         /// <summary>
@@ -192,15 +230,18 @@ namespace MongoDB.Driver
         /// </summary>
         public string ReplicaSetName
         {
-            get { return _serverSettings.ReplicaSetName; }
+            get { return _replicaSetName; }
         }
 
         /// <summary>
         /// Gets the SafeMode to use.
         /// </summary>
+        [Obsolete("Use WriteConcern instead.")]
         public SafeMode SafeMode
         {
-            get { return _serverSettings.SafeMode; }
+#pragma warning disable 618
+            get { return (_writeConcern == null) ? null : new SafeMode(_writeConcern); }
+#pragma warning restore
         }
 
         /// <summary>
@@ -209,7 +250,7 @@ namespace MongoDB.Driver
         /// </summary>
         public TimeSpan SecondaryAcceptableLatency
         {
-            get { return _serverSettings.SecondaryAcceptableLatency; }
+            get { return _secondaryAcceptableLatency; }
         }
 
         /// <summary>
@@ -217,7 +258,7 @@ namespace MongoDB.Driver
         /// </summary>
         public MongoServerAddress Server
         {
-            get { return _serverSettings.Server; }
+            get { return (_servers == null) ? null : _servers.Single(); }
         }
 
         /// <summary>
@@ -225,7 +266,7 @@ namespace MongoDB.Driver
         /// </summary>
         public IEnumerable<MongoServerAddress> Servers
         {
-            get { return _serverSettings.Servers; }
+            get { return _servers; }
         }
 
         /// <summary>
@@ -235,7 +276,7 @@ namespace MongoDB.Driver
         public bool SlaveOk
         {
 #pragma warning disable 618
-            get { return _serverSettings.SlaveOk; }
+            get { return _slaveOk; }
 #pragma warning restore
         }
 
@@ -244,7 +285,7 @@ namespace MongoDB.Driver
         /// </summary>
         public TimeSpan SocketTimeout
         {
-            get { return _serverSettings.SocketTimeout; }
+            get { return _socketTimeout; }
         }
 
         /// <summary>
@@ -260,7 +301,7 @@ namespace MongoDB.Driver
         /// </summary>
         public bool UseSsl
         {
-            get { return _serverSettings.UseSsl; }
+            get { return _useSsl; }
         }
 
         /// <summary>
@@ -268,7 +309,7 @@ namespace MongoDB.Driver
         /// </summary>
         public bool VerifySslCertificate
         {
-            get { return _serverSettings.VerifySslCertificate; }
+            get { return _verifySslCertificate; }
         }
 
         /// <summary>
@@ -292,7 +333,15 @@ namespace MongoDB.Driver
         /// </summary>
         public TimeSpan WaitQueueTimeout
         {
-            get { return _serverSettings.WaitQueueTimeout; }
+            get { return _waitQueueTimeout; }
+        }
+
+        /// <summary>
+        /// Gets the WriteConcern to use.
+        /// </summary>
+        public WriteConcern WriteConcern
+        {
+            get { return _writeConcern; }
         }
 
         // public operators
@@ -395,9 +444,10 @@ namespace MongoDB.Driver
         /// Creates a new instance of MongoServerSettings based on the settings in this MongoUrlBuilder.
         /// </summary>
         /// <returns>A new instance of MongoServerSettings.</returns>
+        [Obsolete("Use MongoServerSettings.FromUrl instead.")]
         public MongoServerSettings ToServerSettings()
         {
-            return _serverSettings;
+            return MongoServerSettings.FromUrl(this);
         }
 
         /// <summary>
