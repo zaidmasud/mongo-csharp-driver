@@ -488,14 +488,15 @@ namespace MongoDB.Driver.Internal
                 CommandDocument getLastErrorCommand = null;
                 if (writeConcern.Enabled)
                 {
+                    BsonValue w = (writeConcern.W > 1) ? (BsonValue)writeConcern.W : (BsonValue)writeConcern.WMode;
+                    BsonValue wTimeout = (writeConcern.WTimeout != TimeSpan.Zero) ? (BsonValue)(int)writeConcern.WTimeout.TotalMilliseconds : null;                    
                     getLastErrorCommand = new CommandDocument
                     {
                         { "getlasterror", 1 }, // use all lowercase for backward compatibility
                         { "fsync", true, writeConcern.FSync },
                         { "j", true, writeConcern.Journal },
-                        { "w", writeConcern.W, writeConcern.W != 0 },
-                        { "w", writeConcern.WMode, writeConcern.WMode != null },
-                        { "wtimeout", (int) writeConcern.WTimeout.TotalMilliseconds, writeConcern.W != 0 && writeConcern.WTimeout != TimeSpan.Zero }
+                        { "w", w, w != null },
+                        { "wtimeout", wTimeout, wTimeout != null }
                     };
                     // piggy back on network transmission for message
                     using (var getLastErrorMessage = new MongoQueryMessage(message.Buffer, message.WriterSettings, databaseName + ".$cmd", QueryFlags.None, 0, 1, getLastErrorCommand, null))

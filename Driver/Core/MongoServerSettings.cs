@@ -45,7 +45,6 @@ namespace MongoDB.Driver
         private string _replicaSetName;
         private TimeSpan _secondaryAcceptableLatency;
         private List<MongoServerAddress> _servers;
-        private ReadOnlyCollection<MongoServerAddress> _serversReadOnly;
         private TimeSpan _socketTimeout;
         private bool _useSsl;
         private bool _verifySslCertificate;
@@ -78,7 +77,6 @@ namespace MongoDB.Driver
             _replicaSetName = null;
             _secondaryAcceptableLatency = MongoDefaults.SecondaryAcceptableLatency;
             _servers = new List<MongoServerAddress> { new MongoServerAddress("localhost") };
-            _serversReadOnly = new ReadOnlyCollection<MongoServerAddress>(_servers);
             _socketTimeout = MongoDefaults.SocketTimeout;
             _useSsl = false;
             _verifySslCertificate = true;
@@ -104,7 +102,7 @@ namespace MongoDB.Driver
         /// <param name="minConnectionPoolSize">The min connection pool size.</param>
         /// <param name="readPreference">The default read preference.</param>
         /// <param name="replicaSetName">The name of the replica set.</param>
-        /// <param name="writeConcern">The write concern.</param>
+        /// <param name="safeMode">The safe mode.</param>
         /// <param name="secondaryAcceptableLatency">The secondary acceptable latency.</param>
         /// <param name="servers">The server addresses (normally one unless it is the seed list for connecting to a replica set).</param>
         /// <param name="socketTimeout">The socket timeout.</param>
@@ -113,6 +111,7 @@ namespace MongoDB.Driver
         /// <param name="waitQueueSize">The wait queue size.</param>
         /// <param name="waitQueueTimeout">The wait queue timeout.</param>
         /// <exception cref="System.ArgumentNullException"></exception>
+        [Obsolete("Use the no-argument constructor instead and set the properties individually.")]
         public MongoServerSettings(
             ConnectionMode connectionMode,
             TimeSpan connectTimeout,
@@ -126,7 +125,7 @@ namespace MongoDB.Driver
             int minConnectionPoolSize,
             ReadPreference readPreference,
             string replicaSetName,
-            WriteConcern writeConcern,
+            SafeMode safeMode,
             TimeSpan secondaryAcceptableLatency,
             IEnumerable<MongoServerAddress> servers,
             TimeSpan socketTimeout,
@@ -143,9 +142,9 @@ namespace MongoDB.Driver
             {
                 throw new ArgumentNullException("readPreference");
             }
-            if (writeConcern == null)
+            if (safeMode == null)
             {
-                throw new ArgumentNullException("writeConcern");
+                throw new ArgumentNullException("safeMode");
             }
 
             _connectionMode = connectionMode;
@@ -162,13 +161,12 @@ namespace MongoDB.Driver
             _replicaSetName = replicaSetName;
             _secondaryAcceptableLatency = secondaryAcceptableLatency;
             _servers = new List<MongoServerAddress>(servers);
-            _serversReadOnly = new ReadOnlyCollection<MongoServerAddress>(_servers);
             _socketTimeout = socketTimeout;
             _useSsl = useSsl;
             _verifySslCertificate = verifySslCertificate;
             _waitQueueSize = waitQueueSize;
             _waitQueueTimeout = waitQueueTimeout;
-            _writeConcern = writeConcern;
+            _writeConcern = safeMode;
         }
 
         // public properties
@@ -398,7 +396,6 @@ namespace MongoDB.Driver
                     throw new ArgumentNullException("value");
                 }
                 _servers = new List<MongoServerAddress> { value };
-                _serversReadOnly = new ReadOnlyCollection<MongoServerAddress>(_servers);
             }
         }
 
@@ -407,7 +404,7 @@ namespace MongoDB.Driver
         /// </summary>
         public IEnumerable<MongoServerAddress> Servers
         {
-            get { return _serversReadOnly; }
+            get { return new ReadOnlyCollection<MongoServerAddress>(_servers); }
             set
             {
                 if (_isFrozen) { throw new InvalidOperationException("MongoServerSettings is frozen."); }
@@ -416,7 +413,6 @@ namespace MongoDB.Driver
                     throw new ArgumentNullException("value");
                 }
                 _servers = new List<MongoServerAddress>(value);
-                _serversReadOnly = new ReadOnlyCollection<MongoServerAddress>(_servers);
             }
         }
 
@@ -621,38 +617,6 @@ namespace MongoDB.Driver
             return serverSettings;
         }
 
-        /// <summary>
-        /// Gets a MongoServerSettings object intialized with values from a MongoUrlBuilder.
-        /// </summary>
-        /// <returns>A MongoServerSettings.</returns>
-        public static MongoServerSettings FromUrlBuilder(MongoUrlBuilder builder)
-        {
-            var serverSettings = new MongoServerSettings();
-            serverSettings.ConnectionMode = builder.ConnectionMode;
-            serverSettings.ConnectTimeout = builder.ConnectTimeout;
-            serverSettings.CredentialsStore = new MongoCredentialsStore();
-            serverSettings.DefaultCredentials = builder.DefaultCredentials;
-            serverSettings.GuidRepresentation = builder.GuidRepresentation;
-            serverSettings.IPv6 = builder.IPv6;
-            serverSettings.MaxConnectionIdleTime = builder.MaxConnectionIdleTime;
-            serverSettings.MaxConnectionLifeTime = builder.MaxConnectionLifeTime;
-            serverSettings.MaxConnectionPoolSize = builder.MaxConnectionPoolSize;
-            serverSettings.MinConnectionPoolSize = builder.MinConnectionPoolSize;
-            serverSettings.ReadPreference = (builder.ReadPreference == null) ? ReadPreference.Primary : builder.ReadPreference.Clone();
-            serverSettings.ReplicaSetName = builder.ReplicaSetName;
-            serverSettings.SecondaryAcceptableLatency = builder.SecondaryAcceptableLatency;
-            serverSettings.Servers = new List<MongoServerAddress>(builder.Servers);
-            serverSettings.SocketTimeout = builder.SocketTimeout;
-            serverSettings.UseSsl = builder.UseSsl;
-            serverSettings.VerifySslCertificate = builder.VerifySslCertificate;
-            serverSettings.WaitQueueSize = builder.ComputedWaitQueueSize;
-            serverSettings.WaitQueueTimeout = builder.WaitQueueTimeout;
-#pragma warning disable 618
-            serverSettings.WriteConcern = (builder.WriteConcern == null) ? MongoDefaults.SafeMode.WriteConcern : builder.WriteConcern.Clone();
-#pragma warning restore
-            return serverSettings;
-        }
-
         // public methods
         /// <summary>
         /// Creates a clone of the settings.
@@ -660,10 +624,28 @@ namespace MongoDB.Driver
         /// <returns>A clone of the settings.</returns>
         public MongoServerSettings Clone()
         {
-            return new MongoServerSettings(_connectionMode, _connectTimeout, _credentialsStore.Clone(), _defaultCredentials,
-                _guidRepresentation, _ipv6, _maxConnectionIdleTime, _maxConnectionLifeTime, _maxConnectionPoolSize,
-                _minConnectionPoolSize, _readPreference, _replicaSetName, _writeConcern.Clone(), _secondaryAcceptableLatency, _servers, 
-                _socketTimeout, _useSsl, _verifySslCertificate, _waitQueueSize, _waitQueueTimeout);
+            var clone = new MongoServerSettings();
+            clone._connectionMode = _connectionMode;
+            clone._connectTimeout = _connectTimeout;
+            clone._credentialsStore = _credentialsStore.Clone();
+            clone._defaultCredentials = _defaultCredentials;
+            clone._guidRepresentation = _guidRepresentation;
+            clone._ipv6 = _ipv6;
+            clone._maxConnectionIdleTime = _maxConnectionIdleTime;
+            clone._maxConnectionLifeTime = _maxConnectionLifeTime;
+            clone._maxConnectionPoolSize = _maxConnectionPoolSize;
+            clone._minConnectionPoolSize = _minConnectionPoolSize;
+            clone._readPreference = _readPreference.Clone();
+            clone._replicaSetName = _replicaSetName;
+            clone._secondaryAcceptableLatency = _secondaryAcceptableLatency;
+            clone._servers = new List<MongoServerAddress>(_servers);
+            clone._socketTimeout = _socketTimeout;
+            clone._useSsl = _useSsl;
+            clone._verifySslCertificate = _verifySslCertificate;
+            clone._waitQueueSize = _waitQueueSize;
+            clone._waitQueueTimeout = _waitQueueTimeout;
+            clone._writeConcern = _writeConcern.Clone();
+            return clone;
         }
 
         /// <summary>

@@ -726,10 +726,10 @@ namespace MongoDB.Driver
         /// Creates a new instance of MongoServerSettings based on the settings in this MongoUrlBuilder.
         /// </summary>
         /// <returns>A new instance of MongoServerSettings.</returns>
-        [Obsolete("Use MongoServerSettings.FromUrlBuilder instead.")]
+        [Obsolete("Use ToMongoUrl and MongoServerSettings.FromUrl instead.")]
         public MongoServerSettings ToServerSettings()
         {
-            return MongoServerSettings.FromUrlBuilder(this);
+            return MongoServerSettings.FromUrl(this.ToMongoUrl());
         }
 
         /// <summary>
