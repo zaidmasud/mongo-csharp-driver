@@ -25,14 +25,7 @@ namespace MongoDB.Driver
     /// </summary>
     [Serializable]
     [Obsolete("Use GetLastErrorResult instead.")]
-    public class SafeModeResult : CommandResult
+    public class SafeModeResult : GetLastErrorResultMethods
     {
-        // constructors
-        /// <summary>
-        /// Initializes a new instance of the SafeModeResult class.
-        /// </summary>
-        public SafeModeResult()
-        {
-        }
     }
 }

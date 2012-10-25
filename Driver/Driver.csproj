@@ -102,6 +102,7 @@
     <Compile Include="Core\CommandResults\GeoHaystackSearchResult.cs" />
     <Compile Include="Core\CommandResults\GeoNearResult.cs" />
     <Compile Include="Core\CommandResults\GetLastErrorResult.cs" />
+    <Compile Include="Core\CommandResults\GetLastErrorResultMethods.cs" />
     <Compile Include="Core\CommandResults\GetProfilingLevelResult.cs" />
     <Compile Include="Core\CommandResults\IsMasterResult.cs" />
     <Compile Include="Core\CommandResults\SafeModeResult.cs" />

@@ -31,53 +31,5 @@ namespace MongoDB.Driver
     public class GetLastErrorResult : SafeModeResult
 #pragma warning restore
     {
-        // constructors
-        /// <summary>
-        /// Initializes a new instance of the GetLastErrorResult class.
-        /// </summary>
-        public GetLastErrorResult()
-        {
-        }
-
-        // public properties
-        /// <summary>
-        /// Gets the number of documents affected.
-        /// </summary>
-        public long DocumentsAffected
-        {
-            get { return Response["n"].ToInt64(); }
-        }
-
-        /// <summary>
-        /// Gets whether the result has a LastErrorMessage.
-        /// </summary>
-        public bool HasLastErrorMessage
-        {
-            get { return Response["err", false].ToBoolean(); }
-        }
-
-        /// <summary>
-        /// Gets the last error message (null if none).
-        /// </summary>
-        public string LastErrorMessage
-        {
-            get
-            {
-                var err = Response["err", false];
-                return (err.ToBoolean()) ? err.ToString() : null;
-            }
-        }
-
-        /// <summary>
-        /// Gets whether the last command updated an existing document.
-        /// </summary>
-        public bool UpdatedExisting
-        {
-            get
-            {
-                var updatedExisting = Response["updatedExisting", false];
-                return updatedExisting.ToBoolean();
-            }
-        }
     }
 }

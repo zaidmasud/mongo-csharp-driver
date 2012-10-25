@@ -455,17 +455,6 @@ namespace MongoDB.Driver
             return clientSettings;
         }
 
-        /// <summary>
-        /// Parses a connection string and returns a MongoClientSettings.
-        /// </summary>
-        /// <param name="connectionString">The connection string.</param>
-        /// <returns>A MongoClientSettings.</returns>
-        public static MongoClientSettings Parse(string connectionString)
-        {
-            var url = new MongoUrl(connectionString);
-            return FromUrl(url);
-        }
-
         // public methods
         /// <summary>
         /// Creates a clone of the settings.
