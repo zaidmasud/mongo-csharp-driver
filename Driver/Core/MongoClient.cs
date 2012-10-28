@@ -96,7 +96,9 @@ namespace MongoDB.Driver
         public MongoServer GetServer()
         {
             var serverSettings = MongoServerSettings.FromClientSettings(_settings);
+#pragma warning disable 618
             return MongoServer.Create(serverSettings);
+#pragma warning restore
         }
     }
 }

@@ -63,24 +63,29 @@ namespace MongoDB.Driver
         private readonly TimeSpan _connectTimeout;
         private readonly string _databaseName;
         private readonly MongoCredentials _defaultCredentials;
+        private readonly bool? _fireAndForget;
+        private readonly bool? _fsync;
         private readonly GuidRepresentation _guidRepresentation;
         private readonly bool _ipv6;
+        private readonly bool? _journal;
         private readonly TimeSpan _maxConnectionIdleTime;
         private readonly TimeSpan _maxConnectionLifeTime;
         private readonly int _maxConnectionPoolSize;
         private readonly int _minConnectionPoolSize;
         private readonly ReadPreference _readPreference;
         private readonly string _replicaSetName;
+        private readonly bool? _safe;
         private readonly TimeSpan _secondaryAcceptableLatency;
         private readonly IEnumerable<MongoServerAddress> _servers;
         private readonly bool _slaveOk;
         private readonly TimeSpan _socketTimeout;
         private readonly bool _useSsl;
         private readonly bool _verifySslCertificate;
+        private readonly WriteConcern.WValue _w;
         private readonly double _waitQueueMultiple;
         private readonly int _waitQueueSize;
         private readonly TimeSpan _waitQueueTimeout;
-        private readonly WriteConcern _writeConcern;
+        private readonly TimeSpan? _wTimeout;
         private readonly string _url;
 
         // constructors
@@ -95,14 +100,20 @@ namespace MongoDB.Driver
             _connectTimeout = builder.ConnectTimeout;
             _databaseName = builder.DatabaseName;
             _defaultCredentials = builder.DefaultCredentials;
+            _fireAndForget = builder.FireAndForget;
+            _fsync = builder.FSync;
             _guidRepresentation = builder.GuidRepresentation;
             _ipv6 = builder.IPv6;
+            _journal = builder.Journal;
             _maxConnectionIdleTime = builder.MaxConnectionIdleTime;
             _maxConnectionLifeTime = builder.MaxConnectionLifeTime;
             _maxConnectionPoolSize = builder.MaxConnectionPoolSize;
             _minConnectionPoolSize = builder.MinConnectionPoolSize;
             _readPreference = builder.ReadPreference;
             _replicaSetName = builder.ReplicaSetName;
+#pragma warning disable 618
+            _safe = builder.Safe;
+#pragma warning restore
             _secondaryAcceptableLatency = builder.SecondaryAcceptableLatency;
             _servers = builder.Servers;
 #pragma warning disable 618
@@ -111,10 +122,11 @@ namespace MongoDB.Driver
             _socketTimeout = builder.SocketTimeout;
             _useSsl = builder.UseSsl;
             _verifySslCertificate = builder.VerifySslCertificate;
+            _w = builder.W;
             _waitQueueMultiple = builder.WaitQueueMultiple;
             _waitQueueSize = builder.WaitQueueSize;
             _waitQueueTimeout = builder.WaitQueueTimeout;
-            _writeConcern = builder.WriteConcern;
+            _wTimeout = builder.WTimeout;
             _url = builder.ToString(); // keep canonical form
         }
 
@@ -170,6 +182,22 @@ namespace MongoDB.Driver
         }
 
         /// <summary>
+        /// Gets the fireAndForget value.
+        /// </summary>
+        public bool? FireAndForget
+        {
+            get { return _fireAndForget; }
+        }
+
+        /// <summary>
+        /// Gets the FSync component of the write concern.
+        /// </summary>
+        public bool? FSync
+        {
+            get { return _fsync; }
+        }
+
+        /// <summary>
         /// Gets the representation to use for Guids.
         /// </summary>
         public GuidRepresentation GuidRepresentation
@@ -183,6 +211,14 @@ namespace MongoDB.Driver
         public bool IPv6
         {
             get { return _ipv6; }
+        }
+
+        /// <summary>
+        /// Gets the Journal component of the write concern.
+        /// </summary>
+        public bool? Journal
+        {
+            get { return _journal; }
         }
 
         /// <summary>
@@ -234,14 +270,32 @@ namespace MongoDB.Driver
         }
 
         /// <summary>
+        /// Gets the safe value.
+        /// </summary>
+        public bool? Safe
+        {
+            get { return _safe; }
+        }
+
+        /// <summary>
         /// Gets the SafeMode to use.
         /// </summary>
-        [Obsolete("Use WriteConcern instead.")]
+        [Obsolete("Use FireAndForget, FSync, Journal, W and WTimeout instead.")]
         public SafeMode SafeMode
         {
+            get
+            {
+                if (_fireAndForget != null || _safe != null || AnyWriteConcernSettingsAreSet())
+                {
 #pragma warning disable 618
-            get { return (_writeConcern == null) ? null : new SafeMode(_writeConcern); }
+                    return new SafeMode(GetWriteConcern(false));
 #pragma warning restore
+                }
+                else
+                {
+                    return null;
+                }
+            }
         }
 
         /// <summary>
@@ -313,6 +367,14 @@ namespace MongoDB.Driver
         }
 
         /// <summary>
+        /// Gets the W component of the write concern.
+        /// </summary>
+        public WriteConcern.WValue W
+        {
+            get { return _w; }
+        }
+
+        /// <summary>
         /// Gets the wait queue multiple (the actual wait queue size will be WaitQueueMultiple x MaxConnectionPoolSize).
         /// </summary>
         public double WaitQueueMultiple
@@ -337,11 +399,11 @@ namespace MongoDB.Driver
         }
 
         /// <summary>
-        /// Gets the WriteConcern to use.
+        /// Gets the WTimeout component of the write concern.
         /// </summary>
-        public WriteConcern WriteConcern
+        public TimeSpan? WTimeout
         {
-            get { return _writeConcern; }
+            get { return _wTimeout; }
         }
 
         // public operators
@@ -441,6 +503,26 @@ namespace MongoDB.Driver
         }
 
         /// <summary>
+        /// Returns a WriteConcern value based on this instance's settings and a fire and forget default.
+        /// </summary>
+        /// <param name="fireAndForgetDefault">The fire and forget default.</param>
+        /// <returns>A WriteConcern.</returns>
+        public WriteConcern GetWriteConcern(bool fireAndForgetDefault)
+        {
+            var fireAndForget = fireAndForgetDefault;
+            if (_fireAndForget != null) { fireAndForget = _fireAndForget.Value; }
+            else if (_safe != null) { fireAndForget = !_safe.Value; }
+            else if (AnyWriteConcernSettingsAreSet()) { fireAndForget = false; }
+
+            var writeConcern = new WriteConcern { FireAndForget = fireAndForget };
+            if (_fsync != null) { writeConcern.FSync = _fsync.Value; }
+            if (_journal != null) { writeConcern.Journal = _journal.Value; }
+            if (_w != null) { writeConcern.W = _w; }
+            if (_wTimeout != null) { writeConcern.WTimeout = _wTimeout.Value; }
+            return writeConcern;
+        }
+
+        /// <summary>
         /// Creates a new instance of MongoServerSettings based on the settings in this MongoUrlBuilder.
         /// </summary>
         /// <returns>A new instance of MongoServerSettings.</returns>
@@ -457,6 +539,12 @@ namespace MongoDB.Driver
         public override string ToString()
         {
             return _url;
+        }
+
+        // private methods
+        private bool AnyWriteConcernSettingsAreSet()
+        {
+            return _fsync != null || _journal != null || _w != null || _wTimeout != null;
         }
     }
 }

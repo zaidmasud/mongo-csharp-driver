@@ -177,8 +177,8 @@ namespace MongoDB.Driver
         /// </summary>
         /// <param name="keys">The indexed fields (usually an IndexKeysDocument or constructed using the IndexKeys builder).</param>
         /// <param name="options">The index options(usually an IndexOptionsDocument or created using the IndexOption builder).</param>
-        /// <returns>A GetLastErrorResult.</returns>
-        public virtual GetLastErrorResult CreateIndex(IMongoIndexKeys keys, IMongoIndexOptions options)
+        /// <returns>A WriteConcernResult.</returns>
+        public virtual WriteConcernResult CreateIndex(IMongoIndexKeys keys, IMongoIndexOptions options)
         {
             var keysDocument = keys.ToBsonDocument();
             var optionsDocument = options.ToBsonDocument();
@@ -204,8 +204,8 @@ namespace MongoDB.Driver
         /// Creates an index for this collection.
         /// </summary>
         /// <param name="keys">The indexed fields (usually an IndexKeysDocument or constructed using the IndexKeys builder).</param>
-        /// <returns>A GetLastErrorResult.</returns>
-        public virtual GetLastErrorResult CreateIndex(IMongoIndexKeys keys)
+        /// <returns>A WriteConcernResult.</returns>
+        public virtual WriteConcernResult CreateIndex(IMongoIndexKeys keys)
         {
             return CreateIndex(keys, IndexOptions.Null);
         }
@@ -214,8 +214,8 @@ namespace MongoDB.Driver
         /// Creates an index for this collection.
         /// </summary>
         /// <param name="keyNames">The names of the indexed fields.</param>
-        /// <returns>A GetLastErrorResult.</returns>
-        public virtual GetLastErrorResult CreateIndex(params string[] keyNames)
+        /// <returns>A WriteConcernResult.</returns>
+        public virtual WriteConcernResult CreateIndex(params string[] keyNames)
         {
             return CreateIndex(IndexKeys.Ascending(keyNames));
         }
@@ -954,8 +954,8 @@ namespace MongoDB.Driver
         /// </summary>
         /// <typeparam name="TNominalType">The nominal type of the document to insert.</typeparam>
         /// <param name="document">The document to insert.</param>
-        /// <returns>A GetLastErrorResult (or null if WriteConcern is disabled).</returns>
-        public virtual GetLastErrorResult Insert<TNominalType>(TNominalType document)
+        /// <returns>A WriteConcernResult (or null if WriteConcern is disabled).</returns>
+        public virtual WriteConcernResult Insert<TNominalType>(TNominalType document)
         {
             return Insert(typeof(TNominalType), document);
         }
@@ -966,8 +966,8 @@ namespace MongoDB.Driver
         /// <typeparam name="TNominalType">The nominal type of the document to insert.</typeparam>
         /// <param name="document">The document to insert.</param>
         /// <param name="options">The options to use for this Insert.</param>
-        /// <returns>A GetLastErrorResult (or null if WriteConcern is disabled).</returns>
-        public virtual GetLastErrorResult Insert<TNominalType>(TNominalType document, MongoInsertOptions options)
+        /// <returns>A WriteConcernResult (or null if WriteConcern is disabled).</returns>
+        public virtual WriteConcernResult Insert<TNominalType>(TNominalType document, MongoInsertOptions options)
         {
             return Insert(typeof(TNominalType), document, options);
         }
@@ -978,8 +978,8 @@ namespace MongoDB.Driver
         /// <typeparam name="TNominalType">The nominal type of the document to insert.</typeparam>
         /// <param name="document">The document to insert.</param>
         /// <param name="writeConcern">The write concern to use for this Insert.</param>
-        /// <returns>A GetLastErrorResult (or null if WriteConcern is disabled).</returns>
-        public virtual GetLastErrorResult Insert<TNominalType>(TNominalType document, WriteConcern writeConcern)
+        /// <returns>A WriteConcernResult (or null if WriteConcern is disabled).</returns>
+        public virtual WriteConcernResult Insert<TNominalType>(TNominalType document, WriteConcern writeConcern)
         {
             return Insert(typeof(TNominalType), document, writeConcern);
         }
@@ -989,8 +989,8 @@ namespace MongoDB.Driver
         /// </summary>
         /// <param name="nominalType">The nominal type of the document to insert.</param>
         /// <param name="document">The document to insert.</param>
-        /// <returns>A GetLastErrorResult (or null if WriteConcern is disabled).</returns>
-        public virtual GetLastErrorResult Insert(Type nominalType, object document)
+        /// <returns>A WriteConcernResult (or null if WriteConcern is disabled).</returns>
+        public virtual WriteConcernResult Insert(Type nominalType, object document)
         {
             var options = new MongoInsertOptions();
             return Insert(nominalType, document, options);
@@ -1002,8 +1002,8 @@ namespace MongoDB.Driver
         /// <param name="nominalType">The nominal type of the document to insert.</param>
         /// <param name="document">The document to insert.</param>
         /// <param name="options">The options to use for this Insert.</param>
-        /// <returns>A GetLastErrorResult (or null if WriteConcern is disabled).</returns>
-        public virtual GetLastErrorResult Insert(Type nominalType, object document, MongoInsertOptions options)
+        /// <returns>A WriteConcernResult (or null if WriteConcern is disabled).</returns>
+        public virtual WriteConcernResult Insert(Type nominalType, object document, MongoInsertOptions options)
         {
             if (document == null)
             {
@@ -1019,8 +1019,8 @@ namespace MongoDB.Driver
         /// <param name="nominalType">The nominal type of the document to insert.</param>
         /// <param name="document">The document to insert.</param>
         /// <param name="writeConcern">The write concern to use for this Insert.</param>
-        /// <returns>A GetLastErrorResult (or null if WriteConcern is disabled).</returns>
-        public virtual GetLastErrorResult Insert(Type nominalType, object document, WriteConcern writeConcern)
+        /// <returns>A WriteConcernResult (or null if WriteConcern is disabled).</returns>
+        public virtual WriteConcernResult Insert(Type nominalType, object document, WriteConcern writeConcern)
         {
             var options = new MongoInsertOptions { WriteConcern = writeConcern};
             return Insert(nominalType, document, options);
@@ -1031,8 +1031,8 @@ namespace MongoDB.Driver
         /// </summary>
         /// <typeparam name="TNominalType">The type of the documents to insert.</typeparam>
         /// <param name="documents">The documents to insert.</param>
-        /// <returns>A list of GetLastErrorResults (or null if WriteConcern is disabled).</returns>
-        public virtual IEnumerable<GetLastErrorResult> InsertBatch<TNominalType>(IEnumerable<TNominalType> documents)
+        /// <returns>A list of WriteConcernResults (or null if WriteConcern is disabled).</returns>
+        public virtual IEnumerable<WriteConcernResult> InsertBatch<TNominalType>(IEnumerable<TNominalType> documents)
         {
             if (documents == null)
             {
@@ -1047,8 +1047,8 @@ namespace MongoDB.Driver
         /// <typeparam name="TNominalType">The type of the documents to insert.</typeparam>
         /// <param name="documents">The documents to insert.</param>
         /// <param name="options">The options to use for this Insert.</param>
-        /// <returns>A list of GetLastErrorResults (or null if WriteConcern is disabled).</returns>
-        public virtual IEnumerable<GetLastErrorResult> InsertBatch<TNominalType>(
+        /// <returns>A list of WriteConcernResults (or null if WriteConcern is disabled).</returns>
+        public virtual IEnumerable<WriteConcernResult> InsertBatch<TNominalType>(
             IEnumerable<TNominalType> documents,
             MongoInsertOptions options)
         {
@@ -1065,8 +1065,8 @@ namespace MongoDB.Driver
         /// <typeparam name="TNominalType">The type of the documents to insert.</typeparam>
         /// <param name="documents">The documents to insert.</param>
         /// <param name="writeConcern">The write concern to use for this Insert.</param>
-        /// <returns>A list of GetLastErrorResults (or null if WriteConcern is disabled).</returns>
-        public virtual IEnumerable<GetLastErrorResult> InsertBatch<TNominalType>(
+        /// <returns>A list of WriteConcernResults (or null if WriteConcern is disabled).</returns>
+        public virtual IEnumerable<WriteConcernResult> InsertBatch<TNominalType>(
             IEnumerable<TNominalType> documents,
             WriteConcern writeConcern)
         {
@@ -1082,8 +1082,8 @@ namespace MongoDB.Driver
         /// </summary>
         /// <param name="nominalType">The nominal type of the documents to insert.</param>
         /// <param name="documents">The documents to insert.</param>
-        /// <returns>A list of GetLastErrorResults (or null if WriteConcern is disabled).</returns>
-        public virtual IEnumerable<GetLastErrorResult> InsertBatch(Type nominalType, IEnumerable documents)
+        /// <returns>A list of WriteConcernResults (or null if WriteConcern is disabled).</returns>
+        public virtual IEnumerable<WriteConcernResult> InsertBatch(Type nominalType, IEnumerable documents)
         {
             var options = new MongoInsertOptions();
             return InsertBatch(nominalType, documents, options);
@@ -1095,8 +1095,8 @@ namespace MongoDB.Driver
         /// <param name="nominalType">The nominal type of the documents to insert.</param>
         /// <param name="documents">The documents to insert.</param>
         /// <param name="writeConcern">The write concern to use for this Insert.</param>
-        /// <returns>A list of GetLastErrorResults (or null if WriteConcern is disabled).</returns>
-        public virtual IEnumerable<GetLastErrorResult> InsertBatch(
+        /// <returns>A list of WriteConcernResults (or null if WriteConcern is disabled).</returns>
+        public virtual IEnumerable<WriteConcernResult> InsertBatch(
             Type nominalType,
             IEnumerable documents,
             WriteConcern writeConcern)
@@ -1111,8 +1111,8 @@ namespace MongoDB.Driver
         /// <param name="nominalType">The nominal type of the documents to insert.</param>
         /// <param name="documents">The documents to insert.</param>
         /// <param name="options">The options to use for this Insert.</param>
-        /// <returns>A list of GetLastErrorResults (or null if WriteConcern is disabled).</returns>
-        public virtual IEnumerable<GetLastErrorResult> InsertBatch(
+        /// <returns>A list of WriteConcernResults (or null if WriteConcern is disabled).</returns>
+        public virtual IEnumerable<WriteConcernResult> InsertBatch(
             Type nominalType,
             IEnumerable documents,
             MongoInsertOptions options)
@@ -1132,7 +1132,7 @@ namespace MongoDB.Driver
             {
                 var writeConcern = options.WriteConcern ?? _settings.WriteConcern;
 
-                List<GetLastErrorResult> results = (writeConcern.Enabled) ? new List<GetLastErrorResult>() : null;
+                List<WriteConcernResult> results = (writeConcern.FireAndForget) ? null : new List<WriteConcernResult>();
 
                 var writerSettings = GetWriterSettings(connection);
                 using (var message = new MongoInsertMessage(writerSettings, FullName, options.CheckElementNames, options.Flags))
@@ -1171,13 +1171,13 @@ namespace MongoDB.Driver
                         {
                             byte[] lastDocument = message.RemoveLastDocument();
                             var intermediateResult = connection.SendMessage(message, writeConcern, _database.Name);
-                            if (writeConcern.Enabled) { results.Add(intermediateResult); }
+                            if (!writeConcern.FireAndForget) { results.Add(intermediateResult); }
                             message.ResetBatch(lastDocument);
                         }
                     }
 
                     var finalResult = connection.SendMessage(message, writeConcern, _database.Name);
-                    if (writeConcern.Enabled) { results.Add(finalResult); }
+                    if (!writeConcern.FireAndForget) { results.Add(finalResult); }
 
                     return results;
                 }
@@ -1279,8 +1279,8 @@ namespace MongoDB.Driver
         /// Removes documents from this collection that match a query.
         /// </summary>
         /// <param name="query">The query (usually a QueryDocument or constructed using the Query builder).</param>
-        /// <returns>A GetLastErrorResult (or null if WriteConcern is disabled).</returns>
-        public virtual GetLastErrorResult Remove(IMongoQuery query)
+        /// <returns>A WriteConcernResult (or null if WriteConcern is disabled).</returns>
+        public virtual WriteConcernResult Remove(IMongoQuery query)
         {
             return Remove(query, RemoveFlags.None, null);
         }
@@ -1290,8 +1290,8 @@ namespace MongoDB.Driver
         /// </summary>
         /// <param name="query">The query (usually a QueryDocument or constructed using the Query builder).</param>
         /// <param name="writeConcern">The write concern to use for this Insert.</param>
-        /// <returns>A GetLastErrorResult (or null if WriteConcern is disabled).</returns>
-        public virtual GetLastErrorResult Remove(IMongoQuery query, WriteConcern writeConcern)
+        /// <returns>A WriteConcernResult (or null if WriteConcern is disabled).</returns>
+        public virtual WriteConcernResult Remove(IMongoQuery query, WriteConcern writeConcern)
         {
             return Remove(query, RemoveFlags.None, writeConcern);
         }
@@ -1301,8 +1301,8 @@ namespace MongoDB.Driver
         /// </summary>
         /// <param name="query">The query (usually a QueryDocument or constructed using the Query builder).</param>
         /// <param name="flags">The flags for this Remove (see <see cref="RemoveFlags"/>).</param>
-        /// <returns>A GetLastErrorResult (or null if WriteConcern is disabled).</returns>
-        public virtual GetLastErrorResult Remove(IMongoQuery query, RemoveFlags flags)
+        /// <returns>A WriteConcernResult (or null if WriteConcern is disabled).</returns>
+        public virtual WriteConcernResult Remove(IMongoQuery query, RemoveFlags flags)
         {
             return Remove(query, flags, null);
         }
@@ -1313,8 +1313,8 @@ namespace MongoDB.Driver
         /// <param name="query">The query (usually a QueryDocument or constructed using the Query builder).</param>
         /// <param name="flags">The flags for this Remove (see <see cref="RemoveFlags"/>).</param>
         /// <param name="writeConcern">The write concern to use for this Insert.</param>
-        /// <returns>A GetLastErrorResult (or null if WriteConcern is disabled).</returns>
-        public virtual GetLastErrorResult Remove(IMongoQuery query, RemoveFlags flags, WriteConcern writeConcern)
+        /// <returns>A WriteConcernResult (or null if WriteConcern is disabled).</returns>
+        public virtual WriteConcernResult Remove(IMongoQuery query, RemoveFlags flags, WriteConcern writeConcern)
         {
             var connection = _server.AcquireConnection(_database, ReadPreference.Primary);
             try
@@ -1334,8 +1334,8 @@ namespace MongoDB.Driver
         /// <summary>
         /// Removes all documents from this collection (see also <see cref="Drop"/>).
         /// </summary>
-        /// <returns>A GetLastErrorResult (or null if WriteConcern is disabled).</returns>
-        public virtual GetLastErrorResult RemoveAll()
+        /// <returns>A WriteConcernResult (or null if WriteConcern is disabled).</returns>
+        public virtual WriteConcernResult RemoveAll()
         {
             return Remove(Query.Null, RemoveFlags.None, null);
         }
@@ -1344,8 +1344,8 @@ namespace MongoDB.Driver
         /// Removes all documents from this collection (see also <see cref="Drop"/>).
         /// </summary>
         /// <param name="writeConcern">The write concern to use for this Insert.</param>
-        /// <returns>A GetLastErrorResult (or null if WriteConcern is disabled).</returns>
-        public virtual GetLastErrorResult RemoveAll(WriteConcern writeConcern)
+        /// <returns>A WriteConcernResult (or null if WriteConcern is disabled).</returns>
+        public virtual WriteConcernResult RemoveAll(WriteConcern writeConcern)
         {
             return Remove(Query.Null, RemoveFlags.None, writeConcern);
         }
@@ -1366,8 +1366,8 @@ namespace MongoDB.Driver
         /// </summary>
         /// <typeparam name="TNominalType">The type of the document to save.</typeparam>
         /// <param name="document">The document to save.</param>
-        /// <returns>A GetLastErrorResult (or null if WriteConcern is disabled).</returns>
-        public virtual GetLastErrorResult Save<TNominalType>(TNominalType document)
+        /// <returns>A WriteConcernResult (or null if WriteConcern is disabled).</returns>
+        public virtual WriteConcernResult Save<TNominalType>(TNominalType document)
         {
             return Save(typeof(TNominalType), document);
         }
@@ -1379,8 +1379,8 @@ namespace MongoDB.Driver
         /// <typeparam name="TNominalType">The type of the document to save.</typeparam>
         /// <param name="document">The document to save.</param>
         /// <param name="options">The options to use for this Save.</param>
-        /// <returns>A GetLastErrorResult (or null if WriteConcern is disabled).</returns>
-        public virtual GetLastErrorResult Save<TNominalType>(TNominalType document, MongoInsertOptions options)
+        /// <returns>A WriteConcernResult (or null if WriteConcern is disabled).</returns>
+        public virtual WriteConcernResult Save<TNominalType>(TNominalType document, MongoInsertOptions options)
         {
             return Save(typeof(TNominalType), document, options);
         }
@@ -1392,8 +1392,8 @@ namespace MongoDB.Driver
         /// <typeparam name="TNominalType">The type of the document to save.</typeparam>
         /// <param name="document">The document to save.</param>
         /// <param name="writeConcern">The write concern to use for this Insert.</param>
-        /// <returns>A GetLastErrorResult (or null if WriteConcern is disabled).</returns>
-        public virtual GetLastErrorResult Save<TNominalType>(TNominalType document, WriteConcern writeConcern)
+        /// <returns>A WriteConcernResult (or null if WriteConcern is disabled).</returns>
+        public virtual WriteConcernResult Save<TNominalType>(TNominalType document, WriteConcern writeConcern)
         {
             return Save(typeof(TNominalType), document, writeConcern);
         }
@@ -1404,8 +1404,8 @@ namespace MongoDB.Driver
         /// </summary>
         /// <param name="nominalType">The type of the document to save.</param>
         /// <param name="document">The document to save.</param>
-        /// <returns>A GetLastErrorResult (or null if WriteConcern is disabled).</returns>
-        public virtual GetLastErrorResult Save(Type nominalType, object document)
+        /// <returns>A WriteConcernResult (or null if WriteConcern is disabled).</returns>
+        public virtual WriteConcernResult Save(Type nominalType, object document)
         {
             var options = new MongoInsertOptions();
             return Save(nominalType, document, options);
@@ -1418,8 +1418,8 @@ namespace MongoDB.Driver
         /// <param name="nominalType">The type of the document to save.</param>
         /// <param name="document">The document to save.</param>
         /// <param name="options">The options to use for this Save.</param>
-        /// <returns>A GetLastErrorResult (or null if WriteConcern is disabled).</returns>
-        public virtual GetLastErrorResult Save(Type nominalType, object document, MongoInsertOptions options)
+        /// <returns>A WriteConcernResult (or null if WriteConcern is disabled).</returns>
+        public virtual WriteConcernResult Save(Type nominalType, object document, MongoInsertOptions options)
         {
             if (document == null)
             {
@@ -1495,8 +1495,8 @@ namespace MongoDB.Driver
         /// <param name="nominalType">The type of the document to save.</param>
         /// <param name="document">The document to save.</param>
         /// <param name="writeConcern">The write concern to use for this Insert.</param>
-        /// <returns>A GetLastErrorResult (or null if WriteConcern is disabled).</returns>
-        public virtual GetLastErrorResult Save(Type nominalType, object document, WriteConcern writeConcern)
+        /// <returns>A WriteConcernResult (or null if WriteConcern is disabled).</returns>
+        public virtual WriteConcernResult Save(Type nominalType, object document, WriteConcern writeConcern)
         {
             var options = new MongoInsertOptions { WriteConcern = writeConcern};
             return Save(nominalType, document, options);
@@ -1516,8 +1516,8 @@ namespace MongoDB.Driver
         /// </summary>
         /// <param name="query">The query (usually a QueryDocument or constructed using the Query builder).</param>
         /// <param name="update">The update to perform on the matching document.</param>
-        /// <returns>A GetLastErrorResult (or null if WriteConcern is disabled).</returns>
-        public virtual GetLastErrorResult Update(IMongoQuery query, IMongoUpdate update)
+        /// <returns>A WriteConcernResult (or null if WriteConcern is disabled).</returns>
+        public virtual WriteConcernResult Update(IMongoQuery query, IMongoUpdate update)
         {
             var options = new MongoUpdateOptions();
             return Update(query, update, options);
@@ -1529,8 +1529,8 @@ namespace MongoDB.Driver
         /// <param name="query">The query (usually a QueryDocument or constructed using the Query builder).</param>
         /// <param name="update">The update to perform on the matching document.</param>
         /// <param name="options">The update options.</param>
-        /// <returns>A GetLastErrorResult (or null if WriteConcern is disabled).</returns>
-        public virtual GetLastErrorResult Update(IMongoQuery query, IMongoUpdate update, MongoUpdateOptions options)
+        /// <returns>A WriteConcernResult (or null if WriteConcern is disabled).</returns>
+        public virtual WriteConcernResult Update(IMongoQuery query, IMongoUpdate update, MongoUpdateOptions options)
         {
             var updateBuilder = update as UpdateBuilder;
             if (updateBuilder != null)
@@ -1568,8 +1568,8 @@ namespace MongoDB.Driver
         /// <param name="query">The query (usually a QueryDocument or constructed using the Query builder).</param>
         /// <param name="update">The update to perform on the matching document.</param>
         /// <param name="writeConcern">The write concern to use for this Insert.</param>
-        /// <returns>A GetLastErrorResult (or null if WriteConcern is disabled).</returns>
-        public virtual GetLastErrorResult Update(IMongoQuery query, IMongoUpdate update, WriteConcern writeConcern)
+        /// <returns>A WriteConcernResult (or null if WriteConcern is disabled).</returns>
+        public virtual WriteConcernResult Update(IMongoQuery query, IMongoUpdate update, WriteConcern writeConcern)
         {
             var options = new MongoUpdateOptions { WriteConcern = writeConcern};
             return Update(query, update, options);
@@ -1581,8 +1581,8 @@ namespace MongoDB.Driver
         /// <param name="query">The query (usually a QueryDocument or constructed using the Query builder).</param>
         /// <param name="update">The update to perform on the matching document.</param>
         /// <param name="flags">The flags for this Update.</param>
-        /// <returns>A GetLastErrorResult (or null if WriteConcern is disabled).</returns>
-        public virtual GetLastErrorResult Update(IMongoQuery query, IMongoUpdate update, UpdateFlags flags)
+        /// <returns>A WriteConcernResult (or null if WriteConcern is disabled).</returns>
+        public virtual WriteConcernResult Update(IMongoQuery query, IMongoUpdate update, UpdateFlags flags)
         {
             var options = new MongoUpdateOptions { Flags = flags };
             return Update(query, update, options);
@@ -1595,8 +1595,8 @@ namespace MongoDB.Driver
         /// <param name="update">The update to perform on the matching document.</param>
         /// <param name="flags">The flags for this Update.</param>
         /// <param name="writeConcern">The write concern to use for this Insert.</param>
-        /// <returns>A GetLastErrorResult (or null if WriteConcern is disabled).</returns>
-        public virtual GetLastErrorResult Update(
+        /// <returns>A WriteConcernResult (or null if WriteConcern is disabled).</returns>
+        public virtual WriteConcernResult Update(
             IMongoQuery query,
             IMongoUpdate update,
             UpdateFlags flags,
@@ -1850,8 +1850,8 @@ namespace MongoDB.Driver
         /// Inserts a document into this collection (see also InsertBatch to insert multiple documents at once).
         /// </summary>
         /// <param name="document">The document to insert.</param>
-        /// <returns>A GetLastErrorResult (or null if WriteConcern is disabled).</returns>
-        public virtual GetLastErrorResult Insert(TDefaultDocument document)
+        /// <returns>A WriteConcernResult (or null if WriteConcern is disabled).</returns>
+        public virtual WriteConcernResult Insert(TDefaultDocument document)
         {
             return Insert<TDefaultDocument>(document);
         }
@@ -1861,8 +1861,8 @@ namespace MongoDB.Driver
         /// </summary>
         /// <param name="document">The document to insert.</param>
         /// <param name="options">The options to use for this Insert.</param>
-        /// <returns>A GetLastErrorResult (or null if WriteConcern is disabled).</returns>
-        public virtual GetLastErrorResult Insert(TDefaultDocument document, MongoInsertOptions options)
+        /// <returns>A WriteConcernResult (or null if WriteConcern is disabled).</returns>
+        public virtual WriteConcernResult Insert(TDefaultDocument document, MongoInsertOptions options)
         {
             return Insert<TDefaultDocument>(document, options);
         }
@@ -1872,8 +1872,8 @@ namespace MongoDB.Driver
         /// </summary>
         /// <param name="document">The document to insert.</param>
         /// <param name="writeConcern">The write concern to use for this Insert.</param>
-        /// <returns>A GetLastErrorResult (or null if WriteConcern is disabled).</returns>
-        public virtual GetLastErrorResult Insert(TDefaultDocument document, WriteConcern writeConcern)
+        /// <returns>A WriteConcernResult (or null if WriteConcern is disabled).</returns>
+        public virtual WriteConcernResult Insert(TDefaultDocument document, WriteConcern writeConcern)
         {
             return Insert<TDefaultDocument>(document, writeConcern);
         }
@@ -1882,8 +1882,8 @@ namespace MongoDB.Driver
         /// Inserts multiple documents at once into this collection (see also Insert to insert a single document).
         /// </summary>
         /// <param name="documents">The documents to insert.</param>
-        /// <returns>A list of GetLastErrorResults (or null if WriteConcern is disabled).</returns>
-        public virtual IEnumerable<GetLastErrorResult> InsertBatch(IEnumerable<TDefaultDocument> documents)
+        /// <returns>A list of WriteConcernResults (or null if WriteConcern is disabled).</returns>
+        public virtual IEnumerable<WriteConcernResult> InsertBatch(IEnumerable<TDefaultDocument> documents)
         {
             return InsertBatch<TDefaultDocument>(documents);
         }
@@ -1893,8 +1893,8 @@ namespace MongoDB.Driver
         /// </summary>
         /// <param name="documents">The documents to insert.</param>
         /// <param name="options">The options to use for this Insert.</param>
-        /// <returns>A list of GetLastErrorResults (or null if WriteConcern is disabled).</returns>
-        public virtual IEnumerable<GetLastErrorResult> InsertBatch(
+        /// <returns>A list of WriteConcernResults (or null if WriteConcern is disabled).</returns>
+        public virtual IEnumerable<WriteConcernResult> InsertBatch(
             IEnumerable<TDefaultDocument> documents,
             MongoInsertOptions options)
         {
@@ -1906,8 +1906,8 @@ namespace MongoDB.Driver
         /// </summary>
         /// <param name="documents">The documents to insert.</param>
         /// <param name="writeConcern">The write concern to use for this Insert.</param>
-        /// <returns>A list of GetLastErrorResults (or null if WriteConcern is disabled).</returns>
-        public virtual IEnumerable<GetLastErrorResult> InsertBatch(
+        /// <returns>A list of WriteConcernResults (or null if WriteConcern is disabled).</returns>
+        public virtual IEnumerable<WriteConcernResult> InsertBatch(
             IEnumerable<TDefaultDocument> documents,
             WriteConcern writeConcern)
         {
@@ -1919,8 +1919,8 @@ namespace MongoDB.Driver
         /// of the Id field Save will perform either an Insert or an Update.
         /// </summary>
         /// <param name="document">The document to save.</param>
-        /// <returns>A GetLastErrorResult (or null if WriteConcern is disabled).</returns>
-        public virtual GetLastErrorResult Save(TDefaultDocument document)
+        /// <returns>A WriteConcernResult (or null if WriteConcern is disabled).</returns>
+        public virtual WriteConcernResult Save(TDefaultDocument document)
         {
             return Save<TDefaultDocument>(document);
         }
@@ -1931,8 +1931,8 @@ namespace MongoDB.Driver
         /// </summary>
         /// <param name="document">The document to save.</param>
         /// <param name="options">The options to use for this Save.</param>
-        /// <returns>A GetLastErrorResult (or null if WriteConcern is disabled).</returns>
-        public virtual GetLastErrorResult Save(TDefaultDocument document, MongoInsertOptions options)
+        /// <returns>A WriteConcernResult (or null if WriteConcern is disabled).</returns>
+        public virtual WriteConcernResult Save(TDefaultDocument document, MongoInsertOptions options)
         {
             return Save<TDefaultDocument>(document, options);
         }
@@ -1943,8 +1943,8 @@ namespace MongoDB.Driver
         /// </summary>
         /// <param name="document">The document to save.</param>
         /// <param name="writeConcern">The write concern to use for this Insert.</param>
-        /// <returns>A GetLastErrorResult (or null if WriteConcern is disabled).</returns>
-        public virtual GetLastErrorResult Save(TDefaultDocument document, WriteConcern writeConcern)
+        /// <returns>A WriteConcernResult (or null if WriteConcern is disabled).</returns>
+        public virtual WriteConcernResult Save(TDefaultDocument document, WriteConcern writeConcern)
         {
             return Save<TDefaultDocument>(document, writeConcern);
         }

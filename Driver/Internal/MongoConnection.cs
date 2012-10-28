@@ -422,7 +422,7 @@ namespace MongoDB.Driver.Internal
             };
             using (var message = new MongoQueryMessage(writerSettings, databaseName + ".$cmd", queryFlags, 0, 1, command, null))
             {
-                SendMessage(message, WriteConcern.None, databaseName);
+                SendMessage(message, null, databaseName); // write concern doesn't apply to queries
             }
 
             var readerSettings = new BsonBinaryReaderSettings
@@ -477,7 +477,7 @@ namespace MongoDB.Driver.Internal
             }
         }
 
-        internal GetLastErrorResult SendMessage(MongoRequestMessage message, WriteConcern writeConcern, string databaseName)
+        internal WriteConcernResult SendMessage(MongoRequestMessage message, WriteConcern writeConcern, string databaseName)
         {
             if (_state == MongoConnectionState.Closed) { throw new InvalidOperationException("Connection is closed."); }
             lock (_connectionLock)
@@ -486,15 +486,18 @@ namespace MongoDB.Driver.Internal
 
                 message.WriteToBuffer();
                 CommandDocument getLastErrorCommand = null;
-                if (writeConcern.Enabled)
+                if (writeConcern != null && !writeConcern.FireAndForget)
                 {
-                    BsonValue w = (writeConcern.W > 1) ? (BsonValue)writeConcern.W : (BsonValue)writeConcern.WMode;
-                    BsonValue wTimeout = (writeConcern.WTimeout != TimeSpan.Zero) ? (BsonValue)(int)writeConcern.WTimeout.TotalMilliseconds : null;                    
+                    var fsync = (writeConcern.FSync == null) ? null : (BsonValue)writeConcern.FSync;
+                    var journal = (writeConcern.Journal == null) ? null : (BsonValue)writeConcern.Journal;
+                    var w = (writeConcern.W == null) ? null : writeConcern.W.ToBsonValue();
+                    var wTimeout = (writeConcern.WTimeout == null) ? null : (BsonValue)(int)writeConcern.WTimeout.Value.TotalMilliseconds;
+
                     getLastErrorCommand = new CommandDocument
                     {
                         { "getlasterror", 1 }, // use all lowercase for backward compatibility
-                        { "fsync", true, writeConcern.FSync },
-                        { "j", true, writeConcern.Journal },
+                        { "fsync", fsync, fsync != null },
+                        { "j", journal, journal != null },
                         { "w", w, w != null },
                         { "wtimeout", wTimeout, wTimeout != null }
                     };
@@ -522,8 +525,8 @@ namespace MongoDB.Driver.Internal
                     throw;
                 }
 
-                GetLastErrorResult getLastErrorResult = null;
-                if (writeConcern.Enabled)
+                WriteConcernResult writeConcernResult = null;
+                if (writeConcern != null && !writeConcern.FireAndForget)
                 {
                     var readerSettings = new BsonBinaryReaderSettings
                     {
@@ -532,26 +535,26 @@ namespace MongoDB.Driver.Internal
                     };
                     var replyMessage = ReceiveMessage<BsonDocument>(readerSettings, null);
                     var getLastErrorResponse = replyMessage.Documents[0];
-                    getLastErrorResult = new GetLastErrorResult();
-                    getLastErrorResult.Initialize(getLastErrorCommand, getLastErrorResponse);
+                    writeConcernResult = new WriteConcernResult();
+                    writeConcernResult.Initialize(getLastErrorCommand, getLastErrorResponse);
 
-                    if (!getLastErrorResult.Ok)
+                    if (!writeConcernResult.Ok)
                     {
                         var errorMessage = string.Format(
-                            "GetLastError reported an error '{0}'. (response was {1}).",
-                            getLastErrorResult.ErrorMessage, getLastErrorResponse.ToJson());
-                        throw new GetLastErrorException(errorMessage, getLastErrorResult);
+                            "WriteConcern detected an error '{0}'. (response was {1}).",
+                            writeConcernResult.ErrorMessage, getLastErrorResponse.ToJson());
+                        throw new WriteConcernException(errorMessage, writeConcernResult);
                     }
-                    if (getLastErrorResult.HasLastErrorMessage)
+                    if (writeConcernResult.HasLastErrorMessage)
                     {
                         var errorMessage = string.Format(
-                            "GetLastError reported an error '{0}'. (Response was {1}).",
-                            getLastErrorResult.LastErrorMessage, getLastErrorResponse.ToJson());
-                        throw new GetLastErrorException(errorMessage, getLastErrorResult);
+                            "WriteConcern detected an error '{0}'. (Response was {1}).",
+                            writeConcernResult.LastErrorMessage, getLastErrorResponse.ToJson());
+                        throw new WriteConcernException(errorMessage, writeConcernResult);
                     }
                 }
 
-                return getLastErrorResult;
+                return writeConcernResult;
             }
         }
 

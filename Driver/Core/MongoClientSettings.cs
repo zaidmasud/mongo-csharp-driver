@@ -421,7 +421,7 @@ namespace MongoDB.Driver
             clientSettings.VerifySslCertificate = builder.VerifySslCertificate;
             clientSettings.WaitQueueSize = builder.ComputedWaitQueueSize;
             clientSettings.WaitQueueTimeout = builder.WaitQueueTimeout;
-            clientSettings.WriteConcern = (builder.WriteConcern == null) ? WriteConcern.Errors : builder.WriteConcern.Clone();
+            clientSettings.WriteConcern = builder.GetWriteConcern(false); // fireAndForget default for MongoClientSettings is false
             return clientSettings;
         }
 
@@ -451,7 +451,7 @@ namespace MongoDB.Driver
             clientSettings.VerifySslCertificate = url.VerifySslCertificate;
             clientSettings.WaitQueueSize = url.ComputedWaitQueueSize;
             clientSettings.WaitQueueTimeout = url.WaitQueueTimeout;
-            clientSettings.WriteConcern = (url.WriteConcern == null) ? WriteConcern.Errors : url.WriteConcern;
+            clientSettings.WriteConcern = url.GetWriteConcern(false); // fireAndForget default for MongoClientSettings is false
             return clientSettings;
         }
 

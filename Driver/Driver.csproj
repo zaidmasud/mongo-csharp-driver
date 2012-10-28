@@ -101,8 +101,8 @@
     <Compile Include="Core\CommandResults\FindAndModifyResult.cs" />
     <Compile Include="Core\CommandResults\GeoHaystackSearchResult.cs" />
     <Compile Include="Core\CommandResults\GeoNearResult.cs" />
+    <Compile Include="Core\CommandResults\WriteConcernResult.cs" />
     <Compile Include="Core\CommandResults\GetLastErrorResult.cs" />
-    <Compile Include="Core\CommandResults\GetLastErrorResultMethods.cs" />
     <Compile Include="Core\CommandResults\GetProfilingLevelResult.cs" />
     <Compile Include="Core\CommandResults\IsMasterResult.cs" />
     <Compile Include="Core\CommandResults\SafeModeResult.cs" />
@@ -171,7 +171,7 @@
     <Compile Include="Exceptions\MongoAuthenticationException.cs" />
     <Compile Include="Exceptions\MongoCommandException.cs" />
     <Compile Include="Exceptions\MongoConnectionException.cs" />
-    <Compile Include="Exceptions\GetLastErrorException.cs" />
+    <Compile Include="Exceptions\WriteConcernException.cs" />
     <Compile Include="GridFS\MongoGridFSException.cs" />
     <Compile Include="Exceptions\MongoInternalException.cs" />
     <Compile Include="Exceptions\MongoQueryException.cs" />

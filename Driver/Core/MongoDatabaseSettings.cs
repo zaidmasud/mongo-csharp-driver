@@ -85,7 +85,7 @@ namespace MongoDB.Driver
             }
             if (databaseName == "admin" && credentials != null && !credentials.Admin)
             {
-                throw new ArgumentOutOfRangeException("Credentials for the admin database must have the admin flag set to true.");
+                throw new ArgumentOutOfRangeException("credentials", "Credentials for the admin database must have the admin flag set to true.");
             }
             if (readPreference == null)
             {
@@ -184,7 +184,7 @@ namespace MongoDB.Driver
         /// <summary>
         /// Gets or sets whether queries can be sent to secondary servers.
         /// </summary>
-        [Obsolete("Use ReadPreference.")]
+        [Obsolete("Use ReadPreference instead.")]
         public bool SlaveOk
         {
             get

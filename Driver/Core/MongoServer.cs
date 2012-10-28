@@ -81,6 +81,7 @@ namespace MongoDB.Driver
         /// <returns>
         /// A new or existing instance of MongoServer.
         /// </returns>
+        [Obsolete("Use MongoClient.GetServer instead.")]
         public static MongoServer Create()
         {
             return Create("mongodb://localhost");
@@ -94,6 +95,7 @@ namespace MongoDB.Driver
         /// <returns>
         /// A new or existing instance of MongoServer.
         /// </returns>
+        [Obsolete("Use MongoClient.GetServer instead.")]
         public static MongoServer Create(MongoConnectionStringBuilder builder)
         {
             return Create(MongoServerSettings.FromConnectionStringBuilder(builder));
@@ -107,6 +109,7 @@ namespace MongoDB.Driver
         /// <returns>
         /// A new or existing instance of MongoServer.
         /// </returns>
+        [Obsolete("Use MongoClient.GetServer instead.")]
         public static MongoServer Create(MongoServerSettings settings)
         {
             lock (__staticLock)
@@ -134,6 +137,7 @@ namespace MongoDB.Driver
         /// <returns>
         /// A new or existing instance of MongoServer.
         /// </returns>
+        [Obsolete("Use MongoClient.GetServer instead.")]
         public static MongoServer Create(MongoUrl url)
         {
             return Create(MongoServerSettings.FromUrl(url));
@@ -147,6 +151,7 @@ namespace MongoDB.Driver
         /// <returns>
         /// A new or existing instance of MongoServer.
         /// </returns>
+        [Obsolete("Use MongoClient.GetServer instead.")]
         public static MongoServer Create(string connectionString)
         {
             if (connectionString.StartsWith("mongodb://", StringComparison.Ordinal))
@@ -169,6 +174,7 @@ namespace MongoDB.Driver
         /// <returns>
         /// A new or existing instance of MongoServer.
         /// </returns>
+        [Obsolete("Use MongoClient.GetServer instead.")]
         public static MongoServer Create(Uri uri)
         {
             var url = MongoUrl.Create(uri.ToString());

@@ -26,26 +26,26 @@ namespace MongoDB.Driver
     /// </summary>
     [Serializable]
 #pragma warning disable 618
-    public class GetLastErrorException : MongoSafeModeException
+    public class WriteConcernException : MongoSafeModeException
 #pragma warning restore
     {
         // constructors
         /// <summary>
-        /// Initializes a new instance of the GetLastErrorException class.
+        /// Initializes a new instance of the WriteConcernException class.
         /// </summary>
         /// <param name="message">The error message.</param>
         /// <param name="commandResult">The command result.</param>
-        public GetLastErrorException(string message, CommandResult commandResult)
+        public WriteConcernException(string message, CommandResult commandResult)
             : base(message, commandResult)
         {
         }
 
         /// <summary>
-        /// Initializes a new instance of the GetLastErrorException class (this overload supports deserialization).
+        /// Initializes a new instance of the WriteConcernException class (this overload supports deserialization).
         /// </summary>
         /// <param name="info">The SerializationInfo.</param>
         /// <param name="context">The StreamingContext.</param>
-        public GetLastErrorException(SerializationInfo info, StreamingContext context)
+        public WriteConcernException(SerializationInfo info, StreamingContext context)
             : base(info, context)
         {
         }

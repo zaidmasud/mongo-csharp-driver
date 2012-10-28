@@ -61,7 +61,7 @@ namespace MongoDB.Driver
             string message;
             if (!server.IsDatabaseNameValid(settings.DatabaseName, out message))
             {
-                throw new ArgumentOutOfRangeException(message);
+                throw new ArgumentOutOfRangeException("settings", message);
             }
 
             _server = server;
@@ -85,6 +85,7 @@ namespace MongoDB.Driver
         /// <returns>
         /// A new or existing instance of MongoDatabase.
         /// </returns>
+        [Obsolete("Use MongoClient, GetServer and GetDatabase instead.")]
         public static MongoDatabase Create(MongoConnectionStringBuilder builder)
         {
             var serverSettings = MongoServerSettings.FromConnectionStringBuilder(builder);
@@ -102,6 +103,7 @@ namespace MongoDB.Driver
         /// <returns>
         /// A new or existing instance of MongoDatabase.
         /// </returns>
+        [Obsolete("Use MongoClient, GetServer and GetDatabase instead.")]
         public static MongoDatabase Create(MongoServerSettings serverSettings, string databaseName)
         {
             if (databaseName == null)
@@ -121,6 +123,7 @@ namespace MongoDB.Driver
         /// <returns>
         /// A new or existing instance of MongoDatabase.
         /// </returns>
+        [Obsolete("Use MongoClient, GetServer and GetDatabase instead.")]
         public static MongoDatabase Create(MongoUrl url)
         {
             var serverSettings = MongoServerSettings.FromUrl(url);
@@ -137,6 +140,7 @@ namespace MongoDB.Driver
         /// <returns>
         /// A new or existing instance of MongoDatabase.
         /// </returns>
+        [Obsolete("Use MongoClient, GetServer and GetDatabase instead.")]
         public static MongoDatabase Create(string connectionString)
         {
             if (connectionString.StartsWith("mongodb://", StringComparison.Ordinal))
@@ -160,6 +164,7 @@ namespace MongoDB.Driver
         /// <returns>
         /// A new or existing instance of MongoDatabase.
         /// </returns>
+        [Obsolete("Use MongoClient, GetServer and GetDatabase instead.")]
         public static MongoDatabase Create(Uri uri)
         {
             return Create(MongoUrl.Create(uri.ToString()));

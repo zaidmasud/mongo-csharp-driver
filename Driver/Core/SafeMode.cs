@@ -37,6 +37,7 @@ namespace MongoDB.Driver
 
         // private fields
         private readonly WriteConcern _writeConcern;
+        private int _frozenHashCode;
 
         // constructors
         /// <summary>
@@ -91,14 +92,10 @@ namespace MongoDB.Driver
                 throw new ArgumentException("wtimeout cannot be non-zero when w is zero.");
             }
 
-            if (enabled)
-            {
-                _writeConcern = new WriteConcern { Enabled = true, FSync = fsync, W = w, WTimeout = wtimeout };
-            }
-            else
-            {
-                _writeConcern = new WriteConcern { Enabled = false };
-            }
+            _writeConcern = new WriteConcern { FireAndForget = !enabled };
+            if (fsync) { _writeConcern.FSync = fsync; }
+            if (w != 0) { _writeConcern.W = w; }
+            if (wtimeout != TimeSpan.Zero) { _writeConcern.WTimeout = wtimeout; }
         }
 
         /// <summary>
@@ -201,8 +198,19 @@ namespace MongoDB.Driver
         /// </summary>
         public bool Enabled
         {
-            get { return _writeConcern.Enabled; }
-            set { _writeConcern.Enabled = value; }
+            get { return !_writeConcern.FireAndForget; }
+            set
+            {
+                if (IsFrozen) { ThrowFrozenException(); }
+                if (value)
+                {
+                    _writeConcern.FireAndForget = false;
+                }
+                else
+                {
+                    ResetValues();
+                }
+            }
         }
 
         /// <summary>
@@ -210,8 +218,20 @@ namespace MongoDB.Driver
         /// </summary>
         public bool FSync
         {
-            get { return _writeConcern.FSync; }
-            set { _writeConcern.FSync = value; }
+            get { return _writeConcern.FSync ?? false; }
+            set {
+                if (IsFrozen) { ThrowFrozenException(); }
+                _writeConcern.FireAndForget = false;
+                _writeConcern.FSync = value;
+            }
+        }
+
+        /// <summary>
+        /// Gets whether this instance is frozen.
+        /// </summary>
+        public bool IsFrozen
+        {
+            get { return _writeConcern.IsFrozen; }
         }
 
         /// <summary>
@@ -229,8 +249,12 @@ namespace MongoDB.Driver
         /// </summary>
         public bool Journal
         {
-            get { return _writeConcern.Journal; }
-            set { _writeConcern.Journal = value; }
+            get { return _writeConcern.Journal ?? false; }
+            set {
+                if (IsFrozen) { ThrowFrozenException(); }
+                _writeConcern.FireAndForget = false;
+                _writeConcern.Journal = value;
+            }
         }
 
         /// <summary>
@@ -238,8 +262,16 @@ namespace MongoDB.Driver
         /// </summary>
         public int W
         {
-            get { return _writeConcern.W; }
-            set { _writeConcern.W = value; }
+            get
+            {
+                var w = _writeConcern.W as WriteConcern.WCount;
+                return (w == null) ? 0 : w.Value;
+            }
+            set {
+                if (IsFrozen) { ThrowFrozenException(); }
+                _writeConcern.FireAndForget = false;
+                _writeConcern.W = value;
+            }
         }
 
         /// <summary>
@@ -247,8 +279,17 @@ namespace MongoDB.Driver
         /// </summary>
         public string WMode
         {
-            get { return _writeConcern.WMode; }
-            set { _writeConcern.WMode = value; }
+            get
+            {
+                var w = _writeConcern.W as WriteConcern.WMode;
+                return (w == null) ? null : w.Value;
+            }
+            set
+            {
+                if (IsFrozen) { ThrowFrozenException(); }
+                _writeConcern.FireAndForget = false;
+                _writeConcern.W = value;
+            }
         }
 
         /// <summary>
@@ -256,8 +297,12 @@ namespace MongoDB.Driver
         /// </summary>
         public TimeSpan WTimeout
         {
-            get { return _writeConcern.WTimeout; }
-            set { _writeConcern.WTimeout = value; }
+            get { return _writeConcern.WTimeout ?? TimeSpan.Zero; }
+            set {
+                if (IsFrozen) { ThrowFrozenException(); }
+                _writeConcern.FireAndForget = false;
+                _writeConcern.WTimeout = value;
+            }
         }
 
         // internal properties
@@ -415,7 +460,13 @@ namespace MongoDB.Driver
         {
             if ((object)rhs == null || GetType() != rhs.GetType()) { return false; }
             if ((object)this == (object)rhs) { return true; }
-            return _writeConcern == rhs._writeConcern;
+            return
+                Enabled == rhs.Enabled &&
+                FSync == rhs.FSync &&
+                Journal == rhs.Journal &&
+                W == rhs.W &&
+                WMode == rhs.WMode &&
+                WTimeout == rhs.WTimeout;
         }
 
         /// <summary>
@@ -424,7 +475,11 @@ namespace MongoDB.Driver
         /// <returns>The frozen SafeMode.</returns>
         public SafeMode Freeze()
         {
-            _writeConcern.Freeze();
+            if (!_writeConcern.IsFrozen)
+            {
+                _frozenHashCode = GetHashCode();
+                _writeConcern.Freeze();
+            }
             return this;
         }
 
@@ -450,7 +505,20 @@ namespace MongoDB.Driver
         /// <returns>The hash code.</returns>
         public override int GetHashCode()
         {
-            return _writeConcern.GetHashCode();
+            if (_writeConcern.IsFrozen)
+            {
+                return _frozenHashCode;
+            }
+
+            // see Effective Java by Joshua Bloch
+            int hash = 17;
+            hash = 37 * hash + Enabled.GetHashCode();
+            hash = 37 * hash + FSync.GetHashCode();
+            hash = 37 * hash + Journal.GetHashCode();
+            hash = 37 * hash + W.GetHashCode();
+            hash = 37 * hash + ((WMode == null) ? 0 : WMode.GetHashCode());
+            hash = 37 * hash + WTimeout.GetHashCode();
+            return hash;
         }
 
         /// <summary>
@@ -459,7 +527,46 @@ namespace MongoDB.Driver
         /// <returns>A string representation of the SafeMode.</returns>
         public override string ToString()
         {
-            return _writeConcern.ToString();
+            var sb = new StringBuilder();
+            sb.AppendFormat("safe={0}", Enabled ? "true" : "false");
+            if (FSync)
+            {
+                sb.Append(",fsync=true");
+            }
+            if (Journal)
+            {
+                sb.Append(",journal=true");
+            }
+            if (W != 0 || WMode != null)
+            {
+                if (W != 0)
+                {
+                    sb.AppendFormat(",w={0}", W);
+                }
+                if (WMode != null)
+                {
+                    sb.AppendFormat(",wmode=\"{0}\"", WMode);
+                }
+            }
+            if (WTimeout != TimeSpan.Zero)
+            {
+                sb.AppendFormat(",wtimeout={0}", WTimeout);
+            }
+            return sb.ToString();
+        }
+        // private methods
+        private void ResetValues()
+        {
+            _writeConcern.FireAndForget = true; // defaults to true because this is the obsolete SafeMode class
+            _writeConcern.FSync = null;
+            _writeConcern.Journal = null;
+            _writeConcern.W = null;
+            _writeConcern.WTimeout = null;
+        }
+
+        private void ThrowFrozenException()
+        {
+            throw new InvalidOperationException("SafeMode has been frozen and no further changes are allowed.");
         }
     }
 }
