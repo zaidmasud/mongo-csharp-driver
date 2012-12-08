@@ -32,7 +32,7 @@ namespace MongoDB.Bson.Serialization.Serializers
     public class SingleSerializer : BsonBaseSerializer
     {
         // private static fields
-        private static SingleSerializer __instance = new SingleSerializer();
+        private static Lazy<SingleSerializer> __instance = new Lazy<SingleSerializer>();
 
         // constructors
         /// <summary>
@@ -49,7 +49,7 @@ namespace MongoDB.Bson.Serialization.Serializers
         /// </summary>
         public static SingleSerializer Instance
         {
-            get { return __instance; }
+            get { return __instance.Value; }
         }
 
         // public methods

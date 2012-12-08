@@ -31,7 +31,7 @@ namespace MongoDB.Bson.Serialization.Serializers
     public class UInt32Serializer : BsonBaseSerializer
     {
         // private static fields
-        private static UInt32Serializer __instance = new UInt32Serializer();
+        private static Lazy<UInt32Serializer> __instance = new Lazy<UInt32Serializer>();
 
         // constructors
         /// <summary>
@@ -48,7 +48,7 @@ namespace MongoDB.Bson.Serialization.Serializers
         /// </summary>
         public static UInt32Serializer Instance
         {
-            get { return __instance; }
+            get { return __instance.Value; }
         }
 
         // public methods

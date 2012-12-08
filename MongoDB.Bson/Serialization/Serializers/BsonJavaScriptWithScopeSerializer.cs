@@ -29,7 +29,7 @@ namespace MongoDB.Bson.Serialization.Serializers
     public class BsonJavaScriptWithScopeSerializer : BsonBaseSerializer
     {
         // private static fields
-        private static BsonJavaScriptWithScopeSerializer __instance = new BsonJavaScriptWithScopeSerializer();
+        private static Lazy<BsonJavaScriptWithScopeSerializer> __instance = new Lazy<BsonJavaScriptWithScopeSerializer>();
 
         // constructors
         /// <summary>
@@ -45,7 +45,7 @@ namespace MongoDB.Bson.Serialization.Serializers
         /// </summary>
         public static BsonJavaScriptWithScopeSerializer Instance
         {
-            get { return __instance; }
+            get { return __instance.Value; }
         }
 
         // public methods

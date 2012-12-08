@@ -33,7 +33,7 @@ namespace MongoDB.Bson.Serialization.Serializers
     public class DictionarySerializer : BsonBaseSerializer
     {
         // private static fields
-        private static DictionarySerializer __instance = new DictionarySerializer();
+        private static Lazy<DictionarySerializer> __instance = new Lazy<DictionarySerializer>();
 
         // private fields
         private readonly KeyValuePairSerializer<object, object> _keyValuePairSerializer;
@@ -54,7 +54,7 @@ namespace MongoDB.Bson.Serialization.Serializers
         /// </summary>
         public static DictionarySerializer Instance
         {
-            get { return __instance; }
+            get { return __instance.Value; }
         }
 
         // public methods

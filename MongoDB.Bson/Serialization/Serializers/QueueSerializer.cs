@@ -31,7 +31,7 @@ namespace MongoDB.Bson.Serialization.Serializers
     public class QueueSerializer : BsonBaseSerializer, IBsonArraySerializer
     {
         // private static fields
-        private static QueueSerializer __instance = new QueueSerializer();
+        private static Lazy<QueueSerializer> __instance = new Lazy<QueueSerializer>();
 
         // constructors
         /// <summary>
@@ -48,7 +48,7 @@ namespace MongoDB.Bson.Serialization.Serializers
         /// </summary>
         public static QueueSerializer Instance
         {
-            get { return __instance; }
+            get { return __instance.Value; }
         }
 
         // public methods

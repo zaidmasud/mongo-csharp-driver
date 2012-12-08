@@ -32,7 +32,7 @@ namespace MongoDB.Bson.Serialization.Serializers
     public class IPEndPointSerializer : BsonBaseSerializer
     {
         // private static fields
-        private static IPEndPointSerializer __instance = new IPEndPointSerializer();
+        private static Lazy<IPEndPointSerializer> __instance = new Lazy<IPEndPointSerializer>();
 
         // constructors
         /// <summary>
@@ -48,7 +48,7 @@ namespace MongoDB.Bson.Serialization.Serializers
         /// </summary>
         public static IPEndPointSerializer Instance
         {
-            get { return __instance; }
+            get { return __instance.Value; }
         }
 
         // public methods

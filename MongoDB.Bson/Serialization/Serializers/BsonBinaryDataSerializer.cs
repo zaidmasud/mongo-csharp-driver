@@ -29,7 +29,7 @@ namespace MongoDB.Bson.Serialization.Serializers
     public class BsonBinaryDataSerializer : BsonBaseSerializer
     {
         // private static fields
-        private static BsonBinaryDataSerializer __instance = new BsonBinaryDataSerializer();
+        private static Lazy<BsonBinaryDataSerializer> __instance = new Lazy<BsonBinaryDataSerializer>();
 
         // constructors
         /// <summary>
@@ -45,7 +45,7 @@ namespace MongoDB.Bson.Serialization.Serializers
         /// </summary>
         public static BsonBinaryDataSerializer Instance
         {
-            get { return __instance; }
+            get { return __instance.Value; }
         }
 
         // public methods

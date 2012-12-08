@@ -29,7 +29,7 @@ namespace MongoDB.Bson.Serialization.Serializers
     public class DrawingSizeSerializer : BsonBaseSerializer
     {
         // private static fields
-        private static DrawingSizeSerializer __instance = new DrawingSizeSerializer();
+        private static Lazy<DrawingSizeSerializer> __instance = new Lazy<DrawingSizeSerializer>();
 
         // constructors
         /// <summary>
@@ -45,7 +45,7 @@ namespace MongoDB.Bson.Serialization.Serializers
         /// </summary>
         public static DrawingSizeSerializer Instance
         {
-            get { return __instance; }
+            get { return __instance.Value; }
         }
 
         // public methods

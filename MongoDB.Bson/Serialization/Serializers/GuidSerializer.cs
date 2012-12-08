@@ -30,7 +30,7 @@ namespace MongoDB.Bson.Serialization.Serializers
     public class GuidSerializer : BsonBaseSerializer
     {
         // private static fields
-        private static GuidSerializer __instance = new GuidSerializer();
+        private static Lazy<GuidSerializer> __instance = new Lazy<GuidSerializer>();
 
         // constructors
         /// <summary>
@@ -47,7 +47,7 @@ namespace MongoDB.Bson.Serialization.Serializers
         /// </summary>
         public static GuidSerializer Instance
         {
-            get { return __instance; }
+            get { return __instance.Value; }
         }
 
         // public methods

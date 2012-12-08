@@ -30,7 +30,7 @@ namespace MongoDB.Bson.Serialization.Serializers
     public class CultureInfoSerializer : BsonBaseSerializer
     {
         // private static fields
-        private static CultureInfoSerializer __instance = new CultureInfoSerializer();
+        private static Lazy<CultureInfoSerializer> __instance = new Lazy<CultureInfoSerializer>();
 
         // constructors
         /// <summary>
@@ -46,7 +46,7 @@ namespace MongoDB.Bson.Serialization.Serializers
         /// </summary>
         public static CultureInfoSerializer Instance
         {
-            get { return __instance; }
+            get { return __instance.Value; }
         }
 
         // public methods

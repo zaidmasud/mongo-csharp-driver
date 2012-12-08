@@ -30,7 +30,7 @@ namespace MongoDB.Bson.Serialization.Serializers
     public class VersionSerializer : BsonBaseSerializer
     {
         // private static fields
-        private static VersionSerializer __instance = new VersionSerializer();
+        private static Lazy<VersionSerializer> __instance = new Lazy<VersionSerializer>();
 
         // constructors
         /// <summary>
@@ -47,7 +47,7 @@ namespace MongoDB.Bson.Serialization.Serializers
         /// </summary>
         public static VersionSerializer Instance
         {
-            get { return __instance; }
+            get { return __instance.Value; }
         }
 
         // public methods
