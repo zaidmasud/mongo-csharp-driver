@@ -44,6 +44,7 @@ namespace MongoDB.Driver
         // private fields
         private readonly object _serverInstanceLock = new object();
         private readonly MongoServerSettings _settings;
+        private readonly IMongoBinding _binding;
         private readonly MongoConnectionPool _connectionPool;
         private readonly PingTimeAggregator _pingTimeAggregator;
         private MongoServerAddress _address;
@@ -65,6 +66,7 @@ namespace MongoDB.Driver
         internal MongoServerInstance(MongoServerSettings settings, MongoServerAddress address)
         {
             _settings = settings;
+            _binding = new MongoServerInstanceBinding(this);
             _address = address;
             _sequentialId = Interlocked.Increment(ref __nextSequentialId);
             _state = MongoServerState.Disconnected;
@@ -305,6 +307,20 @@ namespace MongoDB.Driver
 
         // public methods
         /// <summary>
+        /// Gets a binding to this server instance.
+        /// </summary>
+        /// <returns>A binding.</returns>
+        public IMongoBinding GetBinding()
+        {
+            return new MongoServerInstanceBinding(this);
+        }
+
+        public MongoConnection GetConnection(MongoDatabase database)
+        {
+            return _binding.AcquireConnection(database, null);
+        }
+
+        /// <summary>
         /// Gets the IP end point of this server instance.
         /// </summary>
         /// <returns>The IP end point of this server instance.</returns>
@@ -328,7 +344,7 @@ namespace MongoDB.Driver
         public void Ping()
         {
             // use a new connection instead of one from the connection pool
-            var connection = new MongoConnection(this);
+            var connection = new MongoInternalConnection(this);
             try
             {
                 Ping(connection);
@@ -345,7 +361,7 @@ namespace MongoDB.Driver
         public void VerifyState()
         {
             // use a new connection instead of one from the connection pool
-            var connection = new MongoConnection(this);
+            var connection = new MongoInternalConnection(this);
             try
             {
                 try
@@ -373,9 +389,9 @@ namespace MongoDB.Driver
         /// <param name="credentials">The credentials.</param>
         /// <returns>A MongoConnection.</returns>
         /// <exception cref="System.InvalidOperationException"></exception>
-        internal MongoConnection AcquireConnection(string databaseName, MongoCredentials credentials)
+        internal MongoInternalConnection AcquireConnection(string databaseName, MongoCredentials credentials)
         {
-            MongoConnection connection;
+            MongoInternalConnection connection;
             lock (_serverInstanceLock)
             {
                 if (_state != MongoServerState.Connected)
@@ -514,7 +530,7 @@ namespace MongoDB.Driver
         /// Releases the connection.
         /// </summary>
         /// <param name="connection">The connection.</param>
-        internal void ReleaseConnection(MongoConnection connection)
+        internal void ReleaseConnection(MongoInternalConnection connection)
         {
             _connectionPool.ReleaseConnection(connection);
         }
@@ -539,7 +555,7 @@ namespace MongoDB.Driver
         }
 
         // private methods
-        private void LookupServerInformation(MongoConnection connection)
+        private void LookupServerInformation(MongoInternalConnection connection)
         {
             IsMasterResult isMasterResult = null;
             bool ok = false;
@@ -654,7 +670,7 @@ namespace MongoDB.Driver
             }
         }
 
-        private void Ping(MongoConnection connection)
+        private void Ping(MongoInternalConnection connection)
         {
             try
             {
@@ -688,7 +704,7 @@ namespace MongoDB.Driver
             _inStateVerification = true;
             try
             {
-                var connection = new MongoConnection(this);
+                var connection = new MongoInternalConnection(this);
                 try
                 {
                     Ping(connection);

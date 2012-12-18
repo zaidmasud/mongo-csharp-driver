@@ -51,7 +51,7 @@ namespace MongoDB.Driver.Internal
     /// <summary>
     /// Represents a connection to a MongoServerInstance.
     /// </summary>
-    public class MongoConnection
+    public class MongoInternalConnection
     {
         // private fields
         private object _connectionLock = new object();
@@ -68,7 +68,7 @@ namespace MongoDB.Driver.Internal
         private Dictionary<string, Authentication> _authentications = new Dictionary<string, Authentication>();
 
         // constructors
-        internal MongoConnection(MongoConnectionPool connectionPool)
+        internal MongoInternalConnection(MongoConnectionPool connectionPool)
         {
             _serverInstance = connectionPool.ServerInstance;
             _connectionPool = connectionPool;
@@ -77,7 +77,7 @@ namespace MongoDB.Driver.Internal
             _state = MongoConnectionState.Initial;
         }
 
-        internal MongoConnection(MongoServerInstance serverInstance)
+        internal MongoInternalConnection(MongoServerInstance serverInstance)
         {
             _serverInstance = serverInstance;
             _createdAt = DateTime.UtcNow;

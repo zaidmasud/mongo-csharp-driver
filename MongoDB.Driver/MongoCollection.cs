@@ -36,6 +36,7 @@ namespace MongoDB.Driver
     public abstract class MongoCollection
     {
         // private fields
+        private IMongoBinding _binding;
         private MongoServer _server;
         private MongoDatabase _database;
         private MongoCollectionSettings _settings;
@@ -46,10 +47,11 @@ namespace MongoDB.Driver
         /// <summary>
         /// Protected constructor for abstract base class.
         /// </summary>
+        /// <param name="binding">The binding to use with this collection.</param>
         /// <param name="database">The database that contains this collection.</param>
         /// <param name="name">The name of the collection.</param>
         /// <param name="settings">The settings to use to access this collection.</param>
-        protected MongoCollection(MongoDatabase database, string name, MongoCollectionSettings settings)
+        protected MongoCollection(IMongoBinding binding, MongoDatabase database, string name, MongoCollectionSettings settings)
         {
             if (database == null)
             {
@@ -73,6 +75,7 @@ namespace MongoDB.Driver
             settings.ApplyDefaultValues(database.Settings);
             settings.Freeze();
 
+            _binding = binding;
             _server = database.Server;
             _database = database;
             _settings = settings;
@@ -92,6 +95,14 @@ namespace MongoDB.Driver
         }
 
         // public properties
+        /// <summary>
+        /// Gets the binding for this collection.
+        /// </summary>
+        public virtual IMongoBinding Binding
+        {
+            get { return _binding; }
+        }
+
         /// <summary>
         /// Gets the database that contains this collection.
         /// </summary>
@@ -1136,8 +1147,7 @@ namespace MongoDB.Driver
                 throw new ArgumentNullException("options");
             }
 
-            var connection = _server.AcquireConnection(_database, ReadPreference.Primary);
-            try
+            using (var connection = _binding.AcquireConnection(_database, ReadPreference.Primary))
             {
                 var writeConcern = options.WriteConcern ?? _settings.WriteConcern;
 
@@ -1179,21 +1189,17 @@ namespace MongoDB.Driver
                         if (message.MessageLength > connection.ServerInstance.MaxMessageLength)
                         {
                             byte[] lastDocument = message.RemoveLastDocument();
-                            var intermediateResult = connection.SendMessage(message, writeConcern, _database.Name);
+                            var intermediateResult = connection.InternalConnection.SendMessage(message, writeConcern, _database.Name);
                             if (writeConcern.Enabled) { results.Add(intermediateResult); }
                             message.ResetBatch(lastDocument);
                         }
                     }
 
-                    var finalResult = connection.SendMessage(message, writeConcern, _database.Name);
+                    var finalResult = connection.InternalConnection.SendMessage(message, writeConcern, _database.Name);
                     if (writeConcern.Enabled) { results.Add(finalResult); }
 
                     return results;
                 }
-            }
-            finally
-            {
-                _server.ReleaseConnection(connection);
             }
         }
 
@@ -1325,18 +1331,13 @@ namespace MongoDB.Driver
         /// <returns>A WriteConcernResult (or null if WriteConcern is disabled).</returns>
         public virtual WriteConcernResult Remove(IMongoQuery query, RemoveFlags flags, WriteConcern writeConcern)
         {
-            var connection = _server.AcquireConnection(_database, ReadPreference.Primary);
-            try
+            using (var connection = _binding.AcquireConnection(_database, ReadPreference.Primary))
             {
                 var writerSettings = GetWriterSettings(connection);
                 using (var message = new MongoDeleteMessage(writerSettings, FullName, flags, query))
                 {
-                    return connection.SendMessage(message, writeConcern ?? _settings.WriteConcern, _database.Name);
+                    return connection.InternalConnection.SendMessage(message, writeConcern ?? _settings.WriteConcern, _database.Name);
                 }
-            }
-            finally
-            {
-                _server.ReleaseConnection(connection);
             }
         }
 
@@ -1555,19 +1556,14 @@ namespace MongoDB.Driver
                 throw new ArgumentNullException("options");
             }
 
-            var connection = _server.AcquireConnection(_database, ReadPreference.Primary);
-            try
+            using (var connection = _binding.AcquireConnection(_database, ReadPreference.Primary))
             {
                 var writerSettings = GetWriterSettings(connection);
                 using (var message = new MongoUpdateMessage(writerSettings, FullName, options.CheckElementNames, options.Flags, query, update))
                 {
                     var writeConcern = options.WriteConcern ?? _settings.WriteConcern;
-                    return connection.SendMessage(message, writeConcern, _database.Name);
+                    return connection.InternalConnection.SendMessage(message, writeConcern, _database.Name);
                 }
-            }
-            finally
-            {
-                _server.ReleaseConnection(connection);
             }
         }
 
@@ -1755,11 +1751,25 @@ namespace MongoDB.Driver
         /// Creates a new instance of MongoCollection. Normally you would call one of the indexers or GetCollection methods
         /// of MongoDatabase instead.
         /// </summary>
+        /// <param name="binding">The binding to use with this collection.</param>
         /// <param name="database">The database that contains this collection.</param>
         /// <param name="name">The name of the collection.</param>
         /// <param name="settings">The settings to use to access this collection.</param>
+        internal MongoCollection(IMongoBinding binding, MongoDatabase database, string name, MongoCollectionSettings settings)
+            : base(binding, database, name, settings)
+        {
+        }
+
+        /// <summary>
+        /// Creates a new instance of MongoCollection. Normally you would call one of the indexers or GetCollection methods
+        /// of MongoDatabase instead.
+        /// </summary>
+        /// <param name="database">The database that contains this collection.</param>
+        /// <param name="name">The name of the collection.</param>
+        /// <param name="settings">The settings to use to access this collection.</param>
+        [Obsolete("Use GetCollection instead.")]
         public MongoCollection(MongoDatabase database, string name, MongoCollectionSettings settings)
-            : base(database, name, settings)
+            : base((database == null) ? null : database.Binding, database, name, settings)
         {
         }
 
@@ -1769,7 +1779,7 @@ namespace MongoDB.Driver
         /// </summary>
         /// <param name="database">The database that contains this collection.</param>
         /// <param name="settings">The settings to use to access this collection.</param>
-        [Obsolete("Use MongoCollection(MongoDatabase database, string name, MongoCollectionSettings settings) instead.")]
+        [Obsolete("Use GetCollection instead.")]
         public MongoCollection(MongoDatabase database, MongoCollectionSettings<TDefaultDocument> settings)
             : this(database, settings.CollectionName, settings)
         {

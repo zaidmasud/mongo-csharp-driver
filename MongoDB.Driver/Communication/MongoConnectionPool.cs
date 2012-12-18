@@ -32,7 +32,7 @@ namespace MongoDB.Driver.Internal
         private MongoServerSettings _settings;
         private MongoServerInstance _serverInstance;
         private int _poolSize;
-        private List<MongoConnection> _availableConnections = new List<MongoConnection>();
+        private List<MongoInternalConnection> _availableConnections = new List<MongoInternalConnection>();
         private int _generationId; // whenever the pool is cleared the generationId is incremented
         private int _waitQueueSize;
         private bool _inMaintainPoolSize;
@@ -81,7 +81,7 @@ namespace MongoDB.Driver.Internal
         }
 
         // internal methods
-        internal MongoConnection AcquireConnection(string databaseName, MongoCredentials credentials)
+        internal MongoInternalConnection AcquireConnection(string databaseName, MongoCredentials credentials)
         {
             lock (_connectionPoolLock)
             {
@@ -124,7 +124,7 @@ namespace MongoDB.Driver.Internal
                             // if this happens a lot the connection pool size should be increased
                             _availableConnections[0].Close();
                             _availableConnections.RemoveAt(0);
-                            return new MongoConnection(this);
+                            return new MongoInternalConnection(this);
                         }
 
                         // create a new connection if maximum pool size has not been reached
@@ -132,7 +132,7 @@ namespace MongoDB.Driver.Internal
                         {
                             // make sure connection is created successfully before incrementing poolSize
                             // connection will be opened later outside of the lock
-                            var connection = new MongoConnection(this);
+                            var connection = new MongoInternalConnection(this);
                             _poolSize += 1;
                             return connection;
                         }
@@ -145,7 +145,7 @@ namespace MongoDB.Driver.Internal
                         }
                         else
                         {
-                            throw new TimeoutException("Timeout waiting for a MongoConnection.");
+                            throw new TimeoutException("Timeout waiting for a MongoInternalConnection.");
                         }
                     }
                 }
@@ -181,14 +181,14 @@ namespace MongoDB.Driver.Internal
             _inMaintainPoolSize = true;
             try
             {
-                MongoConnection connectionToRemove = null;
+                MongoInternalConnection connectionToRemove = null;
                 lock (_connectionPoolLock)
                 {
                     // only remove one connection per timer tick to avoid reconnection storms
                     if (_connectionsRemovedSinceLastTimerTick == 0)
                     {
-                        MongoConnection oldestConnection = null;
-                        MongoConnection lruConnection = null;
+                        MongoInternalConnection oldestConnection = null;
+                        MongoInternalConnection lruConnection = null;
                         foreach (var connection in _availableConnections)
                         {
                             if (oldestConnection == null || connection.CreatedAt < oldestConnection.CreatedAt)
@@ -232,7 +232,7 @@ namespace MongoDB.Driver.Internal
             }
         }
 
-        internal void ReleaseConnection(MongoConnection connection)
+        internal void ReleaseConnection(MongoInternalConnection connection)
         {
             if (connection.ConnectionPool != this)
             {
@@ -304,7 +304,7 @@ namespace MongoDB.Driver.Internal
                         }
                     }
 
-                    var connection = new MongoConnection(this);
+                    var connection = new MongoInternalConnection(this);
                     try
                     {
                         connection.Open();
@@ -350,7 +350,7 @@ namespace MongoDB.Driver.Internal
             }
         }
 
-        private void RemoveConnection(MongoConnection connection)
+        private void RemoveConnection(MongoInternalConnection connection)
         {
             lock (_connectionPoolLock)
             {

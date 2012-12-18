@@ -17,6 +17,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Reflection;
 using System.Text;
 
 using MongoDB.Bson;
@@ -33,6 +34,7 @@ namespace MongoDB.Driver
     public class MongoDatabase
     {
         // private fields
+        private IMongoBinding _binding;
         private MongoServer _server;
         private MongoDatabaseSettings _settings;
         private string _name;
@@ -44,22 +46,14 @@ namespace MongoDB.Driver
         /// of MongoServer instead.
         /// </summary>
         /// <param name="server">The server that contains this database.</param>
-        /// <param name="settings">The settings to use to access this database.</param>
-        [Obsolete("Use MongoDatabase(MongoServer server, string name, MongoDatabaseSettings settings) instead.")]
-        public MongoDatabase(MongoServer server, MongoDatabaseSettings settings)
-            : this(server, settings.DatabaseName, settings)
-        {
-        }
-
-        /// <summary>
-        /// Creates a new instance of MongoDatabase. Normally you would call one of the indexers or GetDatabase methods
-        /// of MongoServer instead.
-        /// </summary>
-        /// <param name="server">The server that contains this database.</param>
         /// <param name="name">The name of the database.</param>
         /// <param name="settings">The settings to use to access this database.</param>
-        public MongoDatabase(MongoServer server, string name, MongoDatabaseSettings settings)
+        internal MongoDatabase(IMongoBinding binding, MongoServer server, string name, MongoDatabaseSettings settings)
         {
+            if (binding == null)
+            {
+                throw new ArgumentNullException("binding");
+            }
             if (server == null)
             {
                 throw new ArgumentNullException("server");
@@ -82,12 +76,38 @@ namespace MongoDB.Driver
             settings.ApplyDefaultValues(server.Settings);
             settings.Freeze();
 
+            _binding = binding;
             _server = server;
             _settings = settings;
             _name = name;
 
             var commandCollectionSettings = new MongoCollectionSettings { AssignIdOnInsert = false };
-            _commandCollection = GetCollection("$cmd", commandCollectionSettings);
+            _commandCollection = GetBoundCollection<BsonDocument>(binding, "$cmd", commandCollectionSettings);
+        }
+
+        /// <summary>
+        /// Creates a new instance of MongoDatabase. Normally you would call one of the indexers or GetDatabase methods
+        /// of MongoServer instead.
+        /// </summary>
+        /// <param name="server">The server that contains this database.</param>
+        /// <param name="settings">The settings to use to access this database.</param>
+        [Obsolete("Use GetDatabase instead.")]
+        public MongoDatabase(MongoServer server, MongoDatabaseSettings settings)
+            : this(server, settings.DatabaseName, settings)
+        {
+        }
+
+        /// <summary>
+        /// Creates a new instance of MongoDatabase. Normally you would call one of the indexers or GetDatabase methods
+        /// of MongoServer instead.
+        /// </summary>
+        /// <param name="server">The server that contains this database.</param>
+        /// <param name="name">The name of the database.</param>
+        /// <param name="settings">The settings to use to access this database.</param>
+        [Obsolete("Use GetDatabase instead.")]
+        public MongoDatabase(MongoServer server, string name, MongoDatabaseSettings settings)
+            : this(new MongoServerBinding(server), server, name, settings)
+        {
         }
 
         // factory methods
@@ -186,6 +206,14 @@ namespace MongoDB.Driver
         }
 
         // public properties
+        /// <summary>
+        /// Gets the binding for this database.
+        /// </summary>
+        public virtual IMongoBinding Binding
+        {
+            get { return _binding; }
+        }
+
         /// <summary>
         /// Gets the command collection for this database.
         /// </summary>
@@ -513,6 +541,77 @@ namespace MongoDB.Driver
         }
 
         /// <summary>
+        /// Gets a bound MongoCollection instance representing a collection on this database.
+        /// with a default document type of TDefaultDocument.
+        /// </summary>
+        /// <typeparam name="TDefaultDocument">The default document type for this collection.</typeparam>
+        /// <param name="binding">The binding for the collection.</param>
+        /// <param name="collectionName">The name of the collection.</param>
+        /// <returns>An instance of MongoCollection.</returns>
+        public virtual MongoCollection<TDefaultDocument> GetBoundCollection<TDefaultDocument>(
+            IMongoBinding binding,
+            string collectionName)
+        {
+            var collectionSettings = new MongoCollectionSettings();
+            return new MongoCollection<TDefaultDocument>(binding, this, collectionName, collectionSettings);
+        }
+
+        /// <summary>
+        /// Gets a bound MongoCollection instance representing a collection on this database.
+        /// with a default document type of TDefaultDocument.
+        /// </summary>
+        /// <typeparam name="TDefaultDocument">The default document type for this collection.</typeparam>
+        /// <param name="binding">The binding for the collection.</param>
+        /// <param name="collectionName">The name of the collection.</param>
+        /// <param name="collectionSettings">The settings to use when accessing this collection.</param>
+        /// <returns>An instance of MongoCollection.</returns>
+        public virtual MongoCollection<TDefaultDocument> GetBoundCollection<TDefaultDocument>(
+            IMongoBinding binding,
+            string collectionName,
+            MongoCollectionSettings collectionSettings)
+        {
+            return new MongoCollection<TDefaultDocument>(binding, this, collectionName, collectionSettings);
+        }
+
+        /// <summary>
+        /// Gets a bound MongoCollection instance representing a collection on this database.
+        /// with a default document type of BsonDocument.
+        /// </summary>
+        /// <param name="defaultDocumentType">The default document type.</param>
+        /// <param name="collectionName">The name of the collection.</param>
+        /// <returns>An instance of MongoCollection.</returns>
+        public virtual MongoCollection GetBoundCollection(
+            Type defaultDocumentType,
+            IMongoBinding binding,
+            string collectionName)
+        {
+            var collectionSettings = new MongoCollectionSettings();
+            return GetBoundCollection(defaultDocumentType, binding, collectionName, collectionSettings);
+        }
+
+        /// <summary>
+        /// Gets a bound MongoCollection instance representing a collection on this database.
+        /// with a default document type of BsonDocument.
+        /// </summary>
+        /// <param name="defaultDocumentType">The default document type.</param>
+        /// <param name="collectionName">The name of the collection.</param>
+        /// <param name="collectionSettings">The settings to use when accessing this collection.</param>
+        /// <returns>An instance of MongoCollection.</returns>
+        public virtual MongoCollection GetBoundCollection(
+            Type defaultDocumentType,
+            IMongoBinding binding,
+            string collectionName,
+            MongoCollectionSettings collectionSettings)
+        {
+            var collectionDefinition = typeof(MongoCollection<>);
+            var collectionType = collectionDefinition.MakeGenericType(defaultDocumentType);
+            var bindingAttr = BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance;
+            var types = new Type[] { typeof(IMongoBinding), typeof(MongoDatabase), typeof(string), typeof(MongoCollectionSettings) };
+            var constructorInfo = collectionType.GetConstructor(bindingAttr, null, types, null);
+            return (MongoCollection)constructorInfo.Invoke(new object[] { binding, this, collectionName, collectionSettings });
+        }
+
+        /// <summary>
         /// Gets a MongoCollection instance representing a collection on this database
         /// with a default document type of TDefaultDocument.
         /// </summary>
@@ -550,7 +649,7 @@ namespace MongoDB.Driver
         public virtual MongoCollection<TDefaultDocument> GetCollection<TDefaultDocument>(
             string collectionName, MongoCollectionSettings collectionSettings)
         {
-            return new MongoCollection<TDefaultDocument>(this, collectionName, collectionSettings);
+            return GetBoundCollection<TDefaultDocument>(_binding, collectionName, collectionSettings);
         }
 
         /// <summary>
@@ -639,10 +738,7 @@ namespace MongoDB.Driver
         /// <returns>An instance of MongoCollection.</returns>
         public virtual MongoCollection GetCollection(Type defaultDocumentType, string collectionName, MongoCollectionSettings collectionSettings)
         {
-            var collectionDefinition = typeof(MongoCollection<>);
-            var collectionType = collectionDefinition.MakeGenericType(defaultDocumentType);
-            var constructorInfo = collectionType.GetConstructor(new Type[] { typeof(MongoDatabase), typeof(string), typeof(MongoCollectionSettings) });
-            return (MongoCollection)constructorInfo.Invoke(new object[] { this, collectionName, collectionSettings });
+            return GetBoundCollection(defaultDocumentType, _binding, collectionName, collectionSettings);
         }
 
         /// <summary>
@@ -894,6 +990,7 @@ namespace MongoDB.Driver
         /// Lets the server know that this thread is done with a series of related operations. Instead of calling this method it is better
         /// to put the return value of RequestStart in a using statement.
         /// </summary>
+        [Obsolete("Use GetBoundDatabase instead.")]
         public virtual void RequestDone()
         {
             _server.RequestDone();
@@ -905,6 +1002,7 @@ namespace MongoDB.Driver
         /// using statement (in which case RequestDone will be called automatically when leaving the using statement).
         /// </summary>
         /// <returns>A helper object that implements IDisposable and calls <see cref="RequestDone"/> from the Dispose method.</returns>
+        [Obsolete("Use GetBoundDatabase instead.")]
         public virtual IDisposable RequestStart()
         {
             return RequestStart(ReadPreference.Primary);
@@ -917,7 +1015,7 @@ namespace MongoDB.Driver
         /// </summary>
         /// <param name="slaveOk">Whether queries should be sent to secondary servers.</param>
         /// <returns>A helper object that implements IDisposable and calls <see cref="RequestDone"/> from the Dispose method.</returns>
-        [Obsolete("Use the overload of RequestStart that has a ReadPreference parameter instead.")]
+        [Obsolete("Use GetBoundDatabase instead.")]
         public virtual IDisposable RequestStart(bool slaveOk)
         {
             return _server.RequestStart(this, ReadPreference.FromSlaveOk(slaveOk));
@@ -930,6 +1028,7 @@ namespace MongoDB.Driver
         /// </summary>
         /// <param name="readPreference">The read preference.</param>
         /// <returns>A helper object that implements IDisposable and calls <see cref="RequestDone"/> from the Dispose method.</returns>
+        [Obsolete("Use GetBoundDatabase instead.")]
         public virtual IDisposable RequestStart(ReadPreference readPreference)
         {
             return _server.RequestStart(this, readPreference);
