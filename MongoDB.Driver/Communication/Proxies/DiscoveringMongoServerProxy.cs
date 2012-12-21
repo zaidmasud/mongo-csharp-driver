@@ -28,7 +28,7 @@ namespace MongoDB.Driver.Internal
     {
         private readonly object _lock = new object();
         private readonly MongoServerSettings _settings;
-        private readonly ReadOnlyCollection<MongoServerInstance> _instances;
+        private readonly ReadOnlyCollection<MongoServerInstanceInternal> _instances;
 
         // volatile will ensure that our reads are not reordered such one could get placed before a write.  This 
         // isn't strictly required for > .NET 2.0 systems, but Mono does not offer the same memory model guarantees,
@@ -46,7 +46,7 @@ namespace MongoDB.Driver.Internal
         {
             _state = MongoServerState.Disconnected;
             _settings = settings;
-            _instances = settings.Servers.Select(a => new MongoServerInstance(settings, a)).ToList().AsReadOnly();
+            _instances = settings.Servers.Select(a => new MongoServerInstanceInternal(settings, a)).ToList().AsReadOnly();
         }
 
         // public properties
@@ -85,7 +85,7 @@ namespace MongoDB.Driver.Internal
         /// <summary>
         /// Gets the instances.
         /// </summary>
-        public ReadOnlyCollection<MongoServerInstance> Instances
+        public ReadOnlyCollection<MongoServerInstanceInternal> Instances
         {
             get
             {
@@ -119,8 +119,8 @@ namespace MongoDB.Driver.Internal
         /// Chooses the server instance.
         /// </summary>
         /// <param name="readPreference">The read preference.</param>
-        /// <returns>A MongoServerInstance</returns>
-        public MongoServerInstance ChooseServerInstance(ReadPreference readPreference)
+        /// <returns>A MongoServerInstanceInternal</returns>
+        public MongoServerInstanceInternal ChooseServerInstance(ReadPreference readPreference)
         {
             EnsureInstanceManager(_settings.ConnectTimeout);
             return _serverProxy.ChooseServerInstance(readPreference);
@@ -207,7 +207,7 @@ namespace MongoDB.Driver.Internal
 
         private void Discover(TimeSpan timeout)
         {
-            var connectionQueue = new BlockingQueue<MongoServerInstance>();
+            var connectionQueue = new BlockingQueue<MongoServerInstanceInternal>();
 
             for (int i = 0; i < _instances.Count; i++)
             {
@@ -226,7 +226,7 @@ namespace MongoDB.Driver.Internal
                 });
             }
 
-            MongoServerInstance instance = null;
+            MongoServerInstanceInternal instance = null;
             var timeoutAt = DateTime.UtcNow;
             while ((instance = connectionQueue.Dequeue(timeout)) != null)
             {
@@ -242,7 +242,7 @@ namespace MongoDB.Driver.Internal
             throw new MongoConnectionException(string.Format("Unable to connect in the specified timeframe of '{0}'.", timeout));
         }
 
-        private void CreateActualProxy(MongoServerInstance instance, BlockingQueue<MongoServerInstance> connectionQueue)
+        private void CreateActualProxy(MongoServerInstanceInternal instance, BlockingQueue<MongoServerInstanceInternal> connectionQueue)
         {
             lock (_lock)
             {

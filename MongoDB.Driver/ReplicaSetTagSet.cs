@@ -220,7 +220,7 @@ namespace MongoDB.Driver
         /// </summary>
         /// <param name="instance">The server instance.</param>
         /// <returns>True if every tag in this tag set is also in the server instance tag set; otherwise, false.</returns>
-        public bool MatchesInstance(MongoServerInstance instance)
+        public bool MatchesInstance(MongoServerInstanceInternal instance)
         {
             // an empty tag set matches anything
             if (instance.InstanceType != MongoServerInstanceType.ReplicaSetMember || _tags.Count == 0)

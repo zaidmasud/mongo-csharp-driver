@@ -40,26 +40,74 @@ namespace MongoDB.Driver
         private readonly IMongoBinding _sourceBinding;
         private readonly MongoServer _server;
         private readonly MongoServerInstance _serverInstance;
-        private readonly MongoConnectionInternal _internalConnection;
+        private readonly MongoConnectionInternal _inner;
 
         private bool _disposed;
 
         // constructors
-        internal MongoConnection(IMongoBinding sourceBinding, MongoServer server, MongoServerInstance serverInstance, MongoConnectionInternal internalConnection)
+        internal MongoConnection(IMongoBinding sourceBinding, MongoServer server, MongoServerInstance serverInstance, MongoConnectionInternal inner)
         {
             _sourceBinding = sourceBinding;
             _server = server;
             _serverInstance = serverInstance;
-            _internalConnection = internalConnection;
+            _inner = inner;
         }
 
         // public properties
+        /// <summary>
+        /// Gets the connection pool that this connection belongs to.
+        /// </summary>
+        public MongoConnectionPool ConnectionPool
+        {
+            get { return _inner.ConnectionPool; }
+        }
+
+        /// <summary>
+        /// Gets the DateTime that this connection was created at.
+        /// </summary>
+        public DateTime CreatedAt
+        {
+            get { return _inner.CreatedAt; }
+        }
+
+        /// <summary>
+        /// Gets the generation of the connection pool that this connection belongs to.
+        /// </summary>
+        public int GenerationId
+        {
+            get { return _inner.GenerationId; }
+        }
+
         /// <summary>
         /// Gets the inner internal connection.
         /// </summary>
         public MongoConnectionInternal Inner
         {
-            get { return _internalConnection; }
+            get { return _inner; }
+        }
+
+        /// <summary>
+        /// Gets the DateTime that this connection was last used at.
+        /// </summary>
+        public DateTime LastUsedAt
+        {
+            get { return _inner.LastUsedAt; }
+        }
+
+        /// <summary>
+        /// Gets a count of the number of messages that have been sent using this connection.
+        /// </summary>
+        public int MessageCounter
+        {
+            get { return _inner.MessageCounter; }
+        }
+
+        /// <summary>
+        /// Gets the RequestId of the last message sent on this connection.
+        /// </summary>
+        public int RequestId
+        {
+            get { return _inner.RequestId; }
         }
 
         /// <summary>
@@ -67,7 +115,15 @@ namespace MongoDB.Driver
         /// </summary>
         public MongoServerInstance ServerInstance
         {
-            get { return _internalConnection.ServerInstance; }
+            get { return _serverInstance; }
+        }
+
+        /// <summary>
+        /// Gets the state of this connection.
+        /// </summary>
+        public MongoConnectionState State
+        {
+            get { return _inner.State; }
         }
 
         // public methods
@@ -90,7 +146,7 @@ namespace MongoDB.Driver
             {
                 try
                 {
-                    _sourceBinding.ReleaseConnection(_internalConnection);
+                    _sourceBinding.ReleaseConnection(_inner);
                 }
                 catch (Exception)
                 {
@@ -197,7 +253,7 @@ namespace MongoDB.Driver
         // explicit interface implementations
         MongoConnection IMongoBinding.GetConnection(string initialDatabaseName, ReadPreference readPreference)
         {
-            return new MongoConnection(this, _server, _serverInstance, _internalConnection);
+            return new MongoConnection(this, _server, _serverInstance, _inner);
         }
 
         void IMongoBinding.ReleaseConnection(MongoConnectionInternal internalConnection)

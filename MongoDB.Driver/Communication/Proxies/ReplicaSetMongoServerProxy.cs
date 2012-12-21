@@ -49,7 +49,7 @@ namespace MongoDB.Driver.Internal
         /// <param name="instances">The instances.</param>
         /// <param name="stateChangeQueue">The state change queue.</param>
         /// <param name="connectionAttempt">The connection attempt.</param>
-        public ReplicaSetMongoServerProxy(MongoServerSettings serverSettings, IEnumerable<MongoServerInstance> instances, BlockingQueue<MongoServerInstance> stateChangeQueue, int connectionAttempt)
+        public ReplicaSetMongoServerProxy(MongoServerSettings serverSettings, IEnumerable<MongoServerInstanceInternal> instances, BlockingQueue<MongoServerInstanceInternal> stateChangeQueue, int connectionAttempt)
             : base(serverSettings, instances, stateChangeQueue, connectionAttempt)
         { }
 
@@ -70,7 +70,7 @@ namespace MongoDB.Driver.Internal
         }
 
         // protected methods
-        protected override MongoServerInstance ChooseServerInstance(ConnectedInstanceCollection connectedInstances, ReadPreference readPreference)
+        protected override MongoServerInstanceInternal ChooseServerInstance(ConnectedInstanceCollection connectedInstances, ReadPreference readPreference)
         {
             var secondaryAcceptableLatency = Settings.SecondaryAcceptableLatency;
 
@@ -118,7 +118,7 @@ namespace MongoDB.Driver.Internal
         /// <param name="currentState">State of the current.</param>
         /// <param name="instances">The instances.</param>
         /// <returns>The server state.</returns>
-        protected override MongoServerState DetermineServerState(MongoServerState currentState, IEnumerable<MongoServerInstance> instances)
+        protected override MongoServerState DetermineServerState(MongoServerState currentState, IEnumerable<MongoServerInstanceInternal> instances)
         {
             if (!instances.Any())
             {
@@ -170,7 +170,7 @@ namespace MongoDB.Driver.Internal
         /// <returns>
         ///   <c>true</c> if the instance is valid; otherwise, <c>false</c>.
         /// </returns>
-        protected override bool IsValidInstance(MongoServerInstance instance)
+        protected override bool IsValidInstance(MongoServerInstanceInternal instance)
         {
             if (instance.InstanceType != MongoServerInstanceType.ReplicaSetMember)
             {
@@ -187,7 +187,7 @@ namespace MongoDB.Driver.Internal
         /// Processes the connected instance state change.
         /// </summary>
         /// <param name="instance">The instance.</param>
-        protected override void ProcessConnectedInstanceStateChange(MongoServerInstance instance)
+        protected override void ProcessConnectedInstanceStateChange(MongoServerInstanceInternal instance)
         {
             if (instance.IsPrimary)
             {
@@ -207,12 +207,12 @@ namespace MongoDB.Driver.Internal
         /// <param name="readPreference">The read preference that must be matched.</param>
         /// <param name="secondaryAcceptableLatency">The maximum acceptable secondary latency.</param>
         /// <returns>A randomly selected matching instance.</returns>
-        private MongoServerInstance GetMatchingInstance(List<ConnectedInstanceCollection.InstanceWithPingTime> instancesWithPingTime, ReadPreference readPreference, TimeSpan secondaryAcceptableLatency)
+        private MongoServerInstanceInternal GetMatchingInstance(List<ConnectedInstanceCollection.InstanceWithPingTime> instancesWithPingTime, ReadPreference readPreference, TimeSpan secondaryAcceptableLatency)
         {
             var tagSets = readPreference.TagSets ?? new ReplicaSetTagSet[] { new ReplicaSetTagSet() };
             foreach (var tagSet in tagSets)
             {
-                var matchingInstances = new List<MongoServerInstance>();
+                var matchingInstances = new List<MongoServerInstanceInternal>();
                 var maxPingTime = TimeSpan.MaxValue;
 
                 foreach (var instanceWithPingTime in instancesWithPingTime)
@@ -251,7 +251,7 @@ namespace MongoDB.Driver.Internal
             return null;
         }
 
-        private void ProcessConnectedPrimaryStateChange(MongoServerInstance instance)
+        private void ProcessConnectedPrimaryStateChange(MongoServerInstanceInternal instance)
         {
             Interlocked.CompareExchange(ref _replicaSetName, instance.ReplicaSetInformation.Name, null);
 
@@ -263,7 +263,7 @@ namespace MongoDB.Driver.Internal
             }
         }
 
-        private void ProcessConnectedSecondaryStateChange(MongoServerInstance instance)
+        private void ProcessConnectedSecondaryStateChange(MongoServerInstanceInternal instance)
         {
             var address = instance.ReplicaSetInformation.Primary;
             if (address != null)

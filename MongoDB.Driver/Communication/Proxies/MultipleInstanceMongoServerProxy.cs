@@ -29,7 +29,7 @@ namespace MongoDB.Driver.Internal
         // private fields
         private readonly object _lock = new object();
         private readonly ConnectedInstanceCollection _connectedInstances;
-        private readonly List<MongoServerInstance> _instances;
+        private readonly List<MongoServerInstanceInternal> _instances;
         private readonly MongoServerSettings _settings;
         private int _connectionAttempt;
         private int _outstandingInstanceConnections;
@@ -43,7 +43,7 @@ namespace MongoDB.Driver.Internal
         {
             _settings = settings;
             _connectedInstances = new ConnectedInstanceCollection();
-            _instances = new List<MongoServerInstance>();
+            _instances = new List<MongoServerInstanceInternal>();
 
             MakeInstancesMatchAddresses(settings.Servers);
         }
@@ -56,7 +56,7 @@ namespace MongoDB.Driver.Internal
         /// <param name="connectionQueue">The state change queue.</param>
         /// <param name="connectionAttempt">The connection attempt.</param>
         /// <remarks>This constructor is used when the instances have already been instructed to connect.</remarks>
-        protected MultipleInstanceMongoServerProxy(MongoServerSettings settings, IEnumerable<MongoServerInstance> instances, BlockingQueue<MongoServerInstance> connectionQueue, int connectionAttempt)
+        protected MultipleInstanceMongoServerProxy(MongoServerSettings settings, IEnumerable<MongoServerInstanceInternal> instances, BlockingQueue<MongoServerInstanceInternal> connectionQueue, int connectionAttempt)
         {
             _state = MongoServerState.Connecting;
             _settings = settings;
@@ -114,7 +114,7 @@ namespace MongoDB.Driver.Internal
         /// <summary>
         /// Gets the instances.
         /// </summary>
-        public ReadOnlyCollection<MongoServerInstance> Instances
+        public ReadOnlyCollection<MongoServerInstanceInternal> Instances
         {
             get
             {
@@ -153,8 +153,8 @@ namespace MongoDB.Driver.Internal
         /// Chooses the server instance.
         /// </summary>
         /// <param name="readPreference">The read preference.</param>
-        /// <returns>A MongoServerInstance.</returns>
-        public MongoServerInstance ChooseServerInstance(ReadPreference readPreference)
+        /// <returns>A MongoServerInstanceInternal.</returns>
+        public MongoServerInstanceInternal ChooseServerInstance(ReadPreference readPreference)
         {
             for (int attempt = 1; attempt <= 2; attempt++)
             {
@@ -261,7 +261,7 @@ namespace MongoDB.Driver.Internal
         /// </summary>
         public void Ping()
         {
-            List<MongoServerInstance> instances;
+            List<MongoServerInstanceInternal> instances;
             lock (_lock)
             {
                 instances = _instances.ToList();
@@ -278,7 +278,7 @@ namespace MongoDB.Driver.Internal
         /// </summary>
         public void VerifyState()
         {
-            List<MongoServerInstance> instances;
+            List<MongoServerInstanceInternal> instances;
             lock (_lock)
             {
                 instances = _instances.ToList();
@@ -315,8 +315,8 @@ namespace MongoDB.Driver.Internal
         /// </summary>
         /// <param name="connectedInstances">The connected instances.</param>
         /// <param name="readPreference">The read preference.</param>
-        /// <returns>A MongoServerInstance.</returns>
-        protected abstract MongoServerInstance ChooseServerInstance(ConnectedInstanceCollection connectedInstances, ReadPreference readPreference);
+        /// <returns>A MongoServerInstanceInternal.</returns>
+        protected abstract MongoServerInstanceInternal ChooseServerInstance(ConnectedInstanceCollection connectedInstances, ReadPreference readPreference);
 
         /// <summary>
         /// Determines the state of the server.
@@ -324,7 +324,7 @@ namespace MongoDB.Driver.Internal
         /// <param name="currentState">State of the current.</param>
         /// <param name="instances">The instances.</param>
         /// <returns>The state of the server.</returns>
-        protected abstract MongoServerState DetermineServerState(MongoServerState currentState, IEnumerable<MongoServerInstance> instances);
+        protected abstract MongoServerState DetermineServerState(MongoServerState currentState, IEnumerable<MongoServerInstanceInternal> instances);
 
         /// <summary>
         /// Ensures that an instance with the address exists.
@@ -341,7 +341,7 @@ namespace MongoDB.Driver.Internal
             {
                 if (!_instances.Any(x => x.Address == address))
                 {
-                    var instance = new MongoServerInstance(_settings, address);
+                    var instance = new MongoServerInstanceInternal(_settings, address);
                     AddInstance(instance);
                     if (_state != MongoServerState.Disconnecting && _state != MongoServerState.Disconnected)
                     {
@@ -359,7 +359,7 @@ namespace MongoDB.Driver.Internal
         /// <returns>
         ///   <c>true</c> if the instance is valid; otherwise, <c>false</c>.
         /// </returns>
-        protected abstract bool IsValidInstance(MongoServerInstance instance);
+        protected abstract bool IsValidInstance(MongoServerInstanceInternal instance);
 
         /// <summary>
         /// Ensures that the current instance list has all the addresses provided and does not contain any not provided.
@@ -391,11 +391,11 @@ namespace MongoDB.Driver.Internal
         /// Processes the connected instance state change.
         /// </summary>
         /// <param name="instance">The instance.</param>
-        protected virtual void ProcessConnectedInstanceStateChange(MongoServerInstance instance)
+        protected virtual void ProcessConnectedInstanceStateChange(MongoServerInstanceInternal instance)
         { }
 
         // private methods
-        private void AddInstance(MongoServerInstance instance)
+        private void AddInstance(MongoServerInstanceInternal instance)
         {
             lock (_lock)
             {
@@ -405,7 +405,7 @@ namespace MongoDB.Driver.Internal
             }
         }
 
-        private void ConnectInstance(MongoServerInstance instance)
+        private void ConnectInstance(MongoServerInstanceInternal instance)
         {
             Interlocked.Increment(ref _outstandingInstanceConnections);
             ThreadPool.QueueUserWorkItem(_ =>
@@ -427,10 +427,10 @@ namespace MongoDB.Driver.Internal
 
         private void InstanceStateChanged(object sender, EventArgs e)
         {
-            ProcessInstanceStateChange((MongoServerInstance)sender);
+            ProcessInstanceStateChange((MongoServerInstanceInternal)sender);
         }
 
-        private void ProcessInstanceStateChange(MongoServerInstance instance)
+        private void ProcessInstanceStateChange(MongoServerInstanceInternal instance)
         {
             lock (_lock)
             {
@@ -475,7 +475,7 @@ namespace MongoDB.Driver.Internal
             }
         }
 
-        private void RemoveInstance(MongoServerInstance instance)
+        private void RemoveInstance(MongoServerInstanceInternal instance)
         {
             _connectedInstances.Remove(instance);
             lock (_lock)

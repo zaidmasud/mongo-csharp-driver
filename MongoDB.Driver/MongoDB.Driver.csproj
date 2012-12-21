@@ -132,7 +132,8 @@
     <Compile Include="MongoDBRef.cs" />
     <Compile Include="MongoInsertOptions.cs" />
     <Compile Include="MongoServerBuildInfo.cs" />
-    <Compile Include="Communication\MongoServerInstance.cs" />
+    <Compile Include="Communication\MongoServerInstanceInternal.cs" />
+    <Compile Include="MongoServerInstance.cs" />
     <Compile Include="MongoServerSettings.cs" />
     <Compile Include="MongoUpdateOptions.cs" />
     <Compile Include="MongoUrlBuilder.cs" />

@@ -30,7 +30,7 @@ namespace MongoDB.Driver.Internal
         // private fields
         private object _connectionPoolLock = new object();
         private MongoServerSettings _settings;
-        private MongoServerInstance _serverInstance;
+        private MongoServerInstanceInternal _serverInstance;
         private int _poolSize;
         private List<MongoConnectionInternal> _availableConnections = new List<MongoConnectionInternal>();
         private int _generationId; // whenever the pool is cleared the generationId is incremented
@@ -40,7 +40,7 @@ namespace MongoDB.Driver.Internal
         private int _connectionsRemovedSinceLastTimerTick;
 
         // constructors
-        internal MongoConnectionPool(MongoServerInstance serverInstance)
+        internal MongoConnectionPool(MongoServerInstanceInternal serverInstance)
         {
             _settings = serverInstance.Settings;
             _serverInstance = serverInstance;
@@ -75,13 +75,13 @@ namespace MongoDB.Driver.Internal
         /// <summary>
         /// Gets the server instance.
         /// </summary>
-        public MongoServerInstance ServerInstance
+        public MongoServerInstanceInternal ServerInstance
         {
             get { return _serverInstance; }
         }
 
         // internal methods
-        internal MongoInternalConnection AcquireConnection(string databaseName, MongoCredentials credentials)
+        internal MongoConnectionInternal AcquireConnection(string databaseName, MongoCredentials credentials)
         {
             lock (_connectionPoolLock)
             {

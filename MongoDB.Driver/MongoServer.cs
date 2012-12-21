@@ -212,7 +212,7 @@ namespace MongoDB.Driver
         {
             get
             {
-                return _serverProxy.Instances.Where(i => i.IsArbiter).ToArray();
+                return _serverProxy.Instances.Where(i => i.IsArbiter).Select(i => new MongoServerInstance(this, i)).ToArray();
             }
         }
 
@@ -251,7 +251,7 @@ namespace MongoDB.Driver
                 switch (instances.Count)
                 {
                     case 0: return null;
-                    case 1: return instances[0];
+                    case 1: return new MongoServerInstance(this, instances[0]);
                     default:
                         throw new InvalidOperationException("Instance property cannot be used when there is more than one instance.");
                 }
@@ -265,7 +265,7 @@ namespace MongoDB.Driver
         {
             get
             {
-                return _serverProxy.Instances.ToArray();
+                return _serverProxy.Instances.Select(i => new MongoServerInstance(this, i)).ToArray();
             }
         }
 
@@ -276,7 +276,7 @@ namespace MongoDB.Driver
         {
             get
             {
-                return _serverProxy.Instances.Where(i => i.IsPassive).ToArray();
+                return _serverProxy.Instances.Where(i => i.IsPassive).Select(i => new MongoServerInstance(this, i)).ToArray();
             }
         }
 
@@ -287,7 +287,8 @@ namespace MongoDB.Driver
         {
             get
             {
-                return _serverProxy.Instances.SingleOrDefault(x => x.IsPrimary);
+                var primary = _serverProxy.Instances.SingleOrDefault(x => x.IsPrimary);
+                return (primary == null) ? null : new MongoServerInstance(this, primary);
             }
         }
 
@@ -363,7 +364,7 @@ namespace MongoDB.Driver
         {
             get
             {
-                return _serverProxy.Instances.Where(i => i.IsSecondary).ToArray();
+                return _serverProxy.Instances.Where(i => i.IsSecondary).Select(i => new MongoServerInstance(this, i)).ToArray();
             }
         }
 
@@ -506,7 +507,8 @@ namespace MongoDB.Driver
         /// <returns>A server instance.</returns>
         public virtual MongoServerInstance ChooseServerInstance(ReadPreference readPreference)
         {
-            return _serverProxy.ChooseServerInstance(readPreference);
+            var inner = _serverProxy.ChooseServerInstance(readPreference);
+            return (inner == null) ? null : new MongoServerInstance(this, inner);
         }
 
         /// <summary>
@@ -893,7 +895,7 @@ namespace MongoDB.Driver
         public virtual void RequestDone()
         {
             int threadId = Thread.CurrentThread.ManagedThreadId;
-            MongoConnectionInternal internalConnectionToRelease = null;
+            MongoConnectionInternal connectionToRelease = null;
 
             lock (_serverLock)
             {
@@ -903,7 +905,7 @@ namespace MongoDB.Driver
                     if (--request.NestingLevel == 0)
                     {
                         _requests.Remove(threadId);
-                        internalConnectionToRelease = request.InternalConnection;
+                        connectionToRelease = request.InternalConnection;
                     }
                 }
                 else
@@ -912,10 +914,10 @@ namespace MongoDB.Driver
                 }
             }
 
-            if (internalConnectionToRelease != null)
+            if (connectionToRelease != null)
             {
-                var binding = (IMongoBinding)internalConnectionToRelease.ServerInstance;
-                binding.ReleaseConnection(internalConnectionToRelease);
+                var serverInstance = connectionToRelease.ServerInstance;
+                serverInstance.ReleaseConnection(connectionToRelease);
             }
         }
 
@@ -1004,7 +1006,7 @@ namespace MongoDB.Driver
                 Request request;
                 if (_requests.TryGetValue(threadId, out request))
                 {
-                    if (serverInstance != request.InternalConnection.ServerInstance)
+                    if (serverInstance.Inner != request.InternalConnection.ServerInstance)
                     {
                         throw new InvalidOperationException("The server instance passed to a nested call to RequestStart does not match the server instance of the current Request.");
                     }
@@ -1013,7 +1015,7 @@ namespace MongoDB.Driver
                 }
             }
 
-            var internalConnection = serverInstance.AcquireConnection(initialDatabase.Name, initialDatabase.Credentials);
+            var internalConnection = serverInstance.Inner.AcquireConnection(initialDatabase.Name, initialDatabase.Credentials);
 
             lock (_serverLock)
             {
@@ -1110,7 +1112,7 @@ namespace MongoDB.Driver
                 Request request;
                 if (_requests.TryGetValue(threadId, out request))
                 {
-                    if (request.InternalConnection.ServerInstance != serverInstance)
+                    if (request.InternalConnection.ServerInstance != serverInstance.Inner)
                     {
                         var message = string.Format(
                             "AcquireConnection called for server instance '{0}' but thread is in a RequestStart for server instance '{1}'.",
@@ -1128,7 +1130,7 @@ namespace MongoDB.Driver
                 return requestConnection;
             }
 
-            return serverInstance.AcquireConnection(database.Name, database.Credentials);
+            return serverInstance.Inner.AcquireConnection(database.Name, database.Credentials);
         }
 
         void IMongoBinding.ReleaseConnection(MongoConnectionInternal internalConnection)
@@ -1148,8 +1150,8 @@ namespace MongoDB.Driver
                 }
             }
 
-            var binding = (IMongoBinding)internalConnection.ServerInstance;
-            binding.ReleaseConnection(internalConnection);
+            var serverInstance = internalConnection.ServerInstance;
+            serverInstance.ReleaseConnection(internalConnection);
         }
 
         // explicit interface implementations

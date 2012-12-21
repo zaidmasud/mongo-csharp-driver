@@ -36,7 +36,7 @@ namespace MongoDB.Driver.Internal
         /// <summary>
         /// Gets the instances.
         /// </summary>
-        ReadOnlyCollection<MongoServerInstance> Instances { get; }
+        ReadOnlyCollection<MongoServerInstanceInternal> Instances { get; }
 
         /// <summary>
         /// Gets the state.
@@ -47,8 +47,8 @@ namespace MongoDB.Driver.Internal
         /// Chooses the server instance.
         /// </summary>
         /// <param name="readPreference">The read preference.</param>
-        /// <returns>A MongoServerInstance.</returns>
-        MongoServerInstance ChooseServerInstance(ReadPreference readPreference);
+        /// <returns>A MongoServerInstanceInternal.</returns>
+        MongoServerInstanceInternal ChooseServerInstance(ReadPreference readPreference);
 
         /// <summary>
         /// Connects to the instances respecting the timeout and readPreference.

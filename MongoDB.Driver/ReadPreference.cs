@@ -334,7 +334,7 @@ namespace MongoDB.Driver
         /// </summary>
         /// <param name="instance">The server instance.</param>
         /// <returns>True if the server instance matches the read preferences.</returns>
-        public bool MatchesInstance(MongoServerInstance instance)
+        public bool MatchesInstance(MongoServerInstanceInternal instance)
         {
             switch (_readPreferenceMode)
             {
