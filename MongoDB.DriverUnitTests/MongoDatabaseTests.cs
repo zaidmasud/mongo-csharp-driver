@@ -55,11 +55,11 @@ namespace MongoDB.DriverUnitTests
         [Test]
         public void TestConstructorArgumentChecking()
         {
+            var server = Configuration.TestServer;
             var settings = new MongoDatabaseSettings();
-            Assert.Throws<ArgumentNullException>(() => { new MongoDatabase(null, "name", settings); });
-            Assert.Throws<ArgumentNullException>(() => { new MongoDatabase(_server, null, settings); });
-            Assert.Throws<ArgumentNullException>(() => { new MongoDatabase(_server, "name", null); });
-            Assert.Throws<ArgumentOutOfRangeException>(() => { new MongoDatabase(_server, "", settings); });
+            Assert.Throws<ArgumentNullException>(() => { server.GetDatabase(null, settings); });
+            Assert.Throws<ArgumentNullException>(() => { server.GetDatabase("name", (MongoDatabaseSettings)null); });
+            Assert.Throws<ArgumentOutOfRangeException>(() => { server.GetDatabase("", settings); });
         }
 
         [Test]
@@ -173,11 +173,10 @@ namespace MongoDB.DriverUnitTests
         [Test]
         public void TestGetProfilingInfo()
         {
-            var server = Configuration.TestServer;
-            var serverInstance = server.ChooseServerInstance(ReadPreference.Primary);
+            var serverInstance = Configuration.TestServer.Primary;
             if (serverInstance.InstanceType != MongoServerInstanceType.ShardRouter)
             {
-                var database = server.GetBoundDatabase(serverInstance.GetBinding(), Configuration.TestDatabase.Name);
+                var database = serverInstance.GetDatabase(Configuration.TestDatabase.Name);
                 var collection = database.GetCollection(Configuration.TestCollection.Name);
 
                 if (collection.Exists()) { collection.Drop(); }
@@ -248,11 +247,10 @@ namespace MongoDB.DriverUnitTests
         [Test]
         public void TestSetProfilingLevel()
         {
-            var server = Configuration.TestServer;
-            var serverInstance = server.ChooseServerInstance(ReadPreference.Primary);
+            var serverInstance = Configuration.TestServer.Primary;
             if (serverInstance.InstanceType != MongoServerInstanceType.ShardRouter)
             {
-                var database = server.GetBoundDatabase(serverInstance.GetBinding(), Configuration.TestDatabase.Name);
+                var database = serverInstance.GetDatabase(Configuration.TestDatabase.Name);
 
                 database.SetProfilingLevel(ProfilingLevel.None, TimeSpan.FromMilliseconds(100));
                 var result = database.GetProfilingLevel();

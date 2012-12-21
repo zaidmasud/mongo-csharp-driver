@@ -125,17 +125,14 @@
     <Compile Include="IMongoUpdate.cs" />
     <Compile Include="MongoClient.cs" />
     <Compile Include="MongoClientSettings.cs" />
-    <Compile Include="MongoConnectionBinding.cs" />
     <Compile Include="MongoCollectionSettings.cs" />
     <Compile Include="MongoConnection.cs" />
     <Compile Include="MongoCredentialsStore.cs" />
     <Compile Include="MongoDatabaseSettings.cs" />
     <Compile Include="MongoDBRef.cs" />
     <Compile Include="MongoInsertOptions.cs" />
-    <Compile Include="MongoServerBinding.cs" />
     <Compile Include="MongoServerBuildInfo.cs" />
     <Compile Include="Communication\MongoServerInstance.cs" />
-    <Compile Include="MongoServerInstanceBinding.cs" />
     <Compile Include="MongoServerSettings.cs" />
     <Compile Include="MongoUpdateOptions.cs" />
     <Compile Include="MongoUrlBuilder.cs" />
@@ -194,7 +191,7 @@
     <Compile Include="MongoCursorEnumerator.cs" />
     <Compile Include="Communication\Messages\MongoKillCursorsMessage.cs" />
     <Compile Include="Communication\Proxies\BlockingQueue.cs" />
-    <Compile Include="Communication\MongoInternalConnection.cs" />
+    <Compile Include="Communication\MongoConnectionInternal.cs" />
     <Compile Include="Communication\MongoConnectionPool.cs" />
     <Compile Include="Communication\Messages\MongoDeleteMessage.cs" />
     <Compile Include="Communication\Messages\MongoGetMoreMessage.cs" />

@@ -32,12 +32,13 @@ namespace MongoDB.DriverUnitTests.Jira.CSharp103
         [Test]
         public void TestNullReferenceException()
         {
-            var server = Configuration.TestServer;
-            var database = Configuration.TestDatabase;
-            var collection = Configuration.TestCollection;
-            collection.RemoveAll();
-            using (database.RequestStart())
+            using (var connection = Configuration.TestServer.GetConnection(Configuration.TestDatabase.Name))
             {
+                var database = connection.GetDatabase(Configuration.TestDatabase.Name);
+                var collection = database.GetCollection<BsonDocument>(Configuration.TestCollection.Name);
+
+                collection.RemoveAll();
+
                 for (int i = 0; i < 1; i++)
                 {
                     collection.Insert(new BsonDocument { { "blah", i } });

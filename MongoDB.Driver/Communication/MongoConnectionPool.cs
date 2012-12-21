@@ -32,7 +32,7 @@ namespace MongoDB.Driver.Internal
         private MongoServerSettings _settings;
         private MongoServerInstance _serverInstance;
         private int _poolSize;
-        private List<MongoInternalConnection> _availableConnections = new List<MongoInternalConnection>();
+        private List<MongoConnectionInternal> _availableConnections = new List<MongoConnectionInternal>();
         private int _generationId; // whenever the pool is cleared the generationId is incremented
         private int _waitQueueSize;
         private bool _inMaintainPoolSize;
@@ -124,7 +124,7 @@ namespace MongoDB.Driver.Internal
                             // if this happens a lot the connection pool size should be increased
                             _availableConnections[0].Close();
                             _availableConnections.RemoveAt(0);
-                            return new MongoInternalConnection(this);
+                            return new MongoConnectionInternal(this);
                         }
 
                         // create a new connection if maximum pool size has not been reached
@@ -132,7 +132,7 @@ namespace MongoDB.Driver.Internal
                         {
                             // make sure connection is created successfully before incrementing poolSize
                             // connection will be opened later outside of the lock
-                            var connection = new MongoInternalConnection(this);
+                            var connection = new MongoConnectionInternal(this);
                             _poolSize += 1;
                             return connection;
                         }
@@ -145,7 +145,7 @@ namespace MongoDB.Driver.Internal
                         }
                         else
                         {
-                            throw new TimeoutException("Timeout waiting for a MongoInternalConnection.");
+                            throw new TimeoutException("Timeout waiting for a MongoConnectionInternal.");
                         }
                     }
                 }
@@ -181,14 +181,14 @@ namespace MongoDB.Driver.Internal
             _inMaintainPoolSize = true;
             try
             {
-                MongoInternalConnection connectionToRemove = null;
+                MongoConnectionInternal connectionToRemove = null;
                 lock (_connectionPoolLock)
                 {
                     // only remove one connection per timer tick to avoid reconnection storms
                     if (_connectionsRemovedSinceLastTimerTick == 0)
                     {
-                        MongoInternalConnection oldestConnection = null;
-                        MongoInternalConnection lruConnection = null;
+                        MongoConnectionInternal oldestConnection = null;
+                        MongoConnectionInternal lruConnection = null;
                         foreach (var connection in _availableConnections)
                         {
                             if (oldestConnection == null || connection.CreatedAt < oldestConnection.CreatedAt)
@@ -232,7 +232,7 @@ namespace MongoDB.Driver.Internal
             }
         }
 
-        internal void ReleaseConnection(MongoInternalConnection connection)
+        internal void ReleaseConnection(MongoConnectionInternal connection)
         {
             if (connection.ConnectionPool != this)
             {
@@ -304,7 +304,7 @@ namespace MongoDB.Driver.Internal
                         }
                     }
 
-                    var connection = new MongoInternalConnection(this);
+                    var connection = new MongoConnectionInternal(this);
                     try
                     {
                         connection.Open();
@@ -350,7 +350,7 @@ namespace MongoDB.Driver.Internal
             }
         }
 
-        private void RemoveConnection(MongoInternalConnection connection)
+        private void RemoveConnection(MongoConnectionInternal connection)
         {
             lock (_connectionPoolLock)
             {

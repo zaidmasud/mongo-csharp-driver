@@ -71,6 +71,22 @@ namespace MongoDB.Driver.Internal
         }
 
         /// <summary>
+        /// Tests whether the cache contains the name of an index.
+        /// </summary>
+        /// <param name="databaseName">The name of the database.</param>
+        /// <param name="collectionName">The name of the collection.</param>
+        /// <param name="indexName">The name of the index.</param>
+        /// <returns>True if the cache contains the named index.</returns>
+        public bool Contains(string databaseName, string collectionName, string indexName)
+        {
+            lock (_syncRoot)
+            {
+                var key = new IndexCacheKey(databaseName, collectionName, indexName);
+                return _cache.Contains(key);
+            }
+        }
+
+        /// <summary>
         /// Removes the name of an index from the cache.
         /// </summary>
         /// <param name="collection">The collection that contains the index.</param>

@@ -31,11 +31,10 @@ namespace MongoDB.DriverUnitTests.CommandResults
         [Test]
         public void Test()
         {
-            var server = Configuration.TestServer;
-            var serverInstance = server.ChooseServerInstance(ReadPreference.Primary);
+            var serverInstance = Configuration.TestServer.Primary;
             if (serverInstance.InstanceType != MongoServerInstanceType.ShardRouter)
             {
-                var database = server.GetBoundDatabase(serverInstance.GetBinding(), Configuration.TestDatabase.Name);
+                var database = serverInstance.GetDatabase(Configuration.TestDatabase.Name);
                 var collection = database.GetCollection(Configuration.TestCollection.Name);
 
                 // make sure database exists

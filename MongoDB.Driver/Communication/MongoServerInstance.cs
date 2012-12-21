@@ -27,7 +27,7 @@ namespace MongoDB.Driver
     /// <summary>
     /// Represents an instance of a MongoDB server host.
     /// </summary>
-    public sealed class MongoServerInstance
+    public sealed class MongoServerInstance : IMongoBinding
     {
         // private static fields
         private static int __nextSequentialId;
@@ -44,7 +44,6 @@ namespace MongoDB.Driver
         // private fields
         private readonly object _serverInstanceLock = new object();
         private readonly MongoServerSettings _settings;
-        private readonly IMongoBinding _binding;
         private readonly MongoConnectionPool _connectionPool;
         private readonly PingTimeAggregator _pingTimeAggregator;
         private MongoServerAddress _address;
@@ -66,7 +65,6 @@ namespace MongoDB.Driver
         internal MongoServerInstance(MongoServerSettings settings, MongoServerAddress address)
         {
             _settings = settings;
-            _binding = new MongoServerInstanceBinding(this);
             _address = address;
             _sequentialId = Interlocked.Increment(ref __nextSequentialId);
             _state = MongoServerState.Disconnected;
@@ -307,17 +305,103 @@ namespace MongoDB.Driver
 
         // public methods
         /// <summary>
-        /// Gets a binding to this server instance.
+        /// Gets a MongoCollection instance bound to this server instance.
         /// </summary>
-        /// <returns>A binding.</returns>
-        public IMongoBinding GetBinding()
+        /// <typeparam name="TDefaultDocument">The default document type for this collection.</typeparam>
+        /// <param name="databaseName">The name of the database that contains the collection.</param>
+        /// <param name="collectionName">The name of the collection.</param>
+        /// <returns>An instance of MongoCollection.</returns>
+        public MongoCollection<TDefaultDocument> GetCollection<TDefaultDocument>(
+            string databaseName,
+            string collectionName)
         {
-            return new MongoServerInstanceBinding(this);
+            return GetCollection<TDefaultDocument>(databaseName, collectionName, new MongoCollectionSettings());
         }
 
-        public MongoConnection GetConnection(MongoDatabase database)
+        /// <summary>
+        /// Gets a MongoCollection instance bound to this server instance.
+        /// </summary>
+        /// <typeparam name="TDefaultDocument">The default document type for this collection.</typeparam>
+        /// <param name="databaseName">The name of the database that contains the collection.</param>
+        /// <param name="collectionName">The name of the collection.</param>
+        /// <param name="collectionSettings">The settings to use when accessing this collection.</param>
+        /// <returns>An instance of MongoCollection.</returns>
+        public MongoCollection<TDefaultDocument> GetCollection<TDefaultDocument>(
+            string databaseName,
+            string collectionName,
+            MongoCollectionSettings collectionSettings)
         {
-            return _binding.AcquireConnection(database, null);
+            var database = GetDatabase(databaseName);
+            return database.GetCollection<TDefaultDocument>(collectionName, collectionSettings);
+        }
+
+        /// <summary>
+        /// Gets a MongoCollection instance bound to this server instance.
+        /// </summary>
+        /// <param name="defaultDocumentType">The default document type.</param>
+        /// <param name="databaseName">The name of the database that contains the collection.</param>
+        /// <param name="collectionName">The name of the collection.</param>
+        /// <returns>An instance of MongoCollection.</returns>
+        public MongoCollection GetCollection(
+            Type defaultDocumentType,
+            string databaseName,
+            string collectionName)
+        {
+            return GetCollection(defaultDocumentType, databaseName, collectionName, new MongoCollectionSettings());
+        }
+
+        /// <summary>
+        /// Gets a MongoCollection instance bound to this server instance.
+        /// </summary>
+        /// <param name="defaultDocumentType">The default document type.</param>
+        /// <param name="databaseName">The name of the database that contains the collection.</param>
+        /// <param name="collectionName">The name of the collection.</param>
+        /// <param name="collectionSettings">The settings to use when accessing this collection.</param>
+        /// <returns>An instance of MongoCollection.</returns>
+        public MongoCollection GetCollection(
+            Type defaultDocumentType,
+            string databaseName,
+            string collectionName,
+            MongoCollectionSettings collectionSettings)
+        {
+            var database = GetDatabase(databaseName);
+            return database.GetCollection(defaultDocumentType, collectionName, collectionSettings);
+        }
+
+        /// <summary>
+        /// Gets a connection to this server instance.
+        /// </summary>
+        /// <param name="initialDatabaseName">The initial database to authenticate for.</param>
+        /// <param name="readPreference">The read preference.</param>
+        /// <returns>A MongoConnection.</returns>
+        public MongoConnection GetConnection(string initialDatabaseName, ReadPreference readPreference)
+        {
+            // TODO: EnsureReadPreferenceIsCompatible
+            var database = GetDatabase(initialDatabaseName); // this is a temporary artifact
+            var internalConnection = _connectionPool.AcquireConnection(database); // argument will be databaseName soon
+            return new MongoConnection(this, _server, this, internalConnection);
+        }
+
+        /// <summary>
+        /// Gets a MongoDatabase instance bound to this server instance.
+        /// </summary>
+        /// <param name="databaseName">The name of the database.</param>
+        /// <returns>A new or existing instance of MongoDatabase.</returns>
+        public MongoDatabase GetDatabase(string databaseName)
+        {
+            var databaseSettings = new MongoDatabaseSettings();
+            return GetDatabase(databaseName, databaseSettings);
+        }
+
+        /// <summary>
+        /// Gets a MongoDatabase instance bound to this server instance.
+        /// </summary>
+        /// <param name="databaseName">The name of the database.</param>
+        /// <param name="databaseSettings">The settings to use with this database.</param>
+        /// <returns>A new or existing instance of MongoDatabase.</returns>
+        public MongoDatabase GetDatabase(string databaseName, MongoDatabaseSettings databaseSettings)
+        {
+            return new MongoDatabase(this, _server, databaseName, databaseSettings);
         }
 
         /// <summary>
@@ -344,7 +428,7 @@ namespace MongoDB.Driver
         public void Ping()
         {
             // use a new connection instead of one from the connection pool
-            var connection = new MongoInternalConnection(this);
+            var connection = new MongoConnectionInternal(this);
             try
             {
                 Ping(connection);
@@ -361,7 +445,7 @@ namespace MongoDB.Driver
         public void VerifyState()
         {
             // use a new connection instead of one from the connection pool
-            var connection = new MongoInternalConnection(this);
+            var connection = new MongoConnectionInternal(this);
             try
             {
                 try
@@ -391,7 +475,7 @@ namespace MongoDB.Driver
         /// <exception cref="System.InvalidOperationException"></exception>
         internal MongoInternalConnection AcquireConnection(string databaseName, MongoCredentials credentials)
         {
-            MongoInternalConnection connection;
+            MongoConnectionInternal connection;
             lock (_serverInstanceLock)
             {
                 if (_state != MongoServerState.Connected)
@@ -530,7 +614,7 @@ namespace MongoDB.Driver
         /// Releases the connection.
         /// </summary>
         /// <param name="connection">The connection.</param>
-        internal void ReleaseConnection(MongoInternalConnection connection)
+        void IMongoBinding.ReleaseConnection(MongoConnectionInternal connection)
         {
             _connectionPool.ReleaseConnection(connection);
         }
@@ -555,7 +639,7 @@ namespace MongoDB.Driver
         }
 
         // private methods
-        private void LookupServerInformation(MongoInternalConnection connection)
+        private void LookupServerInformation(MongoConnectionInternal connection)
         {
             IsMasterResult isMasterResult = null;
             bool ok = false;
@@ -670,7 +754,7 @@ namespace MongoDB.Driver
             }
         }
 
-        private void Ping(MongoInternalConnection connection)
+        private void Ping(MongoConnectionInternal connection)
         {
             try
             {
@@ -704,7 +788,7 @@ namespace MongoDB.Driver
             _inStateVerification = true;
             try
             {
-                var connection = new MongoInternalConnection(this);
+                var connection = new MongoConnectionInternal(this);
                 try
                 {
                     Ping(connection);

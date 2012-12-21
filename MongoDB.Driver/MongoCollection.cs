@@ -1147,7 +1147,7 @@ namespace MongoDB.Driver
                 throw new ArgumentNullException("options");
             }
 
-            using (var connection = _binding.AcquireConnection(_database, ReadPreference.Primary))
+            using (var connection = _binding.GetConnection(_database.Name, ReadPreference.Primary))
             {
                 var writeConcern = options.WriteConcern ?? _settings.WriteConcern;
 
@@ -1189,13 +1189,13 @@ namespace MongoDB.Driver
                         if (message.MessageLength > connection.ServerInstance.MaxMessageLength)
                         {
                             byte[] lastDocument = message.RemoveLastDocument();
-                            var intermediateResult = connection.InternalConnection.SendMessage(message, writeConcern, _database.Name);
+                            var intermediateResult = connection.Inner.SendMessage(message, writeConcern, _database.Name);
                             if (writeConcern.Enabled) { results.Add(intermediateResult); }
                             message.ResetBatch(lastDocument);
                         }
                     }
 
-                    var finalResult = connection.InternalConnection.SendMessage(message, writeConcern, _database.Name);
+                    var finalResult = connection.Inner.SendMessage(message, writeConcern, _database.Name);
                     if (writeConcern.Enabled) { results.Add(finalResult); }
 
                     return results;
@@ -1331,12 +1331,12 @@ namespace MongoDB.Driver
         /// <returns>A WriteConcernResult (or null if WriteConcern is disabled).</returns>
         public virtual WriteConcernResult Remove(IMongoQuery query, RemoveFlags flags, WriteConcern writeConcern)
         {
-            using (var connection = _binding.AcquireConnection(_database, ReadPreference.Primary))
+            using (var connection = _binding.GetConnection(_database.Name, ReadPreference.Primary))
             {
                 var writerSettings = GetWriterSettings(connection);
                 using (var message = new MongoDeleteMessage(writerSettings, FullName, flags, query))
                 {
-                    return connection.InternalConnection.SendMessage(message, writeConcern ?? _settings.WriteConcern, _database.Name);
+                    return connection.Inner.SendMessage(message, writeConcern ?? _settings.WriteConcern, _database.Name);
                 }
             }
         }
@@ -1556,13 +1556,13 @@ namespace MongoDB.Driver
                 throw new ArgumentNullException("options");
             }
 
-            using (var connection = _binding.AcquireConnection(_database, ReadPreference.Primary))
+            using (var connection = _binding.GetConnection(_database.Name, ReadPreference.Primary))
             {
                 var writerSettings = GetWriterSettings(connection);
                 using (var message = new MongoUpdateMessage(writerSettings, FullName, options.CheckElementNames, options.Flags, query, update))
                 {
                     var writeConcern = options.WriteConcern ?? _settings.WriteConcern;
-                    return connection.InternalConnection.SendMessage(message, writeConcern, _database.Name);
+                    return connection.Inner.SendMessage(message, writeConcern, _database.Name);
                 }
             }
         }

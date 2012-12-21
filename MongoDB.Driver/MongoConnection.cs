@@ -34,34 +34,30 @@ namespace MongoDB.Driver
     /// <summary>
     /// Represents a connection to a MongoServerInstance.
     /// </summary>
-    public class MongoConnection : IDisposable
+    public class MongoConnection : IDisposable, IMongoBinding
     {
         // private fields
-        private readonly IMongoBinding _binding;
-        private readonly MongoInternalConnection _internalConnection;
+        private readonly IMongoBinding _sourceBinding;
+        private readonly MongoServer _server;
+        private readonly MongoServerInstance _serverInstance;
+        private readonly MongoConnectionInternal _internalConnection;
 
         private bool _disposed;
 
         // constructors
-        internal MongoConnection(IMongoBinding binding, MongoInternalConnection internalConnection)
+        internal MongoConnection(IMongoBinding sourceBinding, MongoServer server, MongoServerInstance serverInstance, MongoConnectionInternal internalConnection)
         {
-            _binding = binding;
+            _sourceBinding = sourceBinding;
+            _server = server;
+            _serverInstance = serverInstance;
             _internalConnection = internalConnection;
         }
 
         // public properties
         /// <summary>
-        /// Gets the binding this connection was acquired from.
+        /// Gets the inner internal connection.
         /// </summary>
-        public IMongoBinding Binding
-        {
-            get { return _binding; }
-        }
-
-        /// <summary>
-        /// Gets the internal connection.
-        /// </summary>
-        public MongoInternalConnection InternalConnection
+        public MongoConnectionInternal Inner
         {
             get { return _internalConnection; }
         }
@@ -85,26 +81,110 @@ namespace MongoDB.Driver
             throw new NotImplementedException();
         }
 
-        public virtual void Dispose()
+        /// <summary>
+        /// Disposes of the connection by calling ReleaseConnection in the source binding.
+        /// </summary>
+        public void Dispose()
         {
             if (!_disposed)
             {
                 try
                 {
-                    _binding.ReleaseConnection(this);
+                    _sourceBinding.ReleaseConnection(_internalConnection);
                 }
-                finally
+                catch (Exception)
                 {
-                    _disposed = true;
+                    // ignore exceptions
                 }
+                _disposed = true;
             }
         }
 
-        public IMongoBinding GetBinding()
+        /// <summary>
+        /// Gets a MongoCollection instance bound to this connection.
+        /// </summary>
+        /// <typeparam name="TDefaultDocument">The default document type for this collection.</typeparam>
+        /// <param name="databaseName">The name of the database that contains the collection.</param>
+        /// <param name="collectionName">The name of the collection.</param>
+        /// <returns>An instance of MongoCollection.</returns>
+        public MongoCollection<TDefaultDocument> GetCollection<TDefaultDocument>(
+            string databaseName,
+            string collectionName)
         {
-            return new MongoConnectionBinding(_internalConnection);
+            return GetCollection<TDefaultDocument>(databaseName, collectionName, new MongoCollectionSettings());
         }
 
+        /// <summary>
+        /// Gets a MongoCollection instance bound to this connection.
+        /// </summary>
+        /// <typeparam name="TDefaultDocument">The default document type for this collection.</typeparam>
+        /// <param name="databaseName">The name of the database that contains the collection.</param>
+        /// <param name="collectionName">The name of the collection.</param>
+        /// <param name="collectionSettings">The settings to use when accessing this collection.</param>
+        /// <returns>An instance of MongoCollection.</returns>
+        public MongoCollection<TDefaultDocument> GetCollection<TDefaultDocument>(
+            string databaseName,
+            string collectionName,
+            MongoCollectionSettings collectionSettings)
+        {
+            var database = GetDatabase(databaseName);
+            return database.GetCollection<TDefaultDocument>(collectionName, collectionSettings);
+        }
+
+        /// <summary>
+        /// Gets a MongoCollection instance bound to this binding.
+        /// </summary>
+        /// <param name="defaultDocumentType">The default document type.</param>
+        /// <param name="databaseName">The name of the database that contains the collection.</param>
+        /// <param name="collectionName">The name of the collection.</param>
+        /// <returns>An instance of MongoCollection.</returns>
+        public MongoCollection GetCollection(
+            Type defaultDocumentType,
+            string databaseName,
+            string collectionName)
+        {
+            return GetCollection(defaultDocumentType, databaseName, collectionName, new MongoCollectionSettings());
+        }
+
+        /// <summary>
+        /// Gets a MongoCollection instance bound to this binding.
+        /// </summary>
+        /// <param name="defaultDocumentType">The default document type.</param>
+        /// <param name="databaseName">The name of the database that contains the collection.</param>
+        /// <param name="collectionName">The name of the collection.</param>
+        /// <param name="collectionSettings">The settings to use when accessing this collection.</param>
+        /// <returns>An instance of MongoCollection.</returns>
+        public MongoCollection GetCollection(
+            Type defaultDocumentType,
+            string databaseName,
+            string collectionName,
+            MongoCollectionSettings collectionSettings)
+        {
+            var database = GetDatabase(databaseName);
+            return database.GetCollection(defaultDocumentType, collectionName, collectionSettings);
+        }
+
+        /// <summary>
+        /// Gets a MongoDatabase instance bound to this connection.
+        /// </summary>
+        /// <param name="databaseName">The name of the database.</param>
+        /// <returns>A MongoDatabase.</returns>
+        public MongoDatabase GetDatabase(string databaseName)
+        {
+            return GetDatabase(databaseName, new MongoDatabaseSettings());
+        }
+
+        /// <summary>
+        /// Gets a MongoDatabase instance bound to this connection.
+        /// </summary>
+        /// <param name="databaseName">The name of the database.</param>
+        /// <param name="databaseSettings">The settings to use with this database.</param>
+        /// <returns>A MongoDatabase.</returns>
+        public MongoDatabase GetDatabase(string databaseName, MongoDatabaseSettings databaseSettings)
+        {
+            return new MongoDatabase(this, _server, databaseName, databaseSettings);
+        }
+        
         /// <summary>
         /// Logoff from a database.
         /// </summary>
@@ -112,6 +192,17 @@ namespace MongoDB.Driver
         public void Logoff(string databaseName)
         {
             throw new NotImplementedException();
+        }
+
+        // explicit interface implementations
+        MongoConnection IMongoBinding.GetConnection(string initialDatabaseName, ReadPreference readPreference)
+        {
+            return new MongoConnection(this, _server, _serverInstance, _internalConnection);
+        }
+
+        void IMongoBinding.ReleaseConnection(MongoConnectionInternal internalConnection)
+        {
+            // do nothing
         }
     }
 }

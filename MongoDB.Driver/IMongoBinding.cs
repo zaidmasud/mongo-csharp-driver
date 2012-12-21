@@ -18,6 +18,8 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 
+using MongoDB.Driver.Internal;
+
 namespace MongoDB.Driver
 {
     /// <summary>
@@ -25,30 +27,83 @@ namespace MongoDB.Driver
     /// </summary>
     public interface IMongoBinding
     {
-        // properties
         /// <summary>
-        /// Gets the server this binding is bound to.
+        /// Gets a MongoCollection instance bound to this binding.
         /// </summary>
-        MongoServer Server { get; }
+        /// <typeparam name="TDefaultDocument">The default document type for this collection.</typeparam>
+        /// <param name="databaseName">The name of the database that contains the collection.</param>
+        /// <param name="collectionName">The name of the collection.</param>
+        /// <returns>An instance of MongoCollection.</returns>
+        MongoCollection<TDefaultDocument> GetCollection<TDefaultDocument>(
+            string databaseName,
+            string collectionName);
 
         /// <summary>
-        /// Gets the server instance this binding is bound to (returns null if not bound to a server instance).
+        /// Gets a MongoCollection instance bound to this binding.
         /// </summary>
-        MongoServerInstance ServerInstance { get; }
+        /// <typeparam name="TDefaultDocument">The default document type for this collection.</typeparam>
+        /// <param name="databaseName">The name of the database that contains the collection.</param>
+        /// <param name="collectionName">The name of the collection.</param>
+        /// <param name="collectionSettings">The settings to use when accessing this collection.</param>
+        /// <returns>An instance of MongoCollection.</returns>
+        MongoCollection<TDefaultDocument> GetCollection<TDefaultDocument>(
+            string databaseName,
+            string collectionName,
+            MongoCollectionSettings collectionSettings);
 
-        // methods
         /// <summary>
-        /// Acquires a connection from whatever the binding is bound to.
+        /// Gets a MongoCollection instance bound to this binding.
         /// </summary>
-        /// <param name="database">The initial database to authenticate for.</param>
+        /// <param name="defaultDocumentType">The default document type.</param>
+        /// <param name="databaseName">The name of the database that contains the collection.</param>
+        /// <param name="collectionName">The name of the collection.</param>
+        /// <returns>An instance of MongoCollection.</returns>
+        MongoCollection GetCollection(
+            Type defaultDocumentType,
+            string databaseName,
+            string collectionName);
+
+        /// <summary>
+        /// Gets a MongoCollection instance bound to this binding.
+        /// </summary>
+        /// <param name="defaultDocumentType">The default document type.</param>
+        /// <param name="databaseName">The name of the database that contains the collection.</param>
+        /// <param name="collectionName">The name of the collection.</param>
+        /// <param name="collectionSettings">The settings to use when accessing this collection.</param>
+        /// <returns>An instance of MongoCollection.</returns>
+        MongoCollection GetCollection(
+            Type defaultDocumentType,
+            string databaseName,
+            string collectionName,
+            MongoCollectionSettings collectionSettings);
+
+        /// <summary>
+        /// Gets a connection from whatever this binding is bound to.
+        /// </summary>
+        /// <param name="initialDatabaseName">The initial database to authenticate for.</param>
         /// <param name="readPreference">The read preference.</param>
         /// <returns>A MongoConnection.</returns>
-        MongoConnection AcquireConnection(MongoDatabase database, ReadPreference readPreference);
+        MongoConnection GetConnection(string initialDatabaseName, ReadPreference readPreference);
 
         /// <summary>
-        /// Releases a connection.
+        /// Gets a MongoDatabase instance bound to this binding.
+        /// </summary>
+        /// <param name="databaseName">The name of the database.</param>
+        /// <returns>A MongoDatabase.</returns>
+        MongoDatabase GetDatabase(string databaseName);
+
+        /// <summary>
+        /// Gets a MongoDatabase instance bound to this binding.
+        /// </summary>
+        /// <param name="databaseName">The name of the database.</param>
+        /// <param name="databaseSettings">The settings to use with this database.</param>
+        /// <returns>A MongoDatabase.</returns>
+        MongoDatabase GetDatabase(string databaseName, MongoDatabaseSettings databaseSettings);
+
+        /// <summary>
+        /// Releases an connection (for internal use only).
         /// </summary>
         /// <param name="connection">The connection.</param>
-        void ReleaseConnection(MongoConnection connection);
+        void ReleaseConnection(MongoConnectionInternal connection);
     }
 }

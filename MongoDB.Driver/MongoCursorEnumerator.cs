@@ -296,21 +296,22 @@ namespace MongoDB.Driver
             if (_binding == null)
             {
                 // first time we need a connection use the collection's binding
-                var connection = _cursor.Collection.Binding.AcquireConnection(_cursor.Database, _readPreference);
+                var binding = _cursor.Collection.Binding;
+                var connection = binding.GetConnection(_cursor.Database.Name, _readPreference);
 
                 // if the collection's binding is to the cluster we need to bind at least to the server instance
                 // so any subsequent GetMore messages get sent to the correct server instance
-                _binding = connection.Binding;
-                if (_binding is MongoServerBinding)
+                if (binding is MongoServer)
                 {
-                    _binding = new MongoServerInstanceBinding(connection.ServerInstance);
+                    binding = connection.ServerInstance;
                 }
 
+                _binding = binding; // don't assign to _binding until we are sure no exceptions were thrown
                 return connection;
             }
             else
             {
-                return _binding.AcquireConnection(_cursor.Database, _readPreference);
+                return _binding.GetConnection(_cursor.Database.Name, _readPreference);
             }
         }
 
@@ -380,8 +381,8 @@ namespace MongoDB.Driver
         private MongoReplyMessage<TDocument> GetReply(MongoConnection connection, MongoRequestMessage message)
         {
             var readerSettings = _cursor.Collection.GetReaderSettings(connection);
-            connection.InternalConnection.SendMessage(message, null, _cursor.Database.Name); // write concern doesn't apply to queries
-            var reply = connection.InternalConnection.ReceiveMessage<TDocument>(readerSettings, _cursor.SerializationOptions);
+            connection.Inner.SendMessage(message, null, _cursor.Database.Name); // write concern doesn't apply to queries
+            var reply = connection.Inner.ReceiveMessage<TDocument>(readerSettings, _cursor.SerializationOptions);
             _responseFlags = reply.ResponseFlags;
             _openCursorId = reply.CursorId;
             return reply;
@@ -395,11 +396,11 @@ namespace MongoDB.Driver
                 {
                     if (_binding != null)
                     {
-                        using (var connection = _binding.AcquireConnection(_cursor.Database, null))
+                        using (var connection = _binding.GetConnection(_cursor.Database.Name, null))
                         {
                             using (var message = new MongoKillCursorsMessage(_openCursorId))
                             {
-                                connection.InternalConnection.SendMessage(message, WriteConcern.Unacknowledged, _cursor.Database.Name);
+                                connection.Inner.SendMessage(message, WriteConcern.Unacknowledged, _cursor.Database.Name);
                             }
                         }
                     }

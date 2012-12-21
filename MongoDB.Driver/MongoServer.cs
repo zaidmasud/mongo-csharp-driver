@@ -30,7 +30,7 @@ namespace MongoDB.Driver
     /// <summary>
     /// Represents a MongoDB server (either a single instance or a replica set) and the settings used to access it. This class is thread-safe.
     /// </summary>
-    public class MongoServer
+    public class MongoServer : IMongoBinding
     {
         // private static fields
         private readonly static object __staticLock = new object();
@@ -41,7 +41,6 @@ namespace MongoDB.Driver
 
         // private fields
         private readonly object _serverLock = new object();
-        private readonly IMongoBinding _binding;
         private readonly IMongoServerProxy _serverProxy;
         private readonly MongoServerSettings _settings;
         private readonly Dictionary<int, Request> _requests = new Dictionary<int, Request>(); // tracks threads that have called RequestStart
@@ -66,7 +65,6 @@ namespace MongoDB.Driver
         /// <param name="settings">The settings for this instance of MongoServer.</param>
         public MongoServer(MongoServerSettings settings)
         {
-            _binding = new MongoServerBinding(this);
             _settings = settings.FrozenCopy();
             _sequentialId = Interlocked.Increment(ref __nextSequentialId);
             // Console.WriteLine("MongoServer[{0}]: {1}", sequentialId, settings);
@@ -313,8 +311,8 @@ namespace MongoDB.Driver
         /// <summary>
         /// Gets the connection reserved by the current RequestStart scope (null if not in the scope of a RequestStart).
         /// </summary>
-        [Obsolete("Use GetConnection instead (if you need access to the connection).")]
-        public virtual MongoConnection RequestConnection
+        [Obsolete("Use binding instead.")]
+        public virtual MongoConnectionInternal RequestConnection
         {
             get
             {
@@ -324,8 +322,7 @@ namespace MongoDB.Driver
                     Request request;
                     if (_requests.TryGetValue(threadId, out request))
                     {
-                        var binding = new MongoConnectionBinding(request.InternalConnection);
-                        return new MongoConnection(binding, request.InternalConnection);
+                        return request.InternalConnection;
                     }
                     else
                     {
@@ -338,6 +335,7 @@ namespace MongoDB.Driver
         /// <summary>
         /// Gets the RequestStart nesting level for the current thread.
         /// </summary>
+        [Obsolete("Use binding instead.")]
         public virtual int RequestNestingLevel
         {
             get
@@ -653,61 +651,27 @@ namespace MongoDB.Driver
             return database.FetchDBRefAs(documentType, dbRef);
         }
 
-        /// <summary>
-        /// Gets a binding to this server.
-        /// </summary>
-        /// <returns>A binding.</returns>
-        public virtual IMongoBinding GetBinding()
-        {
-            return new MongoServerBinding(this);
-        }
 
         /// <summary>
-        /// Gets a MongoDatabase instance representing a database on this server. Only one instance
-        /// is created for each combination of database settings.
+        /// Gets a connection from whatever this binding is bound to.
         /// </summary>
-        /// <param name="binding">The binding for this database.</param>
-        /// <param name="databaseName">The name of the database.</param>
-        /// <returns>A new or existing instance of MongoDatabase.</returns>
-        public virtual MongoDatabase GetBoundDatabase(IMongoBinding binding, string databaseName)
+        /// <param name="initialDatabaseName">The initial database to authenticate for.</param>
+        /// <returns>A MongoConnection.</returns>
+        public virtual MongoConnection GetConnection(string initialDatabaseName)
         {
-            var databaseSettings = new MongoDatabaseSettings();
-            return new MongoDatabase(binding, this, databaseName, databaseSettings);
+            return GetConnection(initialDatabaseName, ReadPreference.Primary);
         }
 
         /// <summary>
-        /// Gets a MongoDatabase instance representing a database on this server. Only one instance
-        /// is created for each combination of database settings.
+        /// Gets a connection from whatever this binding is bound to.
         /// </summary>
-        /// <param name="binding">The binding for this database.</param>
-        /// <param name="databaseName">The name of the database.</param>
-        /// <param name="databaseSettings">The settings to use with this database.</param>
-        /// <returns>A new or existing instance of MongoDatabase.</returns>
-        public virtual MongoDatabase GetBoundDatabase(IMongoBinding binding, string databaseName, MongoDatabaseSettings databaseSettings)
+        /// <param name="initialDatabaseName">The initial database to authenticate for.</param>
+        /// <param name="readPreference">The read preference.</param>
+        /// <returns>A MongoConnection.</returns>
+        public virtual MongoConnection GetConnection(string initialDatabaseName, ReadPreference readPreference)
         {
-            if (binding == null)
-            {
-                throw new ArgumentNullException("binding");
-            }
-            if (databaseName == null)
-            {
-                throw new ArgumentNullException("databaseName");
-            }
-            if (databaseSettings == null)
-            {
-                throw new ArgumentNullException("databaseSettings");
-            }
-            return new MongoDatabase(binding, this, databaseName, databaseSettings);
-        }
-
-        public virtual MongoConnection GetConnection(MongoDatabase database)
-        {
-            return GetConnection(database, ReadPreference.Primary);
-        }
-
-        public virtual MongoConnection GetConnection(MongoDatabase database, ReadPreference readPreference)
-        {
-            return _binding.AcquireConnection(database, readPreference);
+            var serverInstance = ChooseServerInstance(readPreference);
+            return serverInstance.GetConnection(initialDatabaseName, readPreference);
         }
 
         /// <summary>
@@ -781,7 +745,15 @@ namespace MongoDB.Driver
         /// <returns>A new or existing instance of MongoDatabase.</returns>
         public virtual MongoDatabase GetDatabase(string databaseName, MongoDatabaseSettings databaseSettings)
         {
-            return GetBoundDatabase(_binding, databaseName, databaseSettings);
+            if (databaseName == null)
+            {
+                throw new ArgumentNullException("databaseName");
+            }
+            if (databaseSettings == null)
+            {
+                throw new ArgumentNullException("databaseSettings");
+            }
+            return new MongoDatabase(this, this, databaseName, databaseSettings);
         }
 
         /// <summary>
@@ -917,11 +889,11 @@ namespace MongoDB.Driver
         /// Lets the server know that this thread is done with a series of related operations. Instead of calling this method it is better
         /// to put the return value of RequestStart in a using statement.
         /// </summary>
-        [Obsolete("Use GetBoundDatabase instead.")]
+        [Obsolete("Use binding instead.")]
         public virtual void RequestDone()
         {
             int threadId = Thread.CurrentThread.ManagedThreadId;
-            MongoInternalConnection internalConnectionToRelease = null;
+            MongoConnectionInternal internalConnectionToRelease = null;
 
             lock (_serverLock)
             {
@@ -942,7 +914,8 @@ namespace MongoDB.Driver
 
             if (internalConnectionToRelease != null)
             {
-                internalConnectionToRelease.ServerInstance.ReleaseConnection(internalConnectionToRelease);
+                var binding = (IMongoBinding)internalConnectionToRelease.ServerInstance;
+                binding.ReleaseConnection(internalConnectionToRelease);
             }
         }
 
@@ -953,7 +926,7 @@ namespace MongoDB.Driver
         /// </summary>
         /// <param name="initialDatabase">One of the databases involved in the related operations.</param>
         /// <returns>A helper object that implements IDisposable and calls <see cref="RequestDone"/> from the Dispose method.</returns>
-        [Obsolete("Use GetBoundDatabase instead.")]
+        [Obsolete("Use binding instead.")]
         public virtual IDisposable RequestStart(MongoDatabase initialDatabase)
         {
             return RequestStart(initialDatabase, ReadPreference.Primary);
@@ -967,7 +940,7 @@ namespace MongoDB.Driver
         /// <param name="initialDatabase">One of the databases involved in the related operations.</param>
         /// <param name="slaveOk">Whether a secondary is acceptable.</param>
         /// <returns>A helper object that implements IDisposable and calls <see cref="RequestDone"/> from the Dispose method.</returns>
-        [Obsolete("Use GetBoundDatabase instead.")]
+        [Obsolete("Use binding instead.")]
         public virtual IDisposable RequestStart(MongoDatabase initialDatabase, bool slaveOk)
         {
             var readPreference = ReadPreference.FromSlaveOk(slaveOk);
@@ -982,7 +955,7 @@ namespace MongoDB.Driver
         /// <param name="initialDatabase">One of the databases involved in the related operations.</param>
         /// <param name="readPreference">The read preference.</param>
         /// <returns>A helper object that implements IDisposable and calls <see cref="RequestDone"/> from the Dispose method.</returns>
-        [Obsolete("Use GetBoundDatabase instead.")]
+        [Obsolete("Use binding instead.")]
         public virtual IDisposable RequestStart(MongoDatabase initialDatabase, ReadPreference readPreference)
         {
             int threadId = Thread.CurrentThread.ManagedThreadId;
@@ -1021,7 +994,7 @@ namespace MongoDB.Driver
         /// <param name="initialDatabase">One of the databases involved in the related operations.</param>
         /// <param name="serverInstance">The server instance this request should be tied to.</param>
         /// <returns>A helper object that implements IDisposable and calls <see cref="RequestDone"/> from the Dispose method.</returns>
-        [Obsolete("Use GetBoundDatabase instead.")]
+        [Obsolete("Use binding instead.")]
         public virtual IDisposable RequestStart(MongoDatabase initialDatabase, MongoServerInstance serverInstance)
         {
             int threadId = Thread.CurrentThread.ManagedThreadId;
@@ -1098,9 +1071,9 @@ namespace MongoDB.Driver
         }
 
         // internal methods
-        internal MongoInternalConnection AcquireConnection(MongoDatabase database, ReadPreference readPreference)
+        internal MongoConnectionInternal AcquireConnection(MongoDatabase database, ReadPreference readPreference)
         {
-            MongoInternalConnection requestConnection = null;
+            MongoConnectionInternal requestConnection = null;
             lock (_serverLock)
             {
                 // if a thread has called RequestStart it wants all operations to take place on the same connection
@@ -1127,9 +1100,9 @@ namespace MongoDB.Driver
             return serverInstance.AcquireConnection(database.Name, database.Credentials);
         }
 
-        internal MongoInternalConnection AcquireConnection(MongoDatabase database, MongoServerInstance serverInstance)
+        internal MongoConnectionInternal AcquireConnection(MongoDatabase database, MongoServerInstance serverInstance)
         {
-            MongoInternalConnection requestConnection = null;
+            MongoConnectionInternal requestConnection = null;
             lock (_serverLock)
             {
                 // if a thread has called RequestStart it wants all operations to take place on the same connection
@@ -1158,7 +1131,7 @@ namespace MongoDB.Driver
             return serverInstance.AcquireConnection(database.Name, database.Credentials);
         }
 
-        internal void ReleaseConnection(MongoInternalConnection internalConnection)
+        void IMongoBinding.ReleaseConnection(MongoConnectionInternal internalConnection)
         {
             lock (_serverLock)
             {
@@ -1175,25 +1148,91 @@ namespace MongoDB.Driver
                 }
             }
 
-            internalConnection.ServerInstance.ReleaseConnection(internalConnection);
+            var binding = (IMongoBinding)internalConnection.ServerInstance;
+            binding.ReleaseConnection(internalConnection);
+        }
+
+        // explicit interface implementations
+        /// <summary>
+        /// Gets a MongoCollection instance bound to this connection.
+        /// </summary>
+        /// <typeparam name="TDefaultDocument">The default document type for this collection.</typeparam>
+        /// <param name="databaseName">The name of the database that contains the collection.</param>
+        /// <param name="collectionName">The name of the collection.</param>
+        /// <returns>An instance of MongoCollection.</returns>
+        MongoCollection<TDefaultDocument> IMongoBinding.GetCollection<TDefaultDocument>(
+            string databaseName,
+            string collectionName)
+        {
+            return ((IMongoBinding)this).GetCollection<TDefaultDocument>(databaseName, collectionName, new MongoCollectionSettings());
+        }
+
+        /// <summary>
+        /// Gets a MongoCollection instance bound to this connection.
+        /// </summary>
+        /// <typeparam name="TDefaultDocument">The default document type for this collection.</typeparam>
+        /// <param name="databaseName">The name of the database that contains the collection.</param>
+        /// <param name="collectionName">The name of the collection.</param>
+        /// <param name="collectionSettings">The settings to use when accessing this collection.</param>
+        /// <returns>An instance of MongoCollection.</returns>
+        MongoCollection<TDefaultDocument> IMongoBinding.GetCollection<TDefaultDocument>(
+            string databaseName,
+            string collectionName,
+            MongoCollectionSettings collectionSettings)
+        {
+            var database = GetDatabase(databaseName);
+            return database.GetCollection<TDefaultDocument>(collectionName, collectionSettings);
+        }
+
+        /// <summary>
+        /// Gets a MongoCollection instance bound to this binding.
+        /// </summary>
+        /// <param name="defaultDocumentType">The default document type.</param>
+        /// <param name="databaseName">The name of the database that contains the collection.</param>
+        /// <param name="collectionName">The name of the collection.</param>
+        /// <returns>An instance of MongoCollection.</returns>
+        MongoCollection IMongoBinding.GetCollection(
+            Type defaultDocumentType,
+            string databaseName,
+            string collectionName)
+        {
+            return ((IMongoBinding)this).GetCollection(defaultDocumentType, databaseName, collectionName, new MongoCollectionSettings());
+        }
+
+        /// <summary>
+        /// Gets a MongoCollection instance bound to this binding.
+        /// </summary>
+        /// <param name="defaultDocumentType">The default document type.</param>
+        /// <param name="databaseName">The name of the database that contains the collection.</param>
+        /// <param name="collectionName">The name of the collection.</param>
+        /// <param name="collectionSettings">The settings to use when accessing this collection.</param>
+        /// <returns>An instance of MongoCollection.</returns>
+        MongoCollection IMongoBinding.GetCollection(
+            Type defaultDocumentType,
+            string databaseName,
+            string collectionName,
+            MongoCollectionSettings collectionSettings)
+        {
+            var database = GetDatabase(databaseName);
+            return database.GetCollection(defaultDocumentType, collectionName, collectionSettings);
         }
 
         // private nested classes
         private class Request
         {
             // private fields
-            private MongoInternalConnection _internalConnection;
+            private MongoConnectionInternal _internalConnection;
             private int _nestingLevel;
 
             // constructors
-            public Request(MongoInternalConnection internalConnection)
+            public Request(MongoConnectionInternal internalConnection)
             {
                 _internalConnection = internalConnection;
                 _nestingLevel = 1;
             }
 
             // public properties
-            public MongoInternalConnection InternalConnection
+            public MongoConnectionInternal InternalConnection
             {
                 get { return _internalConnection; }
             }
@@ -1219,7 +1258,9 @@ namespace MongoDB.Driver
             // public methods
             public void Dispose()
             {
+#pragma warning disable 618
                 _server.RequestDone();
+#pragma warning restore
             }
         }
     }

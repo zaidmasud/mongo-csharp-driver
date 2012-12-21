@@ -82,10 +82,9 @@ namespace MongoDB.DriverUnitTests
         [Test]
         public void TestBindingToConnection()
         {
-            var server = Configuration.TestServer;
-            using (var connection = server.GetConnection(Configuration.TestDatabase, ReadPreference.Primary))
+            using (var connection = Configuration.TestServer.GetConnection(Configuration.TestDatabase.Name))
             {
-                var database = server.GetBoundDatabase(connection.GetBinding(), _database.Name);
+                var database = connection.GetDatabase(Configuration.TestDatabase.Name);
                 var collection = database.GetCollection<BsonDocument>(Configuration.TestCollection.Name);
 
                 // all the following operations will be performed on the same connection
@@ -99,11 +98,10 @@ namespace MongoDB.DriverUnitTests
         [Test]
         public void TestConstructorArgumentChecking()
         {
+            var database = Configuration.TestDatabase;
             var settings = new MongoCollectionSettings();
-            Assert.Throws<ArgumentNullException>(() => { new MongoCollection<BsonDocument>(null, "name", settings); });
-            Assert.Throws<ArgumentNullException>(() => { new MongoCollection<BsonDocument>(_database, null, settings); });
-            Assert.Throws<ArgumentNullException>(() => { new MongoCollection<BsonDocument>(_database, "name", null); });
-            Assert.Throws<ArgumentOutOfRangeException>(() => { new MongoCollection<BsonDocument>(_database, "", settings); });
+            Assert.Throws<ArgumentNullException>(() => { database.GetCollection<BsonDocument>(null, settings); });
+            Assert.Throws<ArgumentNullException>(() => { database.GetCollection<BsonDocument>("name", (MongoCollectionSettings)null); });
         }
 
         [Test]
@@ -670,11 +668,10 @@ namespace MongoDB.DriverUnitTests
         [Test]
         public void TestGeoHaystackSearch()
         {
-            var server = Configuration.TestServer;
-            var serverInstance = server.ChooseServerInstance(ReadPreference.Primary);
+            var serverInstance = Configuration.TestServer.Primary;
             if (serverInstance.InstanceType != MongoServerInstanceType.ShardRouter)
             {
-                var database = server.GetBoundDatabase(serverInstance.GetBinding(), Configuration.TestDatabase.Name);
+                var database = serverInstance.GetDatabase(Configuration.TestDatabase.Name);
                 var collection = database.GetCollection(Configuration.TestCollection.Name);
 
                 if (collection.Exists()) { collection.Drop(); }
@@ -704,11 +701,10 @@ namespace MongoDB.DriverUnitTests
         [Test]
         public void TestGeoHaystackSearch_Typed()
         {
-            var server = Configuration.TestServer;
-            var serverInstance = server.ChooseServerInstance(ReadPreference.Primary);
+            var serverInstance = Configuration.TestServer.Primary;
             if (serverInstance.InstanceType != MongoServerInstanceType.ShardRouter)
             {
-                var database = server.GetBoundDatabase(serverInstance.GetBinding(), Configuration.TestDatabase.Name);
+                var database = serverInstance.GetDatabase(Configuration.TestDatabase.Name);
                 var collection = database.GetCollection(Configuration.TestCollection.Name);
 
                 if (collection.Exists()) { collection.Drop(); }
@@ -915,16 +911,19 @@ namespace MongoDB.DriverUnitTests
         [Test]
         public void TestGetMore()
         {
-            using (_server.RequestStart(_database))
+            using (var connection = Configuration.TestServer.GetConnection(Configuration.TestDatabase.Name))
             {
-                _collection.RemoveAll();
+                var database = connection.GetDatabase(Configuration.TestDatabase.Name);
+                var collection = database.GetCollection<BsonDocument>(Configuration.TestCollection.Name);
+
+                collection.RemoveAll();
                 var count = _server.Primary.MaxMessageLength / 1000000;
                 for (int i = 0; i < count; i++)
                 {
                     var document = new BsonDocument("data", new BsonBinaryData(new byte[1000000]));
-                    _collection.Insert(document);
+                    collection.Insert(document);
                 }
-                var list = _collection.FindAll().ToList();
+                var list = collection.FindAll().ToList();
             }
         }
 
@@ -1296,11 +1295,10 @@ namespace MongoDB.DriverUnitTests
         [Test]
         public void TestReIndex()
         {
-            var server = Configuration.TestServer;
-            var serverInstance = server.ChooseServerInstance(ReadPreference.Primary);
+            var serverInstance = Configuration.TestServer.Primary;
             if (serverInstance.InstanceType != MongoServerInstanceType.ShardRouter)
             {
-                var database = server.GetBoundDatabase(serverInstance.GetBinding(), Configuration.TestDatabase.Name);
+                var database = serverInstance.GetDatabase(Configuration.TestDatabase.Name);
                 var collection = database.GetCollection(Configuration.TestCollection.Name);
 
                 collection.RemoveAll();
@@ -1451,11 +1449,10 @@ namespace MongoDB.DriverUnitTests
         [Test]
         public void TestValidate()
         {
-            var server = Configuration.TestServer;
-            var serverInstance = server.ChooseServerInstance(ReadPreference.Primary);
+            var serverInstance = Configuration.TestServer.Primary;
             if (serverInstance.InstanceType != MongoServerInstanceType.ShardRouter)
             {
-                var database = server.GetBoundDatabase(serverInstance.GetBinding(), Configuration.TestDatabase.Name);
+                var database = serverInstance.GetDatabase(Configuration.TestDatabase.Name);
                 var collection = database.GetCollection(Configuration.TestCollection.Name);
 
                 // ensure collection exists
