@@ -31,7 +31,7 @@ namespace MongoDB.Bson.Serialization.Serializers
     public class UInt16Serializer : BsonBaseSerializer
     {
         // private static fields
-        private static Lazy<UInt16Serializer> __instance = new Lazy<UInt16Serializer>();
+        private static UInt16Serializer __instance = new UInt16Serializer();
 
         // constructors
         /// <summary>
@@ -46,9 +46,10 @@ namespace MongoDB.Bson.Serialization.Serializers
         /// <summary>
         /// Gets an instance of the UInt16Serializer class.
         /// </summary>
+        [Obsolete("Use constructor instead.")]
         public static UInt16Serializer Instance
         {
-            get { return __instance.Value; }
+            get { return __instance; }
         }
 
         // public methods

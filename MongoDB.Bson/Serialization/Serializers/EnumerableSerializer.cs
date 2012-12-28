@@ -31,7 +31,7 @@ namespace MongoDB.Bson.Serialization.Serializers
     public class EnumerableSerializer : BsonBaseSerializer, IBsonArraySerializer
     {
         // private static fields
-        private static Lazy<EnumerableSerializer> __instance = new Lazy<EnumerableSerializer>();
+        private static EnumerableSerializer __instance = new EnumerableSerializer();
 
         // constructors
         /// <summary>
@@ -46,9 +46,10 @@ namespace MongoDB.Bson.Serialization.Serializers
         /// <summary>
         /// Gets an instance of the EnumerableSerializer class.
         /// </summary>
+        [Obsolete("Use constructor instead.")]
         public static EnumerableSerializer Instance
         {
-            get { return __instance.Value; }
+            get { return __instance; }
         }
 
         // public methods

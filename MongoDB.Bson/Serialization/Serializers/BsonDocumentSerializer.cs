@@ -31,7 +31,7 @@ namespace MongoDB.Bson.Serialization.Serializers
     public class BsonDocumentSerializer : BsonBaseSerializer, IBsonIdProvider
     {
         // private static fields
-        private static Lazy<BsonDocumentSerializer> __instance = new Lazy<BsonDocumentSerializer>();
+        private static BsonDocumentSerializer __instance = new BsonDocumentSerializer();
 
         // constructors
         /// <summary>
@@ -48,7 +48,7 @@ namespace MongoDB.Bson.Serialization.Serializers
         /// </summary>
         public static BsonDocumentSerializer Instance
         {
-            get { return __instance.Value; }
+            get { return __instance; }
         }
 
         // public methods

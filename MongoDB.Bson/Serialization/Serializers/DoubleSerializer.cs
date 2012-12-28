@@ -32,7 +32,7 @@ namespace MongoDB.Bson.Serialization.Serializers
     public class DoubleSerializer : BsonBaseSerializer
     {
         // private static fields
-        private static Lazy<DoubleSerializer> __instance = new Lazy<DoubleSerializer>();
+        private static DoubleSerializer __instance = new DoubleSerializer();
 
         // constructors
         /// <summary>
@@ -47,9 +47,10 @@ namespace MongoDB.Bson.Serialization.Serializers
         /// <summary>
         /// Gets an instance of the DoubleSerializer class.
         /// </summary>
+        [Obsolete("Use constructor instead.")]
         public static DoubleSerializer Instance
         {
-            get { return __instance.Value; }
+            get { return __instance; }
         }
 
         // public methods

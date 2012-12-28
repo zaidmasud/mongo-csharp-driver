@@ -29,7 +29,7 @@ namespace MongoDB.Bson.Serialization.Serializers
     public class BsonMaxKeySerializer : BsonBaseSerializer
     {
         // private static fields
-        private static Lazy<BsonMaxKeySerializer> __instance = new Lazy<BsonMaxKeySerializer>();
+        private static BsonMaxKeySerializer __instance = new BsonMaxKeySerializer();
 
         // constructors
         /// <summary>
@@ -45,7 +45,7 @@ namespace MongoDB.Bson.Serialization.Serializers
         /// </summary>
         public static BsonMaxKeySerializer Instance
         {
-            get { return __instance.Value; }
+            get { return __instance; }
         }
 
         // public methods

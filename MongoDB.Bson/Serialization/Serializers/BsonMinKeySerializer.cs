@@ -29,7 +29,7 @@ namespace MongoDB.Bson.Serialization.Serializers
     public class BsonMinKeySerializer : BsonBaseSerializer
     {
         // private static fields
-        private static Lazy<BsonMinKeySerializer> __instance = new Lazy<BsonMinKeySerializer>();
+        private static BsonMinKeySerializer __instance = new BsonMinKeySerializer();
 
         // constructors
         /// <summary>
@@ -45,7 +45,7 @@ namespace MongoDB.Bson.Serialization.Serializers
         /// </summary>
         public static BsonMinKeySerializer Instance
         {
-            get { return __instance.Value; }
+            get { return __instance; }
         }
 
         // public methods

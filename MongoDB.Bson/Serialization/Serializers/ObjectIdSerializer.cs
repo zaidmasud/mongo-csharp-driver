@@ -30,7 +30,7 @@ namespace MongoDB.Bson.Serialization.Serializers
     public class ObjectIdSerializer : BsonBaseSerializer
     {
         // private static fields
-        private static Lazy<ObjectIdSerializer> __instance = new Lazy<ObjectIdSerializer>();
+        private static ObjectIdSerializer __instance = new ObjectIdSerializer();
 
         // constructors
         /// <summary>
@@ -45,9 +45,10 @@ namespace MongoDB.Bson.Serialization.Serializers
         /// <summary>
         /// Gets an instance of the ObjectIdSerializer class.
         /// </summary>
+        [Obsolete("Use constructor instead.")]
         public static ObjectIdSerializer Instance
         {
-            get { return __instance.Value; }
+            get { return __instance; }
         }
 
         // public methods

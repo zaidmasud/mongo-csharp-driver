@@ -31,7 +31,7 @@ namespace MongoDB.Bson.Serialization.Serializers
     public class DecimalSerializer : BsonBaseSerializer
     {
         // private static fields
-        private static Lazy<DecimalSerializer> __instance = new Lazy<DecimalSerializer>();
+        private static DecimalSerializer __instance = new DecimalSerializer();
 
         // constructors
         /// <summary>
@@ -46,9 +46,10 @@ namespace MongoDB.Bson.Serialization.Serializers
         /// <summary>
         /// Gets an instance of the DecimalSerializer class.
         /// </summary>
+        [Obsolete("Use constructor instead.")]
         public static DecimalSerializer Instance
         {
-            get { return __instance.Value; }
+            get { return __instance; }
         }
 
         // public methods

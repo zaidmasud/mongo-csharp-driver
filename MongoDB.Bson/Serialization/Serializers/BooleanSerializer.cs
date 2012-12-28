@@ -31,7 +31,7 @@ namespace MongoDB.Bson.Serialization.Serializers
     public class BooleanSerializer : BsonBaseSerializer
     {
         // private static fields
-        private static Lazy<BooleanSerializer> __instance = new Lazy<BooleanSerializer>();
+        private static BooleanSerializer __instance = new BooleanSerializer();
 
         // constructors
         /// <summary>
@@ -46,9 +46,10 @@ namespace MongoDB.Bson.Serialization.Serializers
         /// <summary>
         /// Gets an instance of the BooleanSerializer class.
         /// </summary>
+        [Obsolete("Use constructor instead.")]
         public static BooleanSerializer Instance
         {
-            get { return __instance.Value; }
+            get { return __instance; }
         }
 
         // public methods

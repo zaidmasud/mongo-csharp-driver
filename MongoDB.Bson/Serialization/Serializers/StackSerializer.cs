@@ -31,7 +31,7 @@ namespace MongoDB.Bson.Serialization.Serializers
     public class StackSerializer : BsonBaseSerializer, IBsonArraySerializer
     {
         // private static fields
-        private static Lazy<StackSerializer> __instance = new Lazy<StackSerializer>();
+        private static StackSerializer __instance = new StackSerializer();
 
         // constructors
         /// <summary>
@@ -46,9 +46,10 @@ namespace MongoDB.Bson.Serialization.Serializers
         /// <summary>
         /// Gets an instance of the StackSerializer class.
         /// </summary>
+        [Obsolete("Use constructor instead.")]
         public static StackSerializer Instance
         {
-            get { return __instance.Value; }
+            get { return __instance; }
         }
 
         // public methods

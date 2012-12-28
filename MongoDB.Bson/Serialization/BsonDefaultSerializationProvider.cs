@@ -169,7 +169,7 @@ namespace MongoDB.Bson.Serialization
 
             if (type.IsEnum)
             {
-                return EnumSerializer.Instance;
+                return new EnumSerializer();
             }
 
             // classes that implement IDictionary or IEnumerable are serialized using either DictionarySerializer or EnumerableSerializer
@@ -234,7 +234,7 @@ namespace MongoDB.Bson.Serialization
             }
             else if (implementedDictionaryInterface != null)
             {
-                return DictionarySerializer.Instance;
+                return new DictionarySerializer();
             }
             else if (implementedGenericEnumerableInterface != null)
             {
@@ -258,7 +258,7 @@ namespace MongoDB.Bson.Serialization
             }
             else if (implementedEnumerableInterface != null)
             {
-                return EnumerableSerializer.Instance;
+                return new EnumerableSerializer();
             }
 
             return null;

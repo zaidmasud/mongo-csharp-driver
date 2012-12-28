@@ -31,7 +31,7 @@ namespace MongoDB.Bson.Serialization.Serializers
     public class Int64Serializer : BsonBaseSerializer
     {
         // private static fields
-        private static Lazy<Int64Serializer> __instance = new Lazy<Int64Serializer>();
+        private static Int64Serializer __instance = new Int64Serializer();
 
         // constructors
         /// <summary>
@@ -46,9 +46,10 @@ namespace MongoDB.Bson.Serialization.Serializers
         /// <summary>
         /// Gets an instance of the Int64Serializer class.
         /// </summary>
+        [Obsolete("Use constructor instead.")]
         public static Int64Serializer Instance
         {
-            get { return __instance.Value; }
+            get { return __instance; }
         }
 
         // public methods

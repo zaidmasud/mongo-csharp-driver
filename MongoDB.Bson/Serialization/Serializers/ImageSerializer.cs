@@ -30,7 +30,7 @@ namespace MongoDB.Bson.Serialization.Serializers
     public class ImageSerializer : BsonBaseSerializer
     {
         // private static fields
-        private static Lazy<ImageSerializer> __instance = new Lazy<ImageSerializer>();
+        private static ImageSerializer __instance = new ImageSerializer();
 
         // constructors
         /// <summary>
@@ -44,9 +44,10 @@ namespace MongoDB.Bson.Serialization.Serializers
         /// <summary>
         /// Gets an instance of the ImageSerializer class.
         /// </summary>
+        [Obsolete("Use constructor instead.")]
         public static ImageSerializer Instance
         {
-            get { return __instance.Value; }
+            get { return __instance; }
         }
 
         // public methods

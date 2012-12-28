@@ -29,7 +29,7 @@ namespace MongoDB.Bson.Serialization.Serializers
     public class BsonRegularExpressionSerializer : BsonBaseSerializer
     {
         // private static fields
-        private static Lazy<BsonRegularExpressionSerializer> __instance = new Lazy<BsonRegularExpressionSerializer>();
+        private static BsonRegularExpressionSerializer __instance = new BsonRegularExpressionSerializer();
 
         // constructors
         /// <summary>
@@ -45,7 +45,7 @@ namespace MongoDB.Bson.Serialization.Serializers
         /// </summary>
         public static BsonRegularExpressionSerializer Instance
         {
-            get { return __instance.Value; }
+            get { return __instance; }
         }
 
         // public methods

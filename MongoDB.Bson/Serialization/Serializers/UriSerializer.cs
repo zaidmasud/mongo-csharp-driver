@@ -29,7 +29,7 @@ namespace MongoDB.Bson.Serialization.Serializers
     public class UriSerializer : BsonBaseSerializer
     {
         // private static fields
-        private static Lazy<UriSerializer> __instance = new Lazy<UriSerializer>();
+        private static UriSerializer __instance = new UriSerializer();
 
         // constructors
         /// <summary>
@@ -43,9 +43,10 @@ namespace MongoDB.Bson.Serialization.Serializers
         /// <summary>
         /// Gets an instance of the UriSerializer class.
         /// </summary>
+        [Obsolete("Use constructor instead.")]
         public static UriSerializer Instance
         {
-            get { return __instance.Value; }
+            get { return __instance; }
         }
 
         // public methods

@@ -30,7 +30,7 @@ namespace MongoDB.Bson.Serialization.Serializers
     public class TimeSpanSerializer : BsonBaseSerializer
     {
         // private static fields
-        private static Lazy<TimeSpanSerializer> __instance = new Lazy<TimeSpanSerializer>();
+        private static TimeSpanSerializer __instance = new TimeSpanSerializer();
 
         // constructors
         /// <summary>
@@ -45,9 +45,10 @@ namespace MongoDB.Bson.Serialization.Serializers
         /// <summary>
         /// Gets an instance of the TimeSpanSerializer class.
         /// </summary>
+        [Obsolete("Use constructor instead.")]
         public static TimeSpanSerializer Instance
         {
-            get { return __instance.Value; }
+            get { return __instance; }
         }
 
         // public methods

@@ -30,7 +30,7 @@ namespace MongoDB.Bson.Serialization.Serializers
     public class StringSerializer : BsonBaseSerializer
     {
         // private static fields
-        private static Lazy<StringSerializer> __instance = new Lazy<StringSerializer>();
+        private static StringSerializer __instance = new StringSerializer();
 
         // constructors
         /// <summary>
@@ -45,9 +45,10 @@ namespace MongoDB.Bson.Serialization.Serializers
         /// <summary>
         /// Gets an instance of the StringSerializer class.
         /// </summary>
+        [Obsolete("Use constructor instead.")]
         public static StringSerializer Instance
         {
-            get { return __instance.Value; }
+            get { return __instance; }
         }
 
         // public methods

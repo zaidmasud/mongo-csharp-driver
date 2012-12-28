@@ -31,7 +31,7 @@ namespace MongoDB.Bson.Serialization.Serializers
     public class DateTimeSerializer : BsonBaseSerializer
     {
         // private static fields
-        private static Lazy<DateTimeSerializer> __instance = new Lazy<DateTimeSerializer>();
+        private static DateTimeSerializer __instance = new DateTimeSerializer();
 
         // constructors
         /// <summary>
@@ -46,9 +46,10 @@ namespace MongoDB.Bson.Serialization.Serializers
         /// <summary>
         /// Gets an instance of the DateTimeSerializer class.
         /// </summary>
+        [Obsolete("Use constructor instead.")]
         public static DateTimeSerializer Instance
         {
-            get { return __instance.Value; }
+            get { return __instance; }
         }
 
         // public methods

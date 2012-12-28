@@ -28,7 +28,7 @@ namespace MongoDB.Bson.Serialization.Serializers
     public class BsonDocumentWrapperSerializer : BsonBaseSerializer
     {
         // private static fields
-        private static Lazy<BsonDocumentWrapperSerializer> __instance = new Lazy<BsonDocumentWrapperSerializer>();
+        private static BsonDocumentWrapperSerializer __instance = new BsonDocumentWrapperSerializer();
 
         // constructors
         /// <summary>
@@ -44,7 +44,7 @@ namespace MongoDB.Bson.Serialization.Serializers
         /// </summary>
         public static BsonDocumentWrapperSerializer Instance
         {
-            get { return __instance.Value; }
+            get { return __instance; }
         }
 
         // public methods

@@ -31,7 +31,7 @@ namespace MongoDB.Bson.Serialization.Serializers
     public class IPAddressSerializer : BsonBaseSerializer
     {
         // private static fields
-        private static Lazy<IPAddressSerializer> __instance = new Lazy<IPAddressSerializer>();
+        private static IPAddressSerializer __instance = new IPAddressSerializer();
 
         // constructors
         /// <summary>
@@ -45,9 +45,10 @@ namespace MongoDB.Bson.Serialization.Serializers
         /// <summary>
         /// Gets an instance of the IPAddressSerializer class.
         /// </summary>
+        [Obsolete("Use constructor instead.")]
         public static IPAddressSerializer Instance
         {
-            get { return __instance.Value; }
+            get { return __instance; }
         }
 
         // public methods
