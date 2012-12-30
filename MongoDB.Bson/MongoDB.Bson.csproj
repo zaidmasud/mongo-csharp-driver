@@ -215,6 +215,7 @@
     <Compile Include="Serialization\Serializers\BsonTimestampSerializer.cs" />
     <Compile Include="Serialization\Serializers\BsonUndefinedSerializer.cs" />
     <Compile Include="Serialization\Serializers\BsonValueSerializer.cs" />
+    <Compile Include="Serialization\SerializerRegistry.cs" />
     <Compile Include="Serialization\Serializers\ByteArraySerializer.cs" />
     <Compile Include="Serialization\Serializers\ByteSerializer.cs" />
     <Compile Include="Serialization\Serializers\CharSerializer.cs" />

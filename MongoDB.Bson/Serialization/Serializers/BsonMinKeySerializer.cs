@@ -43,6 +43,7 @@ namespace MongoDB.Bson.Serialization.Serializers
         /// <summary>
         /// Gets an instance of the BsonMinKeySerializer class.
         /// </summary>
+        [Obsolete("Use constructor instead.")]
         public static BsonMinKeySerializer Instance
         {
             get { return __instance; }

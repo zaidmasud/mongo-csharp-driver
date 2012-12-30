@@ -46,6 +46,7 @@ namespace MongoDB.Bson.Serialization.Serializers
         /// <summary>
         /// Gets an instance of the BsonDocumentSerializer class.
         /// </summary>
+        [Obsolete("Use constructor instead.")]
         public static BsonDocumentSerializer Instance
         {
             get { return __instance; }
@@ -88,7 +89,7 @@ namespace MongoDB.Bson.Serialization.Serializers
                     while (bsonReader.ReadBsonType() != BsonType.EndOfDocument)
                     {
                         var name = bsonReader.ReadName();
-                        var value = (BsonValue)BsonValueSerializer.Instance.Deserialize(bsonReader, typeof(BsonValue), null);
+                        var value = (BsonValue)SerializerRegistry.BsonValueSerializer.Deserialize(bsonReader, typeof(BsonValue), null);
                         document.Add(name, value);
                     }
                     bsonReader.ReadEndDocument();
@@ -163,7 +164,7 @@ namespace MongoDB.Bson.Serialization.Serializers
             var wrapper = value as BsonDocumentWrapper;
             if (wrapper != null)
             {
-                BsonDocumentWrapperSerializer.Instance.Serialize(bsonWriter, nominalType, value, null);
+                SerializerRegistry.BsonDocumentWrapperSerializer.Serialize(bsonWriter, nominalType, value, null);
                 return;
             }
 
@@ -183,7 +184,7 @@ namespace MongoDB.Bson.Serialization.Serializers
             if (documentSerializationOptions.SerializeIdFirst && bsonDocument.TryGetElement("_id", out idElement))
             {
                 bsonWriter.WriteName(idElement.Name);
-                BsonValueSerializer.Instance.Serialize(bsonWriter, typeof(BsonValue), idElement.Value, null);
+                SerializerRegistry.BsonValueSerializer.Serialize(bsonWriter, typeof(BsonValue), idElement.Value, null);
             }
 
             foreach (var element in bsonDocument)
@@ -192,7 +193,7 @@ namespace MongoDB.Bson.Serialization.Serializers
                 if (!object.ReferenceEquals(element, idElement))
                 {
                     bsonWriter.WriteName(element.Name);
-                    BsonValueSerializer.Instance.Serialize(bsonWriter, typeof(BsonValue), element.Value, null);
+                    SerializerRegistry.BsonValueSerializer.Serialize(bsonWriter, typeof(BsonValue), element.Value, null);
                 }
             }
 

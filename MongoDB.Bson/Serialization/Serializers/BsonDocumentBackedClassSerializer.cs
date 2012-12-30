@@ -53,7 +53,7 @@ namespace MongoDB.Bson.Serialization
         {
             VerifyTypes(nominalType, actualType, typeof(TClass));
 
-            var backingDocument = (BsonDocument)BsonDocumentSerializer.Instance.Deserialize(bsonReader, typeof(BsonDocument), typeof(BsonDocument), options);
+            var backingDocument = (BsonDocument)SerializerRegistry.BsonDocumentSerializer.Deserialize(bsonReader, typeof(BsonDocument), typeof(BsonDocument), options);
             return CreateInstance(backingDocument);
         }
 
@@ -92,7 +92,7 @@ namespace MongoDB.Bson.Serialization
             else
             {
                 var backingDocument = ((BsonDocumentBackedClass)value).BackingDocument;
-                BsonDocumentSerializer.Instance.Serialize(bsonWriter, typeof(BsonDocument), backingDocument, options);
+                SerializerRegistry.BsonDocumentSerializer.Serialize(bsonWriter, typeof(BsonDocument), backingDocument, options);
             }
         }
 

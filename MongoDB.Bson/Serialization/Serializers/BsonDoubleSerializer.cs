@@ -43,6 +43,7 @@ namespace MongoDB.Bson.Serialization.Serializers
         /// <summary>
         /// Gets an instance of the BsonDoubleSerializer class.
         /// </summary>
+        [Obsolete("Use constructor instead.")]
         public static BsonDoubleSerializer Instance
         {
             get { return __instance; }

@@ -372,7 +372,7 @@ namespace MongoDB.Bson
         {
             using (var bsonReader = BsonReader.Create(json))
             {
-                return (BsonDocument)BsonDocumentSerializer.Instance.Deserialize(bsonReader, typeof(BsonDocument), null);
+                return (BsonDocument)SerializerRegistry.BsonDocumentSerializer.Deserialize(bsonReader, typeof(BsonDocument), null);
             }
         }
 
@@ -792,7 +792,7 @@ namespace MongoDB.Bson
         [Obsolete("Deserialize was intended to be private and will become private in a future release.")]
         public object Deserialize(BsonReader bsonReader, Type nominalType, IBsonSerializationOptions options)
         {
-            return BsonDocumentSerializer.Instance.Deserialize(bsonReader, nominalType, options);
+            return SerializerRegistry.BsonDocumentSerializer.Deserialize(bsonReader, nominalType, options);
         }
 
         /// <summary>
@@ -805,7 +805,7 @@ namespace MongoDB.Bson
         [Obsolete("GetDocumentId was intended to be private and will become private in a future release. Use document[\"_id\"] or document.GetValue(\"_id\") instead.")]
         public bool GetDocumentId(out object id, out Type idNominalType, out IIdGenerator idGenerator)
         {
-            var idProvider = (IBsonIdProvider)BsonDocumentSerializer.Instance;
+            var idProvider = (IBsonIdProvider)SerializerRegistry.BsonDocumentSerializer;
             return idProvider.GetDocumentId(this, out id, out idNominalType, out idGenerator);
         }
 
@@ -1042,7 +1042,7 @@ namespace MongoDB.Bson
         [Obsolete("Serialize was intended to be private and will become private in a future release.")]
         public void Serialize(BsonWriter bsonWriter, Type nominalType, IBsonSerializationOptions options)
         {
-            BsonDocumentSerializer.Instance.Serialize(bsonWriter, nominalType, this, options);
+            SerializerRegistry.BsonDocumentSerializer.Serialize(bsonWriter, nominalType, this, options);
         }
 
         /// <summary>
@@ -1088,7 +1088,7 @@ namespace MongoDB.Bson
         [Obsolete("SetDocumentId was intended to be private and will become private in a future release. Use document[\"_id\"] = value or document.Set(\"_id\", value) instead.")]
         public void SetDocumentId(object id)
         {
-            var idProvider = (IBsonIdProvider)BsonDocumentSerializer.Instance;
+            var idProvider = (IBsonIdProvider)SerializerRegistry.BsonDocumentSerializer;
             idProvider.SetDocumentId(this, id);
         }
 

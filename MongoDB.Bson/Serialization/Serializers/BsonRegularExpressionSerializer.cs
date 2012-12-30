@@ -43,6 +43,7 @@ namespace MongoDB.Bson.Serialization.Serializers
         /// <summary>
         /// Gets an instance of the BsonRegularExpressionSerializer class.
         /// </summary>
+        [Obsolete("Use constructor instead.")]
         public static BsonRegularExpressionSerializer Instance
         {
             get { return __instance; }

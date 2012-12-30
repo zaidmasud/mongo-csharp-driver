@@ -43,6 +43,7 @@ namespace MongoDB.Bson.Serialization.Serializers
         /// <summary>
         /// Gets an instance of the BsonNullSerializer class.
         /// </summary>
+        [Obsolete("Use constructor instead.")]
         public static BsonNullSerializer Instance
         {
             get { return __instance; }

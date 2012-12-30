@@ -43,6 +43,7 @@ namespace MongoDB.Bson.Serialization.Serializers
         /// <summary>
         /// Gets an instance of the BsonTimestampSerializer class.
         /// </summary>
+        [Obsolete("Use constructor instead.")]
         public static BsonTimestampSerializer Instance
         {
             get { return __instance; }

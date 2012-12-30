@@ -130,7 +130,7 @@ namespace MongoDB.Bson.Serialization
 
             if (typeof(BsonDocument).IsAssignableFrom(type))
             {
-                return BsonDocumentSerializer.Instance;
+                return SerializerRegistry.BsonDocumentSerializer;
             }
 
             if (type.IsGenericType)
