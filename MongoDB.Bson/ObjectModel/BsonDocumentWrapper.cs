@@ -255,7 +255,7 @@ namespace MongoDB.Bson
         [Obsolete("Serialize was intended to be private and will become private in a future release.")]
         public void Serialize(BsonWriter bsonWriter, Type nominalType, IBsonSerializationOptions options)
         {
-            BsonDocumentWrapperSerializer.Instance.Serialize(bsonWriter, nominalType, this, options);
+            BsonValueSerializers.BsonDocumentWrapperSerializer.Serialize(bsonWriter, nominalType, this, options);
         }
 
         /// <summary>

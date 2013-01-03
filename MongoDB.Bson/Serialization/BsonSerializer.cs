@@ -206,7 +206,7 @@ namespace MongoDB.Bson.Serialization
         {
             if (nominalType == typeof(BsonDocument))
             {
-                return BsonDocumentSerializer.Instance.Deserialize(bsonReader, nominalType, options);
+                return BsonValueSerializers.BsonDocumentSerializer.Deserialize(bsonReader, nominalType, options);
             }
 
             // if nominalType is an interface find out the actualType and use it instead
@@ -530,7 +530,7 @@ namespace MongoDB.Bson.Serialization
             // since we don't allow registering serializers for BsonDocument no lookup is needed
             if (type == typeof(BsonDocument))
             {
-                return BsonDocumentSerializer.Instance;
+                return BsonValueSerializers.BsonDocumentSerializer;
             }
 
             // since we don't allow registering serializers for classes that implement IBsonSerializable no lookup is needed
@@ -820,7 +820,7 @@ namespace MongoDB.Bson.Serialization
             // since we don't allow registering serializers for BsonDocument no lookup is needed
             if (nominalType == typeof(BsonDocument))
             {
-                BsonDocumentSerializer.Instance.Serialize(bsonWriter, nominalType, value, options);
+                BsonValueSerializers.BsonDocumentSerializer.Serialize(bsonWriter, nominalType, value, options);
                 return;
             }
 

@@ -499,7 +499,7 @@ namespace MongoDB.Driver
         {
             RegisterMember("Abbreviated", "abbreviated", new StringSerializer(), typeof(string), null);
             RegisterMember("Client", "client", new StringSerializer(), typeof(string), null);
-            RegisterMember("Command", "command", BsonDocumentSerializer.Instance, typeof(BsonDocument), null);
+            RegisterMember("Command", "command", BsonValueSerializers.BsonDocumentSerializer, typeof(BsonDocument), null);
             RegisterMember("CursorId", "cursorid", new Int64Serializer(), typeof(long), null);
             RegisterMember("Duration", "millis", new TimeSpanSerializer(), typeof(TimeSpan), new TimeSpanSerializationOptions(BsonType.Double, TimeSpanUnits.Milliseconds));
             RegisterMember("Error", "err", new StringSerializer(), typeof(string), null);
@@ -522,11 +522,11 @@ namespace MongoDB.Driver
             RegisterMember("NumberUpdated", "nupdated", new Int32Serializer(), typeof(int), null);
             RegisterMember("NumberOfYields", "numYield", new Int32Serializer(), typeof(int), null);
             RegisterMember("Op", "op", new StringSerializer(), typeof(string), null);
-            RegisterMember("Query", "query", BsonDocumentSerializer.Instance, typeof(BsonDocument), null);
+            RegisterMember("Query", "query", BsonValueSerializers.BsonDocumentSerializer, typeof(BsonDocument), null);
             RegisterMember("ResponseLength", "responseLength", new Int32Serializer(), typeof(int), null);
             RegisterMember("ScanAndOrder", "scanAndOrder", new BooleanSerializer(), typeof(bool), null);
             RegisterMember("Timestamp", "ts", new DateTimeSerializer(), typeof(DateTime), null);
-            RegisterMember("UpdateObject", "updateobj", BsonDocumentSerializer.Instance, typeof(BsonDocument), null);
+            RegisterMember("UpdateObject", "updateobj", BsonValueSerializers.BsonDocumentSerializer, typeof(BsonDocument), null);
             RegisterMember("Upsert", "upsert", new BooleanSerializer(), typeof(bool), null);
             RegisterMember("User", "user", new StringSerializer(), typeof(string), null);
         }

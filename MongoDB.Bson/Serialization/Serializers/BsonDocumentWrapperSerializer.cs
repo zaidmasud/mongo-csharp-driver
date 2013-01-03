@@ -38,6 +38,7 @@ namespace MongoDB.Bson.Serialization.Serializers
         /// <summary>
         /// Gets an instance of the BsonDocumentWrapperSerializer class.
         /// </summary>
+        [Obsolete("Use constructor instead.")]
         public static BsonDocumentWrapperSerializer Instance
         {
             get { return __instance; }

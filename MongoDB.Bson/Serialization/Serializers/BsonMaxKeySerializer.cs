@@ -39,6 +39,7 @@ namespace MongoDB.Bson.Serialization.Serializers
         /// <summary>
         /// Gets an instance of the BsonMaxKeySerializer class.
         /// </summary>
+        [Obsolete("Use constructor instead.")]
         public static BsonMaxKeySerializer Instance
         {
             get { return __instance; }

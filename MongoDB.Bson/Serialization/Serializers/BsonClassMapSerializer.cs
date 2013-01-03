@@ -374,7 +374,7 @@ namespace MongoDB.Bson.Serialization
                         if (discriminator != null)
                         {
                             bsonWriter.WriteName(discriminatorConvention.ElementName);
-                            BsonValueSerializer.Instance.Serialize(bsonWriter, typeof(BsonValue), discriminator, null);
+                            BsonValueSerializers.BsonValueSerializer.Serialize(bsonWriter, typeof(BsonValue), discriminator, null);
                         }
                     }
                 }
@@ -443,7 +443,7 @@ namespace MongoDB.Bson.Serialization
                     extraElements = new BsonDocument();
                     extraElementsMemberMap.Setter(obj, extraElements);
                 }
-                var bsonValue = (BsonValue)BsonValueSerializer.Instance.Deserialize(bsonReader, typeof(BsonValue), null);
+                var bsonValue = (BsonValue)BsonValueSerializers.BsonValueSerializer.Deserialize(bsonReader, typeof(BsonValue), null);
                 extraElements[elementName] = bsonValue;
             }
             else
@@ -461,7 +461,7 @@ namespace MongoDB.Bson.Serialization
                     }
                     extraElementsMemberMap.Setter(obj, extraElements);
                 }
-                var bsonValue = (BsonValue)BsonValueSerializer.Instance.Deserialize(bsonReader, typeof(BsonValue), null);
+                var bsonValue = (BsonValue)BsonValueSerializers.BsonValueSerializer.Deserialize(bsonReader, typeof(BsonValue), null);
                 extraElements[elementName] = BsonTypeMapper.MapToDotNetValue(bsonValue);
             }
         }
@@ -558,7 +558,7 @@ namespace MongoDB.Bson.Serialization
                     foreach (var element in bsonDocument)
                     {
                         bsonWriter.WriteName(element.Name);
-                        BsonValueSerializer.Instance.Serialize(bsonWriter, typeof(BsonValue), element.Value, null);
+                        BsonValueSerializers.BsonValueSerializer.Serialize(bsonWriter, typeof(BsonValue), element.Value, null);
                     }
                 }
                 else
@@ -575,7 +575,7 @@ namespace MongoDB.Bson.Serialization
                         else
                         {
                             var bsonValue = BsonTypeMapper.MapToBsonValue(dictionary[key]);
-                            BsonValueSerializer.Instance.Serialize(bsonWriter, typeof(BsonValue), bsonValue, null);
+                            BsonValueSerializers.BsonValueSerializer.Serialize(bsonWriter, typeof(BsonValue), bsonValue, null);
                         }
                     }
                 }

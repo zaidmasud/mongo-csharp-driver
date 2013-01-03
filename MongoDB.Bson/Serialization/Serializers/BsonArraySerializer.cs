@@ -39,6 +39,7 @@ namespace MongoDB.Bson.Serialization.Serializers
         /// <summary>
         /// Gets an instance of the BsonArraySerializer class.
         /// </summary>
+        [Obsolete("Use constructor instead.")]
         public static BsonArraySerializer Instance
         {
             get { return __instance; }
@@ -69,7 +70,7 @@ namespace MongoDB.Bson.Serialization.Serializers
                     var array = new BsonArray();
                     while (bsonReader.ReadBsonType() != BsonType.EndOfDocument)
                     {
-                        var value = (BsonValue)BsonValueSerializer.Instance.Deserialize(bsonReader, typeof(BsonValue), null);
+                        var value = (BsonValue)BsonValueSerializers.BsonValueSerializer.Deserialize(bsonReader, typeof(BsonValue), null);
                         array.Add(value);
                     }
                     bsonReader.ReadEndArray();
@@ -102,7 +103,7 @@ namespace MongoDB.Bson.Serialization.Serializers
             bsonWriter.WriteStartArray();
             for (int i = 0; i < array.Count; i++)
             {
-                BsonValueSerializer.Instance.Serialize(bsonWriter, typeof(BsonValue), array[i], null);
+                BsonValueSerializers.BsonValueSerializer.Serialize(bsonWriter, typeof(BsonValue), array[i], null);
             }
             bsonWriter.WriteEndArray();
         }
