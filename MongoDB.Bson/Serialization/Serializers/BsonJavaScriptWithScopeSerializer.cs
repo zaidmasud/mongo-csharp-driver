@@ -67,7 +67,7 @@ namespace MongoDB.Bson.Serialization.Serializers
             {
                 case BsonType.JavaScriptWithScope:
                     var code = bsonReader.ReadJavaScriptWithScope();
-                    var scope = (BsonDocument)BsonValueSerializers.BsonDocumentSerializer.Deserialize(bsonReader, typeof(BsonDocument), null);
+                    var scope = (BsonDocument)CachedSerializers.BsonDocumentSerializer.Deserialize(bsonReader, typeof(BsonDocument), null);
                     return new BsonJavaScriptWithScope(code, scope);
                 default:
                     var message = string.Format("Cannot deserialize BsonJavaScriptWithScope from BsonType {0}.", bsonType);
@@ -95,7 +95,7 @@ namespace MongoDB.Bson.Serialization.Serializers
 
             var script = (BsonJavaScriptWithScope)value;
             bsonWriter.WriteJavaScriptWithScope(script.Code);
-            BsonValueSerializers.BsonDocumentSerializer.Serialize(bsonWriter, typeof(BsonDocument), script.Scope, null);
+            CachedSerializers.BsonDocumentSerializer.Serialize(bsonWriter, typeof(BsonDocument), script.Scope, null);
         }
     }
 }

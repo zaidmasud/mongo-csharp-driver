@@ -68,9 +68,10 @@ namespace MongoDB.Bson.Serialization.Serializers
                 case BsonType.Array:
                     bsonReader.ReadStartArray();
                     var array = new BsonArray();
+                    var bsonValueSerializer = CachedSerializers.BsonValueSerializer;
                     while (bsonReader.ReadBsonType() != BsonType.EndOfDocument)
                     {
-                        var value = (BsonValue)BsonValueSerializers.BsonValueSerializer.Deserialize(bsonReader, typeof(BsonValue), null);
+                        var value = (BsonValue)bsonValueSerializer.Deserialize(bsonReader, typeof(BsonValue), null);
                         array.Add(value);
                     }
                     bsonReader.ReadEndArray();
@@ -101,9 +102,10 @@ namespace MongoDB.Bson.Serialization.Serializers
 
             var array = (BsonArray)value;
             bsonWriter.WriteStartArray();
+            var bsonValueSerializer = CachedSerializers.BsonValueSerializer;
             for (int i = 0; i < array.Count; i++)
             {
-                BsonValueSerializers.BsonValueSerializer.Serialize(bsonWriter, typeof(BsonValue), array[i], null);
+                bsonValueSerializer.Serialize(bsonWriter, typeof(BsonValue), array[i], null);
             }
             bsonWriter.WriteEndArray();
         }

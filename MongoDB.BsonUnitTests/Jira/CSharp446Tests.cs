@@ -31,7 +31,7 @@ namespace MongoDB.BsonUnitTests.Jira
             object id;
             Type nominalType;
             IIdGenerator idGenerator;
-            Assert.IsTrue(((IBsonIdProvider)BsonValueSerializers.BsonDocumentSerializer).GetDocumentId(document, out id, out nominalType, out idGenerator));
+            Assert.IsTrue(((IBsonIdProvider)CachedSerializers.BsonDocumentSerializer).GetDocumentId(document, out id, out nominalType, out idGenerator));
             Assert.IsInstanceOf<BsonInt32>(id);
             Assert.AreEqual(new BsonInt32(1), id);
             Assert.AreEqual(typeof(BsonValue), nominalType);
@@ -43,7 +43,7 @@ namespace MongoDB.BsonUnitTests.Jira
         {
             var document = new BsonDocument { { "x", "abc" } };
             var id = new BsonInt32(1);
-            ((IBsonIdProvider)BsonValueSerializers.BsonDocumentSerializer).SetDocumentId(document, id);
+            ((IBsonIdProvider)CachedSerializers.BsonDocumentSerializer).SetDocumentId(document, id);
             Assert.IsTrue(document["_id"].IsInt32);
             Assert.AreEqual(1, document["_id"].AsInt32);
         }
@@ -52,7 +52,7 @@ namespace MongoDB.BsonUnitTests.Jira
         public void TestSetDocumentIdInt32()
         {
             var document = new BsonDocument { { "x", "abc" } };
-            ((IBsonIdProvider)BsonValueSerializers.BsonDocumentSerializer).SetDocumentId(document, 1); // 1 will be converted to a BsonInt32
+            ((IBsonIdProvider)CachedSerializers.BsonDocumentSerializer).SetDocumentId(document, 1); // 1 will be converted to a BsonInt32
             Assert.IsTrue(document["_id"].IsInt32);
             Assert.AreEqual(1, document["_id"].AsInt32);
         }

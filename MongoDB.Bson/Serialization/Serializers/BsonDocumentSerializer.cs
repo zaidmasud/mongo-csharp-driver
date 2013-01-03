@@ -82,10 +82,11 @@ namespace MongoDB.Bson.Serialization.Serializers
 
                     bsonReader.ReadStartDocument();
                     var document = new BsonDocument(documentSerializationOptions.AllowDuplicateNames);
+                    var bsonValueSerializer = CachedSerializers.BsonValueSerializer;
                     while (bsonReader.ReadBsonType() != BsonType.EndOfDocument)
                     {
                         var name = bsonReader.ReadName();
-                        var value = (BsonValue)BsonValueSerializers.BsonValueSerializer.Deserialize(bsonReader, typeof(BsonValue), null);
+                        var value = (BsonValue)bsonValueSerializer.Deserialize(bsonReader, typeof(BsonValue), null);
                         document.Add(name, value);
                     }
                     bsonReader.ReadEndDocument();
@@ -160,7 +161,7 @@ namespace MongoDB.Bson.Serialization.Serializers
             var wrapper = value as BsonDocumentWrapper;
             if (wrapper != null)
             {
-                BsonValueSerializers.BsonDocumentWrapperSerializer.Serialize(bsonWriter, nominalType, value, null);
+                CachedSerializers.BsonDocumentWrapperSerializer.Serialize(bsonWriter, nominalType, value, null);
                 return;
             }
 
@@ -176,11 +177,13 @@ namespace MongoDB.Bson.Serialization.Serializers
             }
 
             bsonWriter.WriteStartDocument();
+            var bsonValueSerializer = CachedSerializers.BsonValueSerializer;
+
             BsonElement idElement = null;
             if (documentSerializationOptions.SerializeIdFirst && bsonDocument.TryGetElement("_id", out idElement))
             {
                 bsonWriter.WriteName(idElement.Name);
-                BsonValueSerializers.BsonValueSerializer.Serialize(bsonWriter, typeof(BsonValue), idElement.Value, null);
+                bsonValueSerializer.Serialize(bsonWriter, typeof(BsonValue), idElement.Value, null);
             }
 
             foreach (var element in bsonDocument)
@@ -189,7 +192,7 @@ namespace MongoDB.Bson.Serialization.Serializers
                 if (!object.ReferenceEquals(element, idElement))
                 {
                     bsonWriter.WriteName(element.Name);
-                    BsonValueSerializers.BsonValueSerializer.Serialize(bsonWriter, typeof(BsonValue), element.Value, null);
+                    bsonValueSerializer.Serialize(bsonWriter, typeof(BsonValue), element.Value, null);
                 }
             }
 

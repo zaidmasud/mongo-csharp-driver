@@ -172,7 +172,7 @@ namespace MongoDB.Driver.Builders
         /// <param name="options">The serialization options.</param>
         protected override void Serialize(BsonWriter bsonWriter, Type nominalType, IBsonSerializationOptions options)
         {
-            BsonValueSerializers.BsonDocumentSerializer.Serialize(bsonWriter, nominalType, _document, options);
+            CachedSerializers.BsonDocumentSerializer.Serialize(bsonWriter, nominalType, _document, options);
         }
     }
 }

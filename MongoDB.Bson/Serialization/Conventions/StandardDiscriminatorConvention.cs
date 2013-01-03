@@ -123,7 +123,7 @@ namespace MongoDB.Bson.Serialization.Conventions
                     var actualType = nominalType;
                     if (bsonReader.FindElement(_elementName))
                     {
-                        var discriminator = (BsonValue)BsonValueSerializers.BsonValueSerializer.Deserialize(bsonReader, typeof(BsonValue), null);
+                        var discriminator = (BsonValue)CachedSerializers.BsonValueSerializer.Deserialize(bsonReader, typeof(BsonValue), null);
                         if (discriminator.IsBsonArray)
                         {
                             discriminator = discriminator.AsBsonArray.Last(); // last item is leaf class discriminator

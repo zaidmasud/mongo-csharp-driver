@@ -38,7 +38,7 @@ namespace MongoDB.Bson.Serialization.Serializers
         /// <summary>
         /// Gets an instance of the BsonIBsonSerializableSerializer class.
         /// </summary>
-        // TODO: [Obsolete("Use constructor instead.")] ???
+        [Obsolete("Use constructor instead.")]
         public static BsonIBsonSerializableSerializer Instance
         {
             get { return __instance; }

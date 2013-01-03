@@ -206,7 +206,7 @@ namespace MongoDB.Bson.Serialization
         {
             if (nominalType == typeof(BsonDocument))
             {
-                return BsonValueSerializers.BsonDocumentSerializer.Deserialize(bsonReader, nominalType, options);
+                return CachedSerializers.BsonDocumentSerializer.Deserialize(bsonReader, nominalType, options);
             }
 
             // if nominalType is an interface find out the actualType and use it instead
@@ -527,12 +527,6 @@ namespace MongoDB.Bson.Serialization
         /// <returns>A serializer for the Type.</returns>
         public static IBsonSerializer LookupSerializer(Type type)
         {
-            // since we don't allow registering serializers for classes that implement IBsonSerializable no lookup is needed
-            if (typeof(IBsonSerializable).IsAssignableFrom(type))
-            {
-                return Serializers.BsonIBsonSerializableSerializer.Instance;
-            }
-
             __configLock.EnterReadLock();
             try
             {
@@ -732,12 +726,6 @@ namespace MongoDB.Bson.Serialization
         /// <param name="serializer">The serializer.</param>
         public static void RegisterSerializer(Type type, IBsonSerializer serializer)
         {
-            if (typeof(IBsonSerializable).IsAssignableFrom(type))
-            {
-                var message = string.Format("A serializer cannot be registered for type {0} because it implements IBsonSerializable.", BsonUtils.GetFriendlyTypeName(type));
-                throw new BsonSerializationException(message);
-            }
-
             __configLock.EnterWriteLock();
             try
             {
@@ -804,18 +792,9 @@ namespace MongoDB.Bson.Serialization
             object value,
             IBsonSerializationOptions options)
         {
-            // since we don't allow registering serializers for BsonDocument no lookup is needed
             if (nominalType == typeof(BsonDocument))
             {
-                BsonValueSerializers.BsonDocumentSerializer.Serialize(bsonWriter, nominalType, value, options);
-                return;
-            }
-
-            // since we don't allow registering serializers for classes that implement IBsonSerializable no lookup is needed
-            var bsonSerializable = value as IBsonSerializable;
-            if (bsonSerializable != null)
-            {
-                bsonSerializable.Serialize(bsonWriter, nominalType, options);
+                CachedSerializers.BsonDocumentSerializer.Serialize(bsonWriter, nominalType, value, options);
                 return;
             }
 
