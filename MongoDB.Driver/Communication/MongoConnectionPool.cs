@@ -86,12 +86,12 @@ namespace MongoDB.Driver.Internal
         }
 
         // internal methods
-        internal MongoConnection AcquireConnection(string databaseName, MongoCredentials credentials)
+        internal MongoConnection AcquireConnection(MongoCredentials credentials)
         {
-            return AcquireConnection(databaseName, credentials, _defaultAcquireConnectionOptions);
+            return AcquireConnection(credentials, _defaultAcquireConnectionOptions);
         }
 
-        internal MongoConnection AcquireConnection(string databaseName, MongoCredentials credentials, AcquireConnectionOptions options)
+        internal MongoConnection AcquireConnection(MongoCredentials credentials, AcquireConnectionOptions options)
         {
             MongoConnection connectionToClose = null;
             try
@@ -112,7 +112,9 @@ namespace MongoDB.Driver.Internal
                         {
                             if (_availableConnections.Count > 0)
                             {
-                                // first try to find the most recently used connection that is already authenticated for this database
+                                var identity = (credentials != null) ? credentials.Identity : null;
+
+                                // first try to find the most recently used connection that is already authenticated for this identity
                                 for (int i = _availableConnections.Count - 1; i >= 0; i--)
                                 {
                                     var connection = _availableConnections[i];
@@ -122,18 +124,18 @@ namespace MongoDB.Driver.Internal
                                         connectionToClose = connection;
                                         return new MongoConnection(this);
                                     }
-                                    else if (connection.IsAuthenticated(databaseName, credentials))
+                                    else if (connection.IsAuthenticated(identity))
                                     {
                                         _availableConnections.RemoveAt(i);
                                         return connection;
                                     }
                                 }
 
-                                // otherwise find the most recently used connection that can be authenticated for this database
+                                // otherwise find the most recently used connection that can be authenticated for this identity
                                 for (int i = _availableConnections.Count - 1; i >= 0; i--)
                                 {
                                     var connection = _availableConnections[i];
-                                    if (connection.CanAuthenticate(databaseName, credentials))
+                                    if (connection.CanAuthenticate(identity))
                                     {
                                         _availableConnections.RemoveAt(i);
                                         return connection;

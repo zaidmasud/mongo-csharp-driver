@@ -934,7 +934,7 @@ namespace MongoDB.Driver
             }
 
             var serverInstance = _serverProxy.ChooseServerInstance(readPreference);
-            var connection = serverInstance.AcquireConnection(initialDatabase.Name, initialDatabase.Credentials);
+            var connection = serverInstance.AcquireConnection(initialDatabase.Credentials);
 
             lock (_serverLock)
             {
@@ -970,7 +970,7 @@ namespace MongoDB.Driver
                 }
             }
 
-            var connection = serverInstance.AcquireConnection(initialDatabase.Name, initialDatabase.Credentials);
+            var connection = serverInstance.AcquireConnection(initialDatabase.Credentials);
 
             lock (_serverLock)
             {
@@ -1028,7 +1028,7 @@ namespace MongoDB.Driver
         }
 
         // internal methods
-        internal MongoConnection AcquireConnection(MongoDatabase database, ReadPreference readPreference)
+        internal MongoConnection AcquireConnection(MongoCredentials credentials, ReadPreference readPreference)
         {
             MongoConnection requestConnection = null;
             lock (_serverLock)
@@ -1049,15 +1049,15 @@ namespace MongoDB.Driver
             // check authentication outside of lock
             if (requestConnection != null)
             {
-                requestConnection.CheckAuthentication(database.Name, database.Credentials); // will throw exception if authentication fails
+                requestConnection.CheckAuthentication(credentials); // will throw exception if authentication fails
                 return requestConnection;
             }
 
             var serverInstance = _serverProxy.ChooseServerInstance(readPreference);
-            return serverInstance.AcquireConnection(database.Name, database.Credentials);
+            return serverInstance.AcquireConnection(credentials);
         }
 
-        internal MongoConnection AcquireConnection(MongoDatabase database, MongoServerInstance serverInstance)
+        internal MongoConnection AcquireConnection(MongoCredentials credentials, MongoServerInstance serverInstance)
         {
             MongoConnection requestConnection = null;
             lock (_serverLock)
@@ -1081,11 +1081,11 @@ namespace MongoDB.Driver
             // check authentication outside of lock
             if (requestConnection != null)
             {
-                requestConnection.CheckAuthentication(database.Name, database.Credentials); // will throw exception if authentication fails
+                requestConnection.CheckAuthentication(credentials); // will throw exception if authentication fails
                 return requestConnection;
             }
 
-            return serverInstance.AcquireConnection(database.Name, database.Credentials);
+            return serverInstance.AcquireConnection(credentials);
         }
 
         internal void ReleaseConnection(MongoConnection connection)

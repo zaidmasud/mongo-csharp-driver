@@ -34,6 +34,7 @@ namespace MongoDB.Driver
         /// </summary>
         /// <param name="credentials">The user's credentials.</param>
         /// <param name="isReadOnly">Whether the user has read-only access.</param>
+        [Obsolete("Use one of the other constructors instead.")]
         public MongoUser(MongoCredentials credentials, bool isReadOnly)
         {
             if (credentials == null)

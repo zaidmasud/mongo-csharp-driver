@@ -396,7 +396,9 @@ namespace MongoDB.Driver
             MongoCredentials defaultCredentials = null;
             if (builder.Username != null && builder.Password != null)
             {
-                defaultCredentials = new MongoCredentials(builder.Username, builder.Password);
+                var identity = MongoIdentity.ParseUsername(builder.Username);
+                var evidence = new MongoPasswordEvidence(builder.Password);
+                defaultCredentials = new MongoCredentials(identity, evidence, MongoAuthenticationType.NonceAuthenticate);
             }
 
             var clientSettings = new MongoClientSettings();

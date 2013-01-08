@@ -76,6 +76,18 @@ namespace MongoDB.Driver
 
             settings = settings.Clone();
             settings.ApplyDefaultValues(server.Settings);
+
+            // if a floating local identity was provided convert it to a local identity on this database
+            if (settings.Credentials != null)
+            {
+                var floatingLocalIdentity = settings.Credentials.Identity as MongoFloatingLocalIdentity;
+                if (floatingLocalIdentity != null)
+                {
+                    var localIdentity = new MongoLocalIdentity(name, floatingLocalIdentity.Username);
+                    settings.Credentials = new MongoCredentials(localIdentity, settings.Credentials.Evidence, settings.Credentials.AuthenticationType);
+                }
+            }
+
             settings.Freeze();
 
             _server = server;
@@ -262,6 +274,7 @@ namespace MongoDB.Driver
         /// Adds a user to this database.
         /// </summary>
         /// <param name="credentials">The user's credentials.</param>
+        [Obsolete("Use one of the other overloads instead.")]
         public virtual void AddUser(MongoCredentials credentials)
         {
             AddUser(credentials, false);
@@ -272,6 +285,7 @@ namespace MongoDB.Driver
         /// </summary>
         /// <param name="credentials">The user's credentials.</param>
         /// <param name="readOnly">True if the user is a read-only user.</param>
+        [Obsolete("Use one of the other overloads instead.")]
         public virtual void AddUser(MongoCredentials credentials, bool readOnly)
         {
             var user = new MongoUser(credentials, readOnly);

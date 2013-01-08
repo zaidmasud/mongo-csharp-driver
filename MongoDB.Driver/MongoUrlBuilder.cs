@@ -744,7 +744,9 @@ namespace MongoDB.Driver
 
                 if (username != "" && password != "")
                 {
-                    _defaultCredentials = new MongoCredentials(username, password);
+                    var identity = MongoIdentity.ParseUsername(username);
+                    var evidence = new MongoPasswordEvidence(password);
+                    _defaultCredentials = new MongoCredentials(identity, evidence, MongoAuthenticationType.NonceAuthenticate);
                 }
                 else
                 {
@@ -925,7 +927,7 @@ namespace MongoDB.Driver
             url.Append("mongodb://");
             if (_defaultCredentials != null)
             {
-                url.AppendFormat("{0}:{1}@", Uri.EscapeDataString(_defaultCredentials.Username), Uri.EscapeDataString(_defaultCredentials.Password));
+                url.AppendFormat("{0}:{1}@", Uri.EscapeDataString(_defaultCredentials.Identity.ToString()), Uri.EscapeDataString(_defaultCredentials.Evidence.ToString()));
             }
             if (_servers != null)
             {

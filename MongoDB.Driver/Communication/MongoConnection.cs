@@ -147,13 +147,23 @@ namespace MongoDB.Driver.Internal
         }
 
         // internal methods
-        internal void Authenticate(string databaseName, MongoCredentials credentials)
+        internal void Authenticate(MongoCredentials credentials)
         {
+            // TODO: support other authentication types
+            if (credentials.AuthenticationType != MongoAuthenticationType.NonceAuthenticate)
+            {
+                var message = string.Format("Authentication type '{0}' is not supported.", credentials.AuthenticationType);
+                throw new NotSupportedException(message);
+            }
+
             if (_state == MongoConnectionState.Closed) { throw new InvalidOperationException("Connection is closed."); }
             lock (_connectionLock)
             {
+                var localIdentity = (MongoLocalIdentity)credentials.Identity;
+                var password = ((MongoPasswordEvidence)credentials.Evidence).Password;
+
                 var nonceCommand = new CommandDocument("getnonce", 1);
-                var commandResult = RunCommand(databaseName, QueryFlags.None, nonceCommand, false);
+                var commandResult = RunCommand(localIdentity.DatabaseName, QueryFlags.None, nonceCommand, false);
                 if (!commandResult.Ok)
                 {
                     throw new MongoAuthenticationException(
@@ -162,27 +172,27 @@ namespace MongoDB.Driver.Internal
                 }
 
                 var nonce = commandResult.Response["nonce"].AsString;
-                var passwordDigest = MongoUtils.Hash(credentials.Username + ":mongo:" + credentials.Password);
-                var digest = MongoUtils.Hash(nonce + credentials.Username + passwordDigest);
+                var passwordDigest = MongoUtils.Hash(localIdentity.Username + ":mongo:" + password);
+                var digest = MongoUtils.Hash(nonce + localIdentity.Username + passwordDigest);
                 var authenticateCommand = new CommandDocument
                 {
                     { "authenticate", 1 },
-                    { "user", credentials.Username },
+                    { "user", localIdentity.Username },
                     { "nonce", nonce },
                     { "key", digest }
                 };
 
-                commandResult = RunCommand(databaseName, QueryFlags.None, authenticateCommand, false);
+                commandResult = RunCommand(localIdentity.DatabaseName, QueryFlags.None, authenticateCommand, false);
                 if (!commandResult.Ok)
                 {
-                    var message = string.Format("Invalid credentials for database '{0}'.", databaseName);
+                    var message = string.Format("Invalid credentials for database '{0}'.", localIdentity.DatabaseName);
                     throw new MongoAuthenticationException(
                         message,
                         new MongoCommandException(commandResult));
                 }
 
-                var authentication = new Authentication(credentials);
-                _authentications.Add(databaseName, authentication);
+                var authentication = new Authentication(localIdentity);
+                _authentications.Add(localIdentity.DatabaseName, authentication);
             }
         }
 
@@ -194,13 +204,9 @@ namespace MongoDB.Driver.Internal
         //    (with the restriction that a particular database can only be authenticated against once and therefore with only one set of credentials)
 
         // assume that IsAuthenticated was called first and returned false
-        internal bool CanAuthenticate(string databaseName, MongoCredentials credentials)
+        internal bool CanAuthenticate(MongoIdentity identity)
         {
             if (_state == MongoConnectionState.Closed) { throw new InvalidOperationException("Connection is closed."); }
-            if (databaseName == null)
-            {
-                return true;
-            }
 
             if (_authentications.Count == 0)
             {
@@ -210,13 +216,15 @@ namespace MongoDB.Driver.Internal
             else
             {
                 // a connection with existing authentications can't be used without credentials
-                if (credentials == null)
+                if (identity == null)
                 {
                     return false;
                 }
 
+                var localIdentity = (MongoLocalIdentity)identity;
+
                 // a connection with existing authentications can't be used with new admin credentials
-                if (credentials.Admin)
+                if (localIdentity.DatabaseName == "admin")
                 {
                     return false;
                 }
@@ -228,7 +236,7 @@ namespace MongoDB.Driver.Internal
                 }
 
                 // a connection with an existing authentication to a database can't authenticate for the same database again
-                if (_authentications.ContainsKey(databaseName))
+                if (_authentications.ContainsKey(localIdentity.DatabaseName))
                 {
                     return false;
                 }
@@ -237,7 +245,7 @@ namespace MongoDB.Driver.Internal
             }
         }
 
-        internal void CheckAuthentication(string databaseName, MongoCredentials credentials)
+        internal void CheckAuthentication(MongoCredentials credentials)
         {
             if (_state == MongoConnectionState.Closed) { throw new InvalidOperationException("Connection is closed."); }
             if (credentials == null)
@@ -249,14 +257,15 @@ namespace MongoDB.Driver.Internal
             }
             else
             {
-                var authenticationDatabaseName = credentials.Admin ? "admin" : databaseName;
+                var localIdentity = (MongoLocalIdentity)credentials.Identity;
+
                 Authentication authentication;
-                if (_authentications.TryGetValue(authenticationDatabaseName, out authentication))
+                if (_authentications.TryGetValue(localIdentity.DatabaseName, out authentication))
                 {
-                    if (authentication.Credentials != credentials)
+                    if (authentication.Identity != localIdentity)
                     {
                         // this shouldn't happen because a connection would have been chosen from the connection pool only if it was viable
-                        if (authenticationDatabaseName == "admin")
+                        if (localIdentity.DatabaseName == "admin")
                         {
                             throw new MongoInternalException("Connection already authenticated to the admin database with different credentials.");
                         }
@@ -269,12 +278,12 @@ namespace MongoDB.Driver.Internal
                 }
                 else
                 {
-                    if (authenticationDatabaseName == "admin" && _authentications.Count != 0)
+                    if (localIdentity.DatabaseName == "admin" && _authentications.Count != 0)
                     {
                         // this shouldn't happen because a connection would have been chosen from the connection pool only if it was viable
                         throw new MongoInternalException("The connection cannot be authenticated against the admin database because it is already authenticated against other databases.");
                     }
-                    Authenticate(authenticationDatabaseName, credentials);
+                    Authenticate(credentials);
                 }
             }
         }
@@ -305,27 +314,24 @@ namespace MongoDB.Driver.Internal
             }
         }
 
-        internal bool IsAuthenticated(string databaseName, MongoCredentials credentials)
+        internal bool IsAuthenticated(MongoIdentity identity)
         {
             if (_state == MongoConnectionState.Closed) { throw new InvalidOperationException("Connection is closed."); }
-            if (databaseName == null)
-            {
-                return true;
-            }
 
             lock (_connectionLock)
             {
-                if (credentials == null)
+                if (identity == null)
                 {
                     return _authentications.Count == 0;
                 }
                 else
                 {
-                    var authenticationDatabaseName = credentials.Admin ? "admin" : databaseName;
+                    var localIdentity = (MongoLocalIdentity)identity;
+
                     Authentication authentication;
-                    if (_authentications.TryGetValue(authenticationDatabaseName, out authentication))
+                    if (_authentications.TryGetValue(localIdentity.DatabaseName, out authentication))
                     {
-                        return credentials == authentication.Credentials;
+                        return identity == authentication.Identity;
                     }
                     else
                     {
@@ -631,24 +637,24 @@ namespace MongoDB.Driver.Internal
         }
 
         // private nested classes
-        // keeps track of what credentials were used with a given database
+        // keeps track of what identities were used with a given database
         // and when that database was last used on this connection
         private class Authentication
         {
             // private fields
-            private MongoCredentials _credentials;
+            private MongoIdentity _identity;
             private DateTime _lastUsed;
 
             // constructors
-            public Authentication(MongoCredentials credentials)
+            public Authentication(MongoIdentity identity)
             {
-                _credentials = credentials;
+                _identity = identity;
                 _lastUsed = DateTime.UtcNow;
             }
 
-            public MongoCredentials Credentials
+            public MongoIdentity Identity
             {
-                get { return _credentials; }
+                get { return _identity; }
             }
 
             public DateTime LastUsed

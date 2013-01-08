@@ -556,7 +556,9 @@ namespace MongoDB.Driver
             MongoCredentials defaultCredentials = null;
             if (builder.Username != null && builder.Password != null)
             {
-                defaultCredentials = new MongoCredentials(builder.Username, builder.Password);
+                var identity = MongoIdentity.ParseUsername(builder.Username);
+                var evidence = new MongoPasswordEvidence(builder.Password);
+                defaultCredentials = new MongoCredentials(identity, evidence, MongoAuthenticationType.NonceAuthenticate);
             }
 
             var serverSettings = new MongoServerSettings();
@@ -746,16 +748,7 @@ namespace MongoDB.Driver
                 return credentials;
             }
 
-            if (databaseName == "admin" && _defaultCredentials != null && _defaultCredentials.Admin)
-            {
-                return _defaultCredentials;
-            }
-            if (databaseName != "admin")
-            {
-                return _defaultCredentials;
-            }
-
-            return null;
+            return _defaultCredentials;
         }
 
         /// <summary>
