@@ -19,16 +19,20 @@ using System.Linq;
 namespace MongoDB.Driver
 {
     /// <summary>
-    /// Represents a authentication protocol type.
+    /// Represents the authentication protocol to use.
     /// </summary>
-    public enum MongoAuthenticationType
+    public enum MongoAuthenticationProtocol
     {
         /// <summary>
-        /// MongoDB's original nonce/authenticate protocol.
+        /// Use the best protocol available.
         /// </summary>
-        NonceAuthenticate,
+        BestAvailable,
         /// <summary>
-        /// MongoDB's new SASL protocol.
+        /// Use MongoDB's original authentication protocol.
+        /// </summary>
+        Original,
+        /// <summary>
+        /// Use MongoDB's SASL authentication protocol.
         /// </summary>
         Sasl
     }

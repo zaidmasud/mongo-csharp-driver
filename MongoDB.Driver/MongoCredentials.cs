@@ -27,7 +27,7 @@ namespace MongoDB.Driver
         // private fields
         private readonly MongoIdentity _identity;
         private readonly MongoIdentityEvidence _evidence;
-        private readonly MongoAuthenticationType _authenticationType;
+        private readonly MongoAuthenticationProtocol _authenticationType;
 
         // constructors
         /// <summary>
@@ -36,7 +36,7 @@ namespace MongoDB.Driver
         /// <param name="identity">The identity.</param>
         /// <param name="evidence">The evidence used to prove the identity.</param>
         /// <param name="authenticationType">The authentication type.</param>
-        public MongoCredentials(MongoIdentity identity, MongoIdentityEvidence evidence, MongoAuthenticationType authenticationType)
+        public MongoCredentials(MongoIdentity identity, MongoIdentityEvidence evidence, MongoAuthenticationProtocol authenticationType)
         {
             if (identity == null)
             {
@@ -64,7 +64,7 @@ namespace MongoDB.Driver
 
             _identity = MongoIdentity.ParseUsername(username);
             _evidence = new MongoPasswordEvidence(password);
-            _authenticationType = MongoAuthenticationType.NonceAuthenticate;
+            _authenticationType = MongoAuthenticationProtocol.Original;
         }
 
         /// <summary>
@@ -90,14 +90,14 @@ namespace MongoDB.Driver
 
             _identity = admin ? (MongoIdentity)new MongoLocalIdentity("admin", username) : new MongoFloatingLocalIdentity(username);
             _evidence = new MongoPasswordEvidence(password);
-            _authenticationType = MongoAuthenticationType.NonceAuthenticate;
+            _authenticationType = MongoAuthenticationProtocol.Original;
         }
 
         // public properties
         /// <summary>
         /// Gets the authentication type.
         /// </summary>
-        public MongoAuthenticationType AuthenticationType
+        public MongoAuthenticationProtocol AuthenticationType
         {
             get { return _authenticationType; }
         }

@@ -746,7 +746,7 @@ namespace MongoDB.Driver
                 {
                     var identity = MongoIdentity.ParseUsername(username);
                     var evidence = new MongoPasswordEvidence(password);
-                    _defaultCredentials = new MongoCredentials(identity, evidence, MongoAuthenticationType.NonceAuthenticate);
+                    _defaultCredentials = new MongoCredentials(identity, evidence, MongoAuthenticationProtocol.Original);
                 }
                 else
                 {

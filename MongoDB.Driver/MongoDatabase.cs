@@ -76,18 +76,6 @@ namespace MongoDB.Driver
 
             settings = settings.Clone();
             settings.ApplyDefaultValues(server.Settings);
-
-            // if a floating local identity was provided convert it to a local identity on this database
-            if (settings.Credentials != null)
-            {
-                var floatingLocalIdentity = settings.Credentials.Identity as MongoFloatingLocalIdentity;
-                if (floatingLocalIdentity != null)
-                {
-                    var localIdentity = new MongoLocalIdentity(name, floatingLocalIdentity.Username);
-                    settings.Credentials = new MongoCredentials(localIdentity, settings.Credentials.Evidence, settings.Credentials.AuthenticationType);
-                }
-            }
-
             settings.Freeze();
 
             _server = server;
@@ -200,14 +188,6 @@ namespace MongoDB.Driver
         public virtual MongoCollection<BsonDocument> CommandCollection
         {
             get { return _commandCollection; }
-        }
-
-        /// <summary>
-        /// Gets the credentials being used to access this database.
-        /// </summary>
-        public virtual MongoCredentials Credentials
-        {
-            get { return _settings.Credentials; }
         }
 
         /// <summary>
@@ -384,7 +364,7 @@ namespace MongoDB.Driver
         /// </summary>
         public virtual void Drop()
         {
-            _server.DropDatabase(_name, _settings.Credentials);
+            _server.DropDatabase(_name);
         }
 
         /// <summary>
@@ -846,24 +826,6 @@ namespace MongoDB.Driver
         /// <returns>A CommandResult.</returns>
         public virtual CommandResult RenameCollection(string oldCollectionName, string newCollectionName, bool dropTarget)
         {
-            var adminCredentials = _server.Settings.GetCredentials("admin");
-            return RenameCollection(oldCollectionName, newCollectionName, dropTarget, adminCredentials);
-        }
-
-        /// <summary>
-        /// Renames a collection on this database.
-        /// </summary>
-        /// <param name="oldCollectionName">The old name for the collection.</param>
-        /// <param name="newCollectionName">The new name for the collection.</param>
-        /// <param name="dropTarget">Whether to drop the target collection first if it already exists.</param>
-        /// <param name="adminCredentials">Credentials for the admin database.</param>
-        /// <returns>A CommandResult.</returns>
-        public virtual CommandResult RenameCollection(
-            string oldCollectionName,
-            string newCollectionName,
-            bool dropTarget,
-            MongoCredentials adminCredentials)
-        {
             if (oldCollectionName == null)
             {
                 throw new ArgumentNullException("oldCollectionName");
@@ -884,20 +846,8 @@ namespace MongoDB.Driver
                 { "to", string.Format("{0}.{1}", _name, newCollectionName) },
                 { "dropTarget", dropTarget, dropTarget } // only added if dropTarget is true
             };
-            var adminDatabase = _server.GetDatabase("admin", adminCredentials);
+            var adminDatabase = _server.GetDatabase("admin");
             return adminDatabase.RunCommand(command);
-        }
-
-        /// <summary>
-        /// Renames a collection on this database.
-        /// </summary>
-        /// <param name="oldCollectionName">The old name for the collection.</param>
-        /// <param name="newCollectionName">The new name for the collection.</param>
-        /// <param name="adminCredentials">Credentials for the admin database.</param>
-        /// <returns>A CommandResult.</returns>
-        public virtual CommandResult RenameCollection(string oldCollectionName, string newCollectionName, MongoCredentials adminCredentials)
-        {
-            return RenameCollection(oldCollectionName, newCollectionName, false, adminCredentials); // dropTarget = false
         }
 
         /// <summary>

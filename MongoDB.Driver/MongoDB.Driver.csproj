@@ -125,13 +125,12 @@
     <Compile Include="MongoClient.cs" />
     <Compile Include="MongoClientSettings.cs" />
     <Compile Include="MongoCollectionSettings.cs" />
-    <Compile Include="MongoCredentialsStore.cs" />
     <Compile Include="MongoDatabaseSettings.cs" />
     <Compile Include="MongoDBRef.cs" />
     <Compile Include="MongoExternalIdentity.cs" />
     <Compile Include="MongoIdentity.cs" />
     <Compile Include="MongoIdentityEvidence.cs" />
-    <Compile Include="MongoAuthenticationType.cs" />
+    <Compile Include="MongoAuthenticationProtocol.cs" />
     <Compile Include="MongoInsertOptions.cs" />
     <Compile Include="MongoLocalIdentity.cs" />
     <Compile Include="MongoPasswordEvidence.cs" />

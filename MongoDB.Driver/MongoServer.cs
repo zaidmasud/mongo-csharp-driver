@@ -403,39 +403,12 @@ namespace MongoDB.Driver
         /// Gets a MongoDatabase instance representing a database on this server. Only one instance
         /// is created for each combination of database settings.
         /// </summary>
-        /// <param name="databaseName">The name of the database.</param>
-        /// <param name="credentials">The credentials to use with this database (null if none).</param>
-        /// <returns>A new or existing instance of MongoDatabase.</returns>
-        [Obsolete("Use GetDatabase instead.")]
-        public virtual MongoDatabase this[string databaseName, MongoCredentials credentials]
-        {
-            get { return GetDatabase(databaseName, credentials); }
-        }
-
-        /// <summary>
-        /// Gets a MongoDatabase instance representing a database on this server. Only one instance
-        /// is created for each combination of database settings.
-        /// </summary>
         /// <param name="databaseSettings">The settings to use with this database.</param>
         /// <returns>A new or existing instance of MongoDatabase.</returns>
         [Obsolete("Use GetDatabase instead.")]
         public virtual MongoDatabase this[MongoDatabaseSettings databaseSettings]
         {
             get { return GetDatabase(databaseSettings); }
-        }
-
-        /// <summary>
-        /// Gets a MongoDatabase instance representing a database on this server. Only one instance
-        /// is created for each combination of database settings.
-        /// </summary>
-        /// <param name="databaseName">The name of the database.</param>
-        /// <param name="credentials">The credentials to use with this database (null if none).</param>
-        /// <param name="writeConcern">The write concern to use with this database.</param>
-        /// <returns>A new or existing instance of MongoDatabase.</returns>
-        [Obsolete("Use GetDatabase instead.")]
-        public virtual MongoDatabase this[string databaseName, MongoCredentials credentials, WriteConcern writeConcern]
-        {
-            get { return GetDatabase(databaseName, credentials, writeConcern); }
         }
 
         /// <summary>
@@ -547,19 +520,7 @@ namespace MongoDB.Driver
         /// <returns>True if the database exists.</returns>
         public virtual bool DatabaseExists(string databaseName)
         {
-            var adminCredentials = _settings.GetCredentials("admin");
-            return DatabaseExists(databaseName, adminCredentials);
-        }
-
-        /// <summary>
-        /// Tests whether a database exists.
-        /// </summary>
-        /// <param name="databaseName">The name of the database.</param>
-        /// <param name="adminCredentials">Credentials for the admin database.</param>
-        /// <returns>True if the database exists.</returns>
-        public virtual bool DatabaseExists(string databaseName, MongoCredentials adminCredentials)
-        {
-            var databaseNames = GetDatabaseNames(adminCredentials);
+            var databaseNames = GetDatabaseNames();
             return databaseNames.Contains(databaseName);
         }
 
@@ -579,19 +540,7 @@ namespace MongoDB.Driver
         /// <returns>A <see cref="CommandResult"/>.</returns>
         public virtual CommandResult DropDatabase(string databaseName)
         {
-            var credentials = _settings.GetCredentials(databaseName);
-            return DropDatabase(databaseName, credentials);
-        }
-
-        /// <summary>
-        /// Drops a database.
-        /// </summary>
-        /// <param name="databaseName">The name of the database to be dropped.</param>
-        /// <param name="credentials">Credentials for the database to be dropped or admin credentials (null if none).</param>
-        /// <returns>A <see cref="CommandResult"/>.</returns>
-        public virtual CommandResult DropDatabase(string databaseName, MongoCredentials credentials)
-        {
-            MongoDatabase database = GetDatabase(databaseName, credentials);
+            MongoDatabase database = GetDatabase(databaseName);
             var command = new CommandDocument("dropDatabase", 1);
             var result = database.RunCommand(command);
             _indexCache.Reset(databaseName);
@@ -665,44 +614,6 @@ namespace MongoDB.Driver
         /// is created for each combination of database settings.
         /// </summary>
         /// <param name="databaseName">The name of the database.</param>
-        /// <param name="credentials">The credentials to use with this database (null if none).</param>
-        /// <returns>A new or existing instance of MongoDatabase.</returns>
-        public virtual MongoDatabase GetDatabase(string databaseName, MongoCredentials credentials)
-        {
-            var databaseSettings = new MongoDatabaseSettings { Credentials = credentials };
-            return GetDatabase(databaseName, databaseSettings);
-        }
-
-        /// <summary>
-        /// Gets a MongoDatabase instance representing a database on this server. Only one instance
-        /// is created for each combination of database settings.
-        /// </summary>
-        /// <param name="databaseName">The name of the database.</param>
-        /// <param name="credentials">The credentials to use with this database.</param>
-        /// <param name="writeConcern">The write concern to use with this database.</param>
-        /// <returns>A new or existing instance of MongoDatabase.</returns>
-        public virtual MongoDatabase GetDatabase(
-            string databaseName,
-            MongoCredentials credentials,
-            WriteConcern writeConcern)
-        {
-            if (writeConcern == null)
-            {
-                throw new ArgumentNullException("writeConcern");
-            }
-            var databaseSettings = new MongoDatabaseSettings
-            {
-                Credentials = credentials,
-                WriteConcern = writeConcern
-            };
-            return GetDatabase(databaseName, databaseSettings);
-        }
-
-        /// <summary>
-        /// Gets a MongoDatabase instance representing a database on this server. Only one instance
-        /// is created for each combination of database settings.
-        /// </summary>
-        /// <param name="databaseName">The name of the database.</param>
         /// <param name="databaseSettings">The settings to use with this database.</param>
         /// <returns>A new or existing instance of MongoDatabase.</returns>
         public virtual MongoDatabase GetDatabase(string databaseName, MongoDatabaseSettings databaseSettings)
@@ -741,18 +652,7 @@ namespace MongoDB.Driver
         /// <returns>A list of database names.</returns>
         public virtual IEnumerable<string> GetDatabaseNames()
         {
-            var adminCredentials = _settings.GetCredentials("admin");
-            return GetDatabaseNames(adminCredentials);
-        }
-
-        /// <summary>
-        /// Gets the names of the databases on this server.
-        /// </summary>
-        /// <param name="adminCredentials">Credentials for the admin database.</param>
-        /// <returns>A list of database names.</returns>
-        public virtual IEnumerable<string> GetDatabaseNames(MongoCredentials adminCredentials)
-        {
-            var adminDatabase = GetDatabase("admin", adminCredentials);
+            var adminDatabase = GetDatabase("admin");
             var result = adminDatabase.RunCommand("listDatabases");
             var databaseNames = new List<string>();
             foreach (BsonDocument database in result.Response["databases"].AsBsonArray.Values)
@@ -770,18 +670,7 @@ namespace MongoDB.Driver
         /// <returns>The last error (<see cref=" GetLastErrorResult"/>)</returns>
         public virtual GetLastErrorResult GetLastError()
         {
-            var adminCredentials = _settings.GetCredentials("admin");
-            return GetLastError(adminCredentials);
-        }
-
-        /// <summary>
-        /// Gets the last error (if any) that occurred on this connection. You MUST be within a RequestStart to call this method.
-        /// </summary>
-        /// <param name="adminCredentials">Credentials for the admin database.</param>
-        /// <returns>The last error (<see cref=" GetLastErrorResult"/>)</returns>
-        public virtual GetLastErrorResult GetLastError(MongoCredentials adminCredentials)
-        {
-            var adminDatabase = GetDatabase("admin", adminCredentials);
+            var adminDatabase = GetDatabase("admin");
             return adminDatabase.GetLastError();
         }
 
@@ -934,7 +823,7 @@ namespace MongoDB.Driver
             }
 
             var serverInstance = _serverProxy.ChooseServerInstance(readPreference);
-            var connection = serverInstance.AcquireConnection(initialDatabase.Credentials);
+            var connection = serverInstance.AcquireConnection();
 
             lock (_serverLock)
             {
@@ -970,7 +859,7 @@ namespace MongoDB.Driver
                 }
             }
 
-            var connection = serverInstance.AcquireConnection(initialDatabase.Credentials);
+            var connection = serverInstance.AcquireConnection();
 
             lock (_serverLock)
             {
@@ -995,21 +884,11 @@ namespace MongoDB.Driver
         /// </summary>
         public virtual void Shutdown()
         {
-            var adminCredentials = _settings.GetCredentials("admin");
-            Shutdown(adminCredentials);
-        }
-
-        /// <summary>
-        /// Shuts down the server.
-        /// </summary>
-        /// <param name="adminCredentials">Credentials for the admin database.</param>
-        public virtual void Shutdown(MongoCredentials adminCredentials)
-        {
             lock (_serverLock)
             {
                 try
                 {
-                    var adminDatabase = GetDatabase("admin", adminCredentials);
+                    var adminDatabase = GetDatabase("admin");
                     adminDatabase.RunCommand("shutdown");
                 }
                 catch (EndOfStreamException)
@@ -1028,9 +907,8 @@ namespace MongoDB.Driver
         }
 
         // internal methods
-        internal MongoConnection AcquireConnection(MongoCredentials credentials, ReadPreference readPreference)
+        internal MongoConnection AcquireConnection(ReadPreference readPreference)
         {
-            MongoConnection requestConnection = null;
             lock (_serverLock)
             {
                 // if a thread has called RequestStart it wants all operations to take place on the same connection
@@ -1042,24 +920,16 @@ namespace MongoDB.Driver
                     {
                         throw new InvalidOperationException("The thread is in a RequestStart and the current server instance is not a match for the supplied read preference.");
                     }
-                    requestConnection = request.Connection;
+                    return request.Connection;
                 }
             }
 
-            // check authentication outside of lock
-            if (requestConnection != null)
-            {
-                requestConnection.CheckAuthentication(credentials); // will throw exception if authentication fails
-                return requestConnection;
-            }
-
             var serverInstance = _serverProxy.ChooseServerInstance(readPreference);
-            return serverInstance.AcquireConnection(credentials);
+            return serverInstance.AcquireConnection();
         }
 
-        internal MongoConnection AcquireConnection(MongoCredentials credentials, MongoServerInstance serverInstance)
+        internal MongoConnection AcquireConnection(MongoServerInstance serverInstance)
         {
-            MongoConnection requestConnection = null;
             lock (_serverLock)
             {
                 // if a thread has called RequestStart it wants all operations to take place on the same connection
@@ -1074,18 +944,11 @@ namespace MongoDB.Driver
                             serverInstance.Address, request.Connection.ServerInstance.Address);
                         throw new MongoConnectionException(message);
                     }
-                    requestConnection = request.Connection;
+                    return request.Connection;
                 }
             }
 
-            // check authentication outside of lock
-            if (requestConnection != null)
-            {
-                requestConnection.CheckAuthentication(credentials); // will throw exception if authentication fails
-                return requestConnection;
-            }
-
-            return serverInstance.AcquireConnection(credentials);
+            return serverInstance.AcquireConnection();
         }
 
         internal void ReleaseConnection(MongoConnection connection)

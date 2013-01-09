@@ -61,7 +61,6 @@ namespace MongoDB.Driver.Internal
         private DateTime _lastUsedAt; // set every time the connection is Released
         private int _messageCounter;
         private int _requestId;
-        private Dictionary<string, Authentication> _authentications = new Dictionary<string, Authentication>();
 
         // constructors
         internal MongoConnection(MongoConnectionPool connectionPool)
@@ -150,7 +149,7 @@ namespace MongoDB.Driver.Internal
         internal void Authenticate(MongoCredentials credentials)
         {
             // TODO: support other authentication types
-            if (credentials.AuthenticationType != MongoAuthenticationType.NonceAuthenticate)
+            if (credentials.AuthenticationType != MongoAuthenticationProtocol.Original)
             {
                 var message = string.Format("Authentication type '{0}' is not supported.", credentials.AuthenticationType);
                 throw new NotSupportedException(message);
@@ -185,105 +184,10 @@ namespace MongoDB.Driver.Internal
                 commandResult = RunCommand(localIdentity.DatabaseName, QueryFlags.None, authenticateCommand, false);
                 if (!commandResult.Ok)
                 {
-                    var message = string.Format("Invalid credentials for database '{0}'.", localIdentity.DatabaseName);
+                    var message = string.Format("Invalid credentials.");
                     throw new MongoAuthenticationException(
                         message,
                         new MongoCommandException(commandResult));
-                }
-
-                var authentication = new Authentication(localIdentity);
-                _authentications.Add(localIdentity.DatabaseName, authentication);
-            }
-        }
-
-        // check whether the connection can be used with the given database (and credentials)
-        // the following are the only valid authentication states for a connection:
-        // 1. the connection is not authenticated against any database
-        // 2. the connection has a single authentication against the admin database (with a particular set of credentials)
-        // 3. the connection has one or more authentications against any databases other than admin
-        //    (with the restriction that a particular database can only be authenticated against once and therefore with only one set of credentials)
-
-        // assume that IsAuthenticated was called first and returned false
-        internal bool CanAuthenticate(MongoIdentity identity)
-        {
-            if (_state == MongoConnectionState.Closed) { throw new InvalidOperationException("Connection is closed."); }
-
-            if (_authentications.Count == 0)
-            {
-                // a connection with no existing authentications can authenticate anything
-                return true;
-            }
-            else
-            {
-                // a connection with existing authentications can't be used without credentials
-                if (identity == null)
-                {
-                    return false;
-                }
-
-                var localIdentity = (MongoLocalIdentity)identity;
-
-                // a connection with existing authentications can't be used with new admin credentials
-                if (localIdentity.DatabaseName == "admin")
-                {
-                    return false;
-                }
-
-                // a connection with an existing authentication to the admin database can't be used with any other credentials
-                if (_authentications.ContainsKey("admin"))
-                {
-                    return false;
-                }
-
-                // a connection with an existing authentication to a database can't authenticate for the same database again
-                if (_authentications.ContainsKey(localIdentity.DatabaseName))
-                {
-                    return false;
-                }
-
-                return true;
-            }
-        }
-
-        internal void CheckAuthentication(MongoCredentials credentials)
-        {
-            if (_state == MongoConnectionState.Closed) { throw new InvalidOperationException("Connection is closed."); }
-            if (credentials == null)
-            {
-                if (_authentications.Count != 0)
-                {
-                    throw new InvalidOperationException("Connection requires credentials.");
-                }
-            }
-            else
-            {
-                var localIdentity = (MongoLocalIdentity)credentials.Identity;
-
-                Authentication authentication;
-                if (_authentications.TryGetValue(localIdentity.DatabaseName, out authentication))
-                {
-                    if (authentication.Identity != localIdentity)
-                    {
-                        // this shouldn't happen because a connection would have been chosen from the connection pool only if it was viable
-                        if (localIdentity.DatabaseName == "admin")
-                        {
-                            throw new MongoInternalException("Connection already authenticated to the admin database with different credentials.");
-                        }
-                        else
-                        {
-                            throw new MongoInternalException("Connection already authenticated to the database with different credentials.");
-                        }
-                    }
-                    authentication.LastUsed = DateTime.UtcNow;
-                }
-                else
-                {
-                    if (localIdentity.DatabaseName == "admin" && _authentications.Count != 0)
-                    {
-                        // this shouldn't happen because a connection would have been chosen from the connection pool only if it was viable
-                        throw new MongoInternalException("The connection cannot be authenticated against the admin database because it is already authenticated against other databases.");
-                    }
-                    Authenticate(credentials);
                 }
             }
         }
@@ -314,33 +218,6 @@ namespace MongoDB.Driver.Internal
             }
         }
 
-        internal bool IsAuthenticated(MongoIdentity identity)
-        {
-            if (_state == MongoConnectionState.Closed) { throw new InvalidOperationException("Connection is closed."); }
-
-            lock (_connectionLock)
-            {
-                if (identity == null)
-                {
-                    return _authentications.Count == 0;
-                }
-                else
-                {
-                    var localIdentity = (MongoLocalIdentity)identity;
-
-                    Authentication authentication;
-                    if (_authentications.TryGetValue(localIdentity.DatabaseName, out authentication))
-                    {
-                        return identity == authentication.Identity;
-                    }
-                    else
-                    {
-                        return false;
-                    }
-                }
-            }
-        }
-
         internal bool IsExpired()
         {
             var now = DateTime.UtcNow;
@@ -361,8 +238,6 @@ namespace MongoDB.Driver.Internal
                         "Error logging off.",
                         new MongoCommandException(commandResult));
                 }
-
-                _authentications.Remove(databaseName);
             }
         }
 
@@ -411,6 +286,11 @@ namespace MongoDB.Driver.Internal
             _tcpClient = tcpClient;
             _stream = stream;
             _state = MongoConnectionState.Open;
+
+            foreach (var credentials in _connectionPool.ServerInstance.Settings.CredentialsList)
+            {
+                Authenticate(credentials);
+            }
         }
 
         // this is a low level method that doesn't require a MongoServer
@@ -634,34 +514,6 @@ namespace MongoDB.Driver.Internal
             // returning ClearConnectionPool frequently can result in Connect/Disconnect storms
 
             return HandleExceptionAction.CloseConnection; // this should always be the default action
-        }
-
-        // private nested classes
-        // keeps track of what identities were used with a given database
-        // and when that database was last used on this connection
-        private class Authentication
-        {
-            // private fields
-            private MongoIdentity _identity;
-            private DateTime _lastUsed;
-
-            // constructors
-            public Authentication(MongoIdentity identity)
-            {
-                _identity = identity;
-                _lastUsed = DateTime.UtcNow;
-            }
-
-            public MongoIdentity Identity
-            {
-                get { return _identity; }
-            }
-
-            public DateTime LastUsed
-            {
-                get { return _lastUsed; }
-                set { _lastUsed = value; }
-            }
         }
     }
 }
