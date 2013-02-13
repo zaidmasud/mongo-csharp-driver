@@ -162,24 +162,6 @@ namespace MongoDB.Driver
             return Create(url);
         }
 
-        // public static properties
-        /// <summary>
-        /// Gets or sets the maximum number of instances of MongoServer that will be allowed to be created.
-        /// </summary>
-        public static int MaxServerCount
-        {
-            get { return MongoServerProxyFactory.Instance.MaxProxyCount; }
-            set { MongoServerProxyFactory.Instance.MaxProxyCount = value; }
-        }
-
-        /// <summary>
-        /// Gets the number of instances of MongoServer that have been created.
-        /// </summary>
-        public static int ServerCount
-        {
-            get { return MongoServerProxyFactory.Instance.ProxyCount; }
-        }
-
         // public properties
         /// <summary>
         /// Gets the arbiter instances.
@@ -401,24 +383,6 @@ namespace MongoDB.Driver
         public virtual MongoDatabase this[string databaseName, WriteConcern writeConcern]
         {
             get { return GetDatabase(databaseName, writeConcern); }
-        }
-
-        // public static methods
-        /// <summary>
-        /// Unregisters all servers from the dictionary used by Create to remember which servers have already been created.
-        /// </summary>
-        public static void UnregisterAllServers()
-        {
-            MongoServerProxyFactory.Instance.UnregisterAllProxies();
-        }
-
-        /// <summary>
-        /// Unregisters a server from the dictionary used by Create to remember which servers have already been created.
-        /// </summary>
-        /// <param name="server">The server to unregister.</param>
-        public static void UnregisterServer(MongoServer server)
-        {
-            MongoServerProxyFactory.Instance.UnregisterProxy(server._serverProxy);
         }
 
         // public methods

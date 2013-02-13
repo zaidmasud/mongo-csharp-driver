@@ -73,8 +73,6 @@ namespace MongoDB.Driver.Internal
         // protected methods
         protected override MongoServerInstance ChooseServerInstance(ConnectedInstanceCollection connectedInstances, ReadPreference readPreference)
         {
-            var secondaryAcceptableLatency = readPreference.SecondaryAcceptableLatency;
-
             switch (readPreference.ReadPreferenceMode)
             {
                 case ReadPreferenceMode.Primary:
@@ -88,14 +86,14 @@ namespace MongoDB.Driver.Internal
                     }
                     else
                     {
-                        return GetMatchingInstance(connectedInstances.GetSecondaries(), readPreference, secondaryAcceptableLatency);
+                        return GetMatchingInstance(connectedInstances.GetSecondaries(), readPreference);
                     }
 
                 case ReadPreferenceMode.Secondary:
-                    return GetMatchingInstance(connectedInstances.GetSecondaries(), readPreference, secondaryAcceptableLatency);
+                    return GetMatchingInstance(connectedInstances.GetSecondaries(), readPreference);
 
                 case ReadPreferenceMode.SecondaryPreferred:
-                    var secondary = GetMatchingInstance(connectedInstances.GetSecondaries(), readPreference, secondaryAcceptableLatency);
+                    var secondary = GetMatchingInstance(connectedInstances.GetSecondaries(), readPreference);
                     if (secondary != null)
                     {
                         return secondary;
@@ -106,7 +104,7 @@ namespace MongoDB.Driver.Internal
                     }
 
                 case ReadPreferenceMode.Nearest:
-                    return GetMatchingInstance(connectedInstances.GetPrimaryAndSecondaries(), readPreference, secondaryAcceptableLatency);
+                    return GetMatchingInstance(connectedInstances.GetPrimaryAndSecondaries(), readPreference);
 
                 default:
                     throw new MongoInternalException("Invalid ReadPreferenceMode.");
@@ -208,9 +206,8 @@ namespace MongoDB.Driver.Internal
         /// </summary>
         /// <param name="instancesWithPingTime">A list of instances from which to find a matching instance.</param>
         /// <param name="readPreference">The read preference that must be matched.</param>
-        /// <param name="secondaryAcceptableLatency">The maximum acceptable secondary latency.</param>
         /// <returns>A randomly selected matching instance.</returns>
-        private MongoServerInstance GetMatchingInstance(List<ConnectedInstanceCollection.InstanceWithPingTime> instancesWithPingTime, ReadPreference readPreference, TimeSpan secondaryAcceptableLatency)
+        private MongoServerInstance GetMatchingInstance(List<ConnectedInstanceCollection.InstanceWithPingTime> instancesWithPingTime, ReadPreference readPreference)
         {
             var tagSets = readPreference.TagSets ?? new ReplicaSetTagSet[] { new ReplicaSetTagSet() };
             foreach (var tagSet in tagSets)
@@ -231,7 +228,7 @@ namespace MongoDB.Driver.Internal
                         matchingInstances.Add(instance);
                         if (maxPingTime == TimeSpan.MaxValue)
                         {
-                            maxPingTime = instanceWithPingTime.CachedAveragePingTime + secondaryAcceptableLatency;
+                            maxPingTime = instanceWithPingTime.CachedAveragePingTime + readPreference.SecondaryAcceptableLatency;
                         }
                     }
                 }

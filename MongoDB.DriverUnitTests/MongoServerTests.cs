@@ -66,11 +66,10 @@ namespace MongoDB.DriverUnitTests
                 Server = new MongoServerAddress("localhost74883190"),
                 SafeMode = SafeMode.True
             };
-            var count = MongoServer.ServerCount;
             var server1 = MongoServer.Create(settings);
-            Assert.AreEqual(count + 1, MongoServer.ServerCount);
             var server2 = MongoServer.Create(settings);
-            Assert.AreEqual(count + 1, MongoServer.ServerCount); // didn't create an additional proxy
+            Assert.AreNotSame(server1, server2);
+            Assert.AreEqual(server1.SequentialId, server2.SequentialId); // same proxy
             Assert.AreEqual(settings, server1.Settings);
 #pragma warning restore
         }

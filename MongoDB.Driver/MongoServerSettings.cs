@@ -42,7 +42,6 @@ namespace MongoDB.Driver
         private int _minConnectionPoolSize;
         private ReadPreference _readPreference;
         private string _replicaSetName;
-        private TimeSpan _secondaryAcceptableLatency;
         private List<MongoServerAddress> _servers;
         private TimeSpan _socketTimeout;
         private SslSettings _sslSettings;
@@ -74,7 +73,6 @@ namespace MongoDB.Driver
             _minConnectionPoolSize = MongoDefaults.MinConnectionPoolSize;
             _readPreference = ReadPreference.Primary;
             _replicaSetName = null;
-            _secondaryAcceptableLatency = MongoDefaults.SecondaryAcceptableLatency;
             _servers = new List<MongoServerAddress> { new MongoServerAddress("localhost") };
             _socketTimeout = MongoDefaults.SocketTimeout;
             _sslSettings = null;
@@ -275,20 +273,6 @@ namespace MongoDB.Driver
         }
 
         /// <summary>
-        /// Gets or sets the acceptable latency for considering a replica set member for inclusion in load balancing
-        /// when using a read preference of Secondary, SecondaryPreferred, and Nearest.
-        /// </summary>
-        public TimeSpan SecondaryAcceptableLatency
-        {
-            get { return _secondaryAcceptableLatency; }
-            set
-            {
-                if (_isFrozen) { throw new InvalidOperationException("MongoServerSettings is frozen."); }
-                _secondaryAcceptableLatency = value;
-            }
-        }
-
-        /// <summary>
         /// Gets or sets the address of the server (see also Servers if using more than one address).
         /// </summary>
         public MongoServerAddress Server
@@ -481,7 +465,6 @@ namespace MongoDB.Driver
             serverSettings.MinConnectionPoolSize = clientSettings.MinConnectionPoolSize;
             serverSettings.ReadPreference = clientSettings.ReadPreference.Clone();
             serverSettings.ReplicaSetName = clientSettings.ReplicaSetName;
-            serverSettings.SecondaryAcceptableLatency = clientSettings.SecondaryAcceptableLatency;
             serverSettings.Servers = new List<MongoServerAddress>(clientSettings.Servers);
             serverSettings.SocketTimeout = clientSettings.SocketTimeout;
             serverSettings.SslSettings = (clientSettings.SslSettings == null) ? null : clientSettings.SslSettings.Clone();
@@ -521,7 +504,6 @@ namespace MongoDB.Driver
             serverSettings.MinConnectionPoolSize = builder.MinConnectionPoolSize;
             serverSettings.ReadPreference = (builder.ReadPreference == null) ? ReadPreference.Primary : builder.ReadPreference.Clone();
             serverSettings.ReplicaSetName = builder.ReplicaSetName;
-            serverSettings.SecondaryAcceptableLatency = builder.SecondaryAcceptableLatency;
             serverSettings.Servers = new List<MongoServerAddress>(builder.Servers);
             serverSettings.SocketTimeout = builder.SocketTimeout;
             serverSettings.SslSettings = null; // SSL settings must be provided in code
@@ -563,7 +545,6 @@ namespace MongoDB.Driver
             serverSettings.MinConnectionPoolSize = url.MinConnectionPoolSize;
             serverSettings.ReadPreference = (url.ReadPreference == null) ? ReadPreference.Primary : url.ReadPreference;
             serverSettings.ReplicaSetName = url.ReplicaSetName;
-            serverSettings.SecondaryAcceptableLatency = url.SecondaryAcceptableLatency;
             serverSettings.Servers = new List<MongoServerAddress>(url.Servers);
             serverSettings.SocketTimeout = url.SocketTimeout;
             serverSettings.SslSettings = null; // SSL settings must be provided in code
@@ -596,7 +577,6 @@ namespace MongoDB.Driver
             clone._minConnectionPoolSize = _minConnectionPoolSize;
             clone._readPreference = _readPreference.Clone();
             clone._replicaSetName = _replicaSetName;
-            clone._secondaryAcceptableLatency = _secondaryAcceptableLatency;
             clone._servers = new List<MongoServerAddress>(_servers);
             clone._socketTimeout = _socketTimeout;
             clone._sslSettings = (_sslSettings == null) ? null : _sslSettings.Clone();
@@ -643,7 +623,6 @@ namespace MongoDB.Driver
                _minConnectionPoolSize == rhs._minConnectionPoolSize &&
                _readPreference == rhs._readPreference &&
                _replicaSetName == rhs._replicaSetName &&
-               _secondaryAcceptableLatency == rhs._secondaryAcceptableLatency &&
                _servers.SequenceEqual(rhs._servers) &&
                _socketTimeout == rhs._socketTimeout &&
                _sslSettings == rhs._sslSettings &&
@@ -710,7 +689,6 @@ namespace MongoDB.Driver
                 .Hash(_minConnectionPoolSize)
                 .Hash(_readPreference)
                 .Hash(_replicaSetName)
-                .Hash(_secondaryAcceptableLatency)
                 .HashElements(_servers)
                 .Hash(_socketTimeout)
                 .Hash(_sslSettings)
@@ -745,7 +723,6 @@ namespace MongoDB.Driver
             sb.AppendFormat("MinConnectionPoolSize={0};", _minConnectionPoolSize);
             sb.AppendFormat("ReadPreference={0};", _readPreference);
             sb.AppendFormat("ReplicaSetName={0};", _replicaSetName);
-            sb.AppendFormat("SecondaryAcceptableLatency={0};", _secondaryAcceptableLatency);
             sb.AppendFormat("Servers={0};", string.Join(",", _servers.Select(s => s.ToString()).ToArray()));
             sb.AppendFormat("SocketTimeout={0};", _socketTimeout);
             if (_sslSettings != null)

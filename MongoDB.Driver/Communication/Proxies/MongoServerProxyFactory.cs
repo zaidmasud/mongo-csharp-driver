@@ -30,7 +30,6 @@ namespace MongoDB.Driver.Internal
         private readonly object _lock = new object();
         private readonly Dictionary<MongoServerProxySettings, IMongoServerProxy> _proxies = new Dictionary<MongoServerProxySettings, IMongoServerProxy>();
 
-        private int _maxProxyCount = 100;
         private int _nextSequentialId = 1;
 
         // public static properties
@@ -46,30 +45,6 @@ namespace MongoDB.Driver.Internal
         }
 
         // public properties
-        /// <summary>
-        /// Gets or sets the max proxy count.
-        /// </summary>
-        /// <value>
-        /// The max proxy count.
-        /// </value>
-        public int MaxProxyCount
-        {
-            get
-            {
-                lock (_lock)
-                {
-                    return _maxProxyCount;
-                }
-            }
-            set
-            {
-                lock (_lock)
-                {
-                    _maxProxyCount = value;
-                }
-            }
-        }
-
         /// <summary>
         /// Gets the proxy count.
         /// </summary>
@@ -100,70 +75,15 @@ namespace MongoDB.Driver.Internal
                 IMongoServerProxy proxy;
                 if (!_proxies.TryGetValue(settings, out proxy))
                 {
-                    if (_proxies.Count >= _maxProxyCount)
-                    {
-                        var message = string.Format("MongoServerProxyFactory.Create has already created {0} proxies which is the maximum number of proxies allowed.", _maxProxyCount);
-                        throw new MongoException(message);
-                    }
-                    proxy = CreateInstance(settings);
+                    proxy = CreateInstance(_nextSequentialId++, settings);
                     _proxies.Add(settings, proxy);
                 }
                 return proxy;
             }
         }
 
-        /// <summary>
-        /// Gets an array containing a snapshot of the set of all proxies that have been created so far.
-        /// </summary>
-        /// <returns>An array containing a snapshot of the set of all proxies that have been created so far.</returns>
-        public IMongoServerProxy[] GetAllProxies()
-        {
-            lock (_lock)
-            {
-                return _proxies.Values.ToArray();
-            }
-        }
-
-        /// <summary>
-        /// Unregisters all proxies.
-        /// </summary>
-        public void UnregisterAllProxies()
-        {
-            lock (_lock)
-            {
-                foreach (var proxy in _proxies.Values)
-                {
-                    try { proxy.Disconnect(); }
-                    catch { } // ignore exceptions
-                }
-                _proxies.Clear();
-            }
-        }
-
-        /// <summary>
-        /// Unregisters the proxy.
-        /// </summary>
-        /// <param name="proxy">The proxy.</param>
-        public void UnregisterProxy(IMongoServerProxy proxy)
-        {
-            lock (_lock)
-            {
-                try { proxy.Disconnect(); }
-                catch { } // ignore exceptions
-
-                foreach (var kvp in _proxies)
-                {
-                    if (object.ReferenceEquals(kvp.Value, proxy))
-                    {
-                        _proxies.Remove(kvp.Key);
-                        break;
-                    }
-                }
-            }
-        }
-
         // private methods
-        private IMongoServerProxy CreateInstance(MongoServerProxySettings settings)
+        private IMongoServerProxy CreateInstance(int sequentialId, MongoServerProxySettings settings)
         {
             var connectionMode = settings.ConnectionMode;
             if (settings.ConnectionMode == ConnectionMode.Automatic)
@@ -178,7 +98,6 @@ namespace MongoDB.Driver.Internal
                 }
             }
 
-            var sequentialId = _nextSequentialId++;
             switch (connectionMode)
             {
                 case ConnectionMode.Direct:

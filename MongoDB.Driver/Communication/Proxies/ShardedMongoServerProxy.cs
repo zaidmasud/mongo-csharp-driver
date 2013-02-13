@@ -70,9 +70,8 @@ namespace MongoDB.Driver.Internal
             }
             else
             {
-                var secondaryAcceptableLatency = readPreference.SecondaryAcceptableLatency;
                 var minPingTime = instancesWithPingTime[0].CachedAveragePingTime;
-                var maxPingTime = minPingTime + secondaryAcceptableLatency;
+                var maxPingTime = minPingTime + readPreference.SecondaryAcceptableLatency;
                 var n = instancesWithPingTime.Count(i => i.CachedAveragePingTime <= maxPingTime);
                 lock (_randomLock)
                 {
