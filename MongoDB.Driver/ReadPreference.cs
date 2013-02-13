@@ -63,6 +63,7 @@ namespace MongoDB.Driver
         private ReadPreferenceMode _readPreferenceMode;
         private List<ReplicaSetTagSet> _tagSets;
         private ReadOnlyCollection<ReplicaSetTagSet> _tagSetsReadOnly;
+        private TimeSpan _secondaryAcceptableLatency;
         private bool _isFrozen;
         private int _frozenHashCode;
 
@@ -182,6 +183,16 @@ namespace MongoDB.Driver
                 if (_isFrozen) { ThrowFrozenException(); }
                 _tagSets = new List<ReplicaSetTagSet>(value);
                 _tagSetsReadOnly = _tagSets.AsReadOnly();
+            }
+        }
+
+        public TimeSpan SecondaryAcceptableLatency
+        {
+            get { return _secondaryAcceptableLatency; }
+            set
+            {
+                if (_isFrozen) { ThrowFrozenException(); }
+                _secondaryAcceptableLatency = value;
             }
         }
 

@@ -34,9 +34,10 @@ namespace MongoDB.Driver.Internal
         /// <summary>
         /// Initializes a new instance of the <see cref="ReplicaSetMongoServerProxy"/> class.
         /// </summary>
+        /// <param name="sequentialId">The sequential id.</param>
         /// <param name="settings">The settings.</param>
-        public ReplicaSetMongoServerProxy(MongoServerSettings settings)
-            : base(settings)
+        public ReplicaSetMongoServerProxy(int sequentialId, MongoServerProxySettings settings)
+            : base(sequentialId, settings)
         {
             _replicaSetName = settings.ReplicaSetName;
         }
@@ -44,12 +45,13 @@ namespace MongoDB.Driver.Internal
         /// <summary>
         /// Initializes a new instance of the <see cref="ReplicaSetMongoServerProxy"/> class.
         /// </summary>
+        /// <param name="sequentialId">The sequential id.</param>
         /// <param name="serverSettings">The server settings.</param>
         /// <param name="instances">The instances.</param>
         /// <param name="stateChangeQueue">The state change queue.</param>
         /// <param name="connectionAttempt">The connection attempt.</param>
-        public ReplicaSetMongoServerProxy(MongoServerSettings serverSettings, IEnumerable<MongoServerInstance> instances, BlockingQueue<MongoServerInstance> stateChangeQueue, int connectionAttempt)
-            : base(serverSettings, instances, stateChangeQueue, connectionAttempt)
+        public ReplicaSetMongoServerProxy(int sequentialId, MongoServerProxySettings serverSettings, IEnumerable<MongoServerInstance> instances, BlockingQueue<MongoServerInstance> stateChangeQueue, int connectionAttempt)
+            : base(sequentialId, serverSettings, instances, stateChangeQueue, connectionAttempt)
         { }
 
         // public properties
@@ -71,7 +73,7 @@ namespace MongoDB.Driver.Internal
         // protected methods
         protected override MongoServerInstance ChooseServerInstance(ConnectedInstanceCollection connectedInstances, ReadPreference readPreference)
         {
-            var secondaryAcceptableLatency = Settings.SecondaryAcceptableLatency;
+            var secondaryAcceptableLatency = readPreference.SecondaryAcceptableLatency;
 
             switch (readPreference.ReadPreferenceMode)
             {

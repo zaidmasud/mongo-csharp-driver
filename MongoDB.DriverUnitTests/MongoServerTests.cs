@@ -63,12 +63,14 @@ namespace MongoDB.DriverUnitTests
 #pragma warning disable 618
             var settings = new MongoServerSettings
             {
-                Server = new MongoServerAddress("localhost"),
+                Server = new MongoServerAddress("localhost74883190"),
                 SafeMode = SafeMode.True
             };
+            var count = MongoServer.ServerCount;
             var server1 = MongoServer.Create(settings);
+            Assert.AreEqual(count + 1, MongoServer.ServerCount);
             var server2 = MongoServer.Create(settings);
-            Assert.AreSame(server1, server2);
+            Assert.AreEqual(count + 1, MongoServer.ServerCount); // didn't create an additional proxy
             Assert.AreEqual(settings, server1.Settings);
 #pragma warning restore
         }
@@ -122,23 +124,6 @@ namespace MongoDB.DriverUnitTests
             Assert.AreEqual(2, document.ElementCount);
             Assert.AreEqual(1, document["_id"].AsInt32);
             Assert.AreEqual(2, document["x"].AsInt32);
-        }
-
-        [Test]
-        public void TestGetAllServers()
-        {
-            var snapshot1 = MongoServer.GetAllServers();
-#pragma warning disable 618
-            var server = MongoServer.Create("mongodb://newhostnamethathasnotbeenusedbefore");
-#pragma warning restore
-            var snapshot2 = MongoServer.GetAllServers();
-            Assert.AreEqual(snapshot1.Length + 1, snapshot2.Length);
-            Assert.IsFalse(snapshot1.Contains(server));
-            Assert.IsTrue(snapshot2.Contains(server));
-            MongoServer.UnregisterServer(server);
-            var snapshot3 = MongoServer.GetAllServers();
-            Assert.AreEqual(snapshot1.Length, snapshot3.Length);
-            Assert.IsFalse(snapshot3.Contains(server));
         }
 
         [Test]

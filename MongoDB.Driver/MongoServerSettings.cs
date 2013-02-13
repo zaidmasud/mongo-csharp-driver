@@ -20,6 +20,7 @@ using System.Linq;
 using System.Net.Sockets;
 using System.Text;
 using MongoDB.Bson;
+using MongoDB.Driver.Internal;
 using MongoDB.Shared;
 
 namespace MongoDB.Driver
@@ -757,6 +758,28 @@ namespace MongoDB.Driver
             sb.AppendFormat("WaitQueueTimeout={0}", _waitQueueTimeout);
             sb.AppendFormat("WriteConcern={0};", _writeConcern);
             return sb.ToString();
+        }
+
+        // internal methods
+        internal MongoServerProxySettings ToMongoServerProxySettings()
+        {
+            return new MongoServerProxySettings(
+                _connectionMode,
+                _connectTimeout,
+                _credentials,
+                _ipv6,
+                _maxConnectionIdleTime,
+                _maxConnectionLifeTime,
+                _maxConnectionPoolSize,
+                _minConnectionPoolSize,
+                _replicaSetName,
+                _servers,
+                _socketTimeout,
+                _sslSettings,
+                _useSsl,
+                _verifySslCertificate,
+                _waitQueueSize,
+                _waitQueueTimeout);
         }
     }
 }
