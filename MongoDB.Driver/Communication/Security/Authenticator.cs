@@ -36,7 +36,7 @@ namespace MongoDB.Driver.Communication.Security
         };
 
         // private fields
-        private readonly MongoConnection _connection;
+        private readonly MongoConnectionInternal _connection;
         private readonly IEnumerable<MongoCredential> _credentials;
 
         // constructors
@@ -45,7 +45,7 @@ namespace MongoDB.Driver.Communication.Security
         /// </summary>
         /// <param name="connection">The connection.</param>
         /// <param name="credentials">The credentials.</param>
-        public Authenticator(MongoConnection connection, IEnumerable<MongoCredential> credentials)
+        public Authenticator(MongoConnectionInternal connection, IEnumerable<MongoCredential> credentials)
         {
             _connection = connection;
             _credentials = credentials;

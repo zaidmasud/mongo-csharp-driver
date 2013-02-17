@@ -27,7 +27,7 @@ namespace MongoDB.Driver.Internal
         // private fields
         private readonly object _connectedInstancesLock = new object();
 
-        private Dictionary<MongoServerInstance, LinkedListNode<InstanceWithPingTime>> _instanceLookup;
+        private Dictionary<MongoServerInstanceInternal, LinkedListNode<InstanceWithPingTime>> _instanceLookup;
         private LinkedList<InstanceWithPingTime> _instances;
 
         // constructors
@@ -37,7 +37,7 @@ namespace MongoDB.Driver.Internal
         public ConnectedInstanceCollection()
         {
             _instances = new LinkedList<InstanceWithPingTime>();
-            _instanceLookup = new Dictionary<MongoServerInstance, LinkedListNode<InstanceWithPingTime>>();
+            _instanceLookup = new Dictionary<MongoServerInstanceInternal, LinkedListNode<InstanceWithPingTime>>();
         }
 
         // public methods
@@ -72,7 +72,7 @@ namespace MongoDB.Driver.Internal
         /// Gets the primary instance.
         /// </summary>
         /// <returns>The primary instance (or null if there is none).</returns>
-        public MongoServerInstance GetPrimary()
+        public MongoServerInstanceInternal GetPrimary()
         {
             lock (_connectedInstancesLock)
             {
@@ -116,7 +116,7 @@ namespace MongoDB.Driver.Internal
         /// Ensures that the instance is in the collection.
         /// </summary>
         /// <param name="instance">The instance.</param>
-        public void EnsureContains(MongoServerInstance instance)
+        public void EnsureContains(MongoServerInstanceInternal instance)
         {
             lock (_connectedInstancesLock)
             {
@@ -156,7 +156,7 @@ namespace MongoDB.Driver.Internal
         /// Removes the specified instance.
         /// </summary>
         /// <param name="instance">The instance.</param>
-        public void Remove(MongoServerInstance instance)
+        public void Remove(MongoServerInstanceInternal instance)
         {
             lock (_connectedInstancesLock)
             {
@@ -175,7 +175,7 @@ namespace MongoDB.Driver.Internal
         // private methods
         private void InstanceAveragePingTimeChanged(object sender, EventArgs e)
         {
-            var instance = (MongoServerInstance)sender;
+            var instance = (MongoServerInstanceInternal)sender;
             lock (_connectedInstancesLock)
             {
                 LinkedListNode<InstanceWithPingTime> node;
@@ -228,10 +228,10 @@ namespace MongoDB.Driver.Internal
         }
 
         // When dealing with an always sorted linked list, we need to maintain a cached version of the ping time 
-        // to compare against because a MongoServerInstance's could change on it's own making the sorting of the list incorrect.
+        // to compare against because a MongoServerInstanceInternal's could change on it's own making the sorting of the list incorrect.
         internal class InstanceWithPingTime
         {
-            public MongoServerInstance Instance;
+            public MongoServerInstanceInternal Instance;
             public TimeSpan CachedAveragePingTime;
         }
     }

@@ -46,6 +46,6 @@ namespace MongoDB.Driver.Communication.Security
         /// <param name="connection">The connection.</param>
         /// <param name="credential">The credential.</param>
         /// <returns>The initial step.</returns>
-        ISaslStep Initialize(MongoConnection connection, MongoCredential credential);
+        ISaslStep Initialize(MongoConnectionInternal connection, MongoCredential credential);
     }
 }

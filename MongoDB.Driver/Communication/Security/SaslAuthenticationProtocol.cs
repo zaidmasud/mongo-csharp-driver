@@ -55,7 +55,7 @@ namespace MongoDB.Driver.Communication.Security
         /// </summary>
         /// <param name="connection">The connection.</param>
         /// <param name="credential">The credential.</param>
-        public void Authenticate(MongoConnection connection, MongoCredential credential)
+        public void Authenticate(MongoConnectionInternal connection, MongoCredential credential)
         {
             using (var conversation = new SaslConversation())
             {

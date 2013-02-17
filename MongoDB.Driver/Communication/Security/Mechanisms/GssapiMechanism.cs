@@ -67,7 +67,7 @@ namespace MongoDB.Driver.Communication.Security.Mechanisms
         /// <param name="connection">The connection.</param>
         /// <param name="credential">The credential.</param>
         /// <returns>The initial step.</returns>
-        public ISaslStep Initialize(MongoConnection connection, MongoCredential credential)
+        public ISaslStep Initialize(MongoConnectionInternal connection, MongoCredential credential)
         {
             // TODO: provide an override to force the use of gsasl?
             if (__useGsasl)

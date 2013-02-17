@@ -21,16 +21,16 @@ using MongoDB.Driver.Communication;
 namespace MongoDB.Driver.Internal
 {
     /// <summary>
-    /// Represents a pool of connections to a MongoDB server.
+    /// Represents a pool of connections to a MongoServerInstanceInternal.
     /// </summary>
     public class MongoConnectionPool
     {
         // private fields
         private object _connectionPoolLock = new object();
         private MongoServerProxySettings _settings;
-        private MongoServerInstance _serverInstance;
+        private MongoServerInstanceInternal _serverInstance;
         private int _poolSize;
-        private List<MongoConnection> _availableConnections = new List<MongoConnection>();
+        private List<MongoConnectionInternal> _availableConnections = new List<MongoConnectionInternal>();
         private AcquireConnectionOptions _defaultAcquireConnectionOptions;
         private int _generationId; // whenever the pool is cleared the generationId is incremented
         private int _waitQueueSize;
@@ -38,7 +38,7 @@ namespace MongoDB.Driver.Internal
         private bool _inEnsureMinConnectionPoolSizeWorkItem;
 
         // constructors
-        internal MongoConnectionPool(MongoServerInstance serverInstance)
+        internal MongoConnectionPool(MongoServerInstanceInternal serverInstance)
         {
             _settings = serverInstance.Settings;
             _serverInstance = serverInstance;
@@ -81,20 +81,20 @@ namespace MongoDB.Driver.Internal
         /// <summary>
         /// Gets the server instance.
         /// </summary>
-        public MongoServerInstance ServerInstance
+        public MongoServerInstanceInternal ServerInstance
         {
             get { return _serverInstance; }
         }
 
         // internal methods
-        internal MongoConnection AcquireConnection()
+        internal MongoConnectionInternal AcquireConnection()
         {
             return AcquireConnection(_defaultAcquireConnectionOptions);
         }
 
-        internal MongoConnection AcquireConnection(AcquireConnectionOptions options)
+        internal MongoConnectionInternal AcquireConnection(AcquireConnectionOptions options)
         {
-            MongoConnection connectionToClose = null;
+            MongoConnectionInternal connectionToClose = null;
             try
             {
                 DateTime timeoutAt = DateTime.UtcNow + options.WaitQueueTimeout;
@@ -117,7 +117,7 @@ namespace MongoDB.Driver.Internal
                                 if (connection.IsExpired())
                                 {
                                     connectionToClose = connection;
-                                    connection = new MongoConnection(this);
+                                    connection = new MongoConnectionInternal(this);
                                 }
 
                                 _availableConnections.RemoveAt(_availableConnections.Count - 1);
@@ -131,7 +131,7 @@ namespace MongoDB.Driver.Internal
                                 {
                                     // make sure connection is created successfully before incrementing poolSize
                                     // connection will be opened later outside of the lock
-                                    var connection = new MongoConnection(this);
+                                    var connection = new MongoConnectionInternal(this);
                                     _poolSize += 1;
                                     return connection;
                                 }
@@ -152,7 +152,7 @@ namespace MongoDB.Driver.Internal
                                 {
                                     // make sure connection is created successfully before incrementing poolSize
                                     // connection will be opened later outside of the lock
-                                    var connection = new MongoConnection(this);
+                                    var connection = new MongoConnectionInternal(this);
                                     _poolSize += 1;
                                     return connection;
                                 }
@@ -210,7 +210,7 @@ namespace MongoDB.Driver.Internal
             _inMaintainPoolSize = true;
             try
             {
-                MongoConnection connectionToClose = null;
+                MongoConnectionInternal connectionToClose = null;
                 lock (_connectionPoolLock)
                 {
                     for (int i = 0; i < _availableConnections.Count; i++)
@@ -250,7 +250,7 @@ namespace MongoDB.Driver.Internal
             }
         }
 
-        internal void ReleaseConnection(MongoConnection connection)
+        internal void ReleaseConnection(MongoConnectionInternal connection)
         {
             if (connection.ConnectionPool != this)
             {
@@ -318,7 +318,7 @@ namespace MongoDB.Driver.Internal
                         }
                     }
 
-                    var connection = new MongoConnection(this);
+                    var connection = new MongoConnectionInternal(this);
                     try
                     {
                         connection.Open();
@@ -364,7 +364,7 @@ namespace MongoDB.Driver.Internal
             }
         }
 
-        private void RemoveConnection(MongoConnection connection)
+        private void RemoveConnection(MongoConnectionInternal connection)
         {
             lock (_connectionPoolLock)
             {

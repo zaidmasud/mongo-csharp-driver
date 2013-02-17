@@ -46,7 +46,7 @@ namespace MongoDB.Driver.Internal
         /// <param name="instances">The instances.</param>
         /// <param name="stateChangedQueue">The state changed queue.</param>
         /// <param name="connectionAttempt">The connection attempt.</param>
-        public ShardedMongoServerProxy(int sequentialId, MongoServerProxySettings settings, IEnumerable<MongoServerInstance> instances, BlockingQueue<MongoServerInstance> stateChangedQueue, int connectionAttempt)
+        public ShardedMongoServerProxy(int sequentialId, MongoServerProxySettings settings, IEnumerable<MongoServerInstanceInternal> instances, BlockingQueue<MongoServerInstanceInternal> stateChangedQueue, int connectionAttempt)
             : base(sequentialId, settings, instances, stateChangedQueue, connectionAttempt)
         { }
 
@@ -56,8 +56,8 @@ namespace MongoDB.Driver.Internal
         /// </summary>
         /// <param name="connectedInstances">The connected instances.</param>
         /// <param name="readPreference">The read preference.</param>
-        /// <returns>A MongoServerInstance.</returns>
-        protected override MongoServerInstance ChooseServerInstance(ConnectedInstanceCollection connectedInstances, ReadPreference readPreference)
+        /// <returns>A MongoServerInstanceInternal.</returns>
+        protected override MongoServerInstanceInternal ChooseServerInstance(ConnectedInstanceCollection connectedInstances, ReadPreference readPreference)
         {
             var instancesWithPingTime = connectedInstances.GetAllInstances();
             if (instancesWithPingTime.Count == 0)
@@ -87,7 +87,7 @@ namespace MongoDB.Driver.Internal
         /// <param name="currentState">State of the current.</param>
         /// <param name="instances">The instances.</param>
         /// <returns>The server state.</returns>
-        protected override MongoServerState DetermineServerState(MongoServerState currentState, IEnumerable<MongoServerInstance> instances)
+        protected override MongoServerState DetermineServerState(MongoServerState currentState, IEnumerable<MongoServerInstanceInternal> instances)
         {
             if (!instances.Any())
             {
@@ -135,7 +135,7 @@ namespace MongoDB.Driver.Internal
         /// <returns>
         ///   <c>true</c> if the instance is valid; otherwise, <c>false</c>.
         /// </returns>
-        protected override bool IsValidInstance(MongoServerInstance instance)
+        protected override bool IsValidInstance(MongoServerInstanceInternal instance)
         {
             return instance.InstanceType == MongoServerInstanceType.ShardRouter;
         }

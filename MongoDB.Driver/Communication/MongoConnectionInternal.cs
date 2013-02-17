@@ -46,13 +46,13 @@ namespace MongoDB.Driver.Internal
     }
 
     /// <summary>
-    /// Represents a connection to a MongoServerInstance.
+    /// Represents a connection to a MongoServerInstanceInternal.
     /// </summary>
-    public class MongoConnection
+    public class MongoConnectionInternal
     {
         // private fields
         private object _connectionLock = new object();
-        private MongoServerInstance _serverInstance;
+        private MongoServerInstanceInternal _serverInstance;
         private MongoConnectionPool _connectionPool;
         private int _generationId; // the generationId of the connection pool at the time this connection was created
         private MongoConnectionState _state;
@@ -64,14 +64,14 @@ namespace MongoDB.Driver.Internal
         private int _requestId;
 
         // constructors
-        internal MongoConnection(MongoConnectionPool connectionPool)
+        internal MongoConnectionInternal(MongoConnectionPool connectionPool)
             : this(connectionPool.ServerInstance)
         {
             _connectionPool = connectionPool;
             _generationId = connectionPool.GenerationId;
         }
 
-        internal MongoConnection(MongoServerInstance serverInstance)
+        internal MongoConnectionInternal(MongoServerInstanceInternal serverInstance)
         {
             _serverInstance = serverInstance;
             _createdAt = DateTime.UtcNow;
@@ -131,7 +131,7 @@ namespace MongoDB.Driver.Internal
         /// <summary>
         /// Gets the server instance this connection is connected to.
         /// </summary>
-        public MongoServerInstance ServerInstance
+        public MongoServerInstanceInternal ServerInstance
         {
             get { return _serverInstance; }
         }
@@ -241,8 +241,8 @@ namespace MongoDB.Driver.Internal
                 .Authenticate();
         }
 
-        // this is a low level method that doesn't require a MongoServer
-        // so it can be used while connecting to a MongoServer
+        // this is a low level method that doesn't require a MongoServerInternal
+        // so it can be used while connecting to a MongoServerInternal
         internal CommandResult RunCommand(
             string databaseName,
             QueryFlags queryFlags,

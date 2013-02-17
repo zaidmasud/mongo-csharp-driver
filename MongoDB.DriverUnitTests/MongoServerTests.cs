@@ -214,28 +214,33 @@ namespace MongoDB.DriverUnitTests
         [Test]
         public void TestRequestStart()
         {
+#pragma warning disable 618
             Assert.AreEqual(0, _server.RequestNestingLevel);
             using (_server.RequestStart(_database))
             {
                 Assert.AreEqual(1, _server.RequestNestingLevel);
             }
             Assert.AreEqual(0, _server.RequestNestingLevel);
+#pragma warning restore
         }
 
         [Test]
         public void TestRequestStartPrimary()
         {
+#pragma warning disable 618
             Assert.AreEqual(0, _server.RequestNestingLevel);
             using (_server.RequestStart(_database, _server.Primary))
             {
                 Assert.AreEqual(1, _server.RequestNestingLevel);
             }
             Assert.AreEqual(0, _server.RequestNestingLevel);
+#pragma warning restore
         }
 
         [Test]
         public void TestRequestStartPrimaryNested()
         {
+#pragma warning disable 618
             Assert.AreEqual(0, _server.RequestNestingLevel);
             using (_server.RequestStart(_database, _server.Primary))
             {
@@ -247,26 +252,27 @@ namespace MongoDB.DriverUnitTests
                 Assert.AreEqual(1, _server.RequestNestingLevel);
             }
             Assert.AreEqual(0, _server.RequestNestingLevel);
+#pragma warning restore
         }
 
         [Test]
         public void TestRequestStartSlaveOk()
         {
-            Assert.AreEqual(0, _server.RequestNestingLevel);
 #pragma warning disable 618
+            Assert.AreEqual(0, _server.RequestNestingLevel);
             using (_server.RequestStart(_database, true))
             {
                 Assert.AreEqual(1, _server.RequestNestingLevel);
             }
-#pragma warning restore
             Assert.AreEqual(0, _server.RequestNestingLevel);
+#pragma warning restore
         }
 
         [Test]
         public void TestRequestStartSlaveOkNested()
         {
-            Assert.AreEqual(0, _server.RequestNestingLevel);
 #pragma warning disable 618
+            Assert.AreEqual(0, _server.RequestNestingLevel);
             using (_server.RequestStart(_database, false))
             {
                 Assert.AreEqual(1, _server.RequestNestingLevel);
@@ -276,8 +282,8 @@ namespace MongoDB.DriverUnitTests
                 }
                 Assert.AreEqual(1, _server.RequestNestingLevel);
             }
-#pragma warning restore
             Assert.AreEqual(0, _server.RequestNestingLevel);
+#pragma warning restore
         }
 
         [Test]

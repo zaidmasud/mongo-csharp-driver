@@ -105,7 +105,7 @@ namespace MongoDB.Driver
         private bool _disposed = false;
         private bool _started = false;
         private bool _done = false;
-        private MongoServerInstance _serverInstance; // set when first request is sent to server instance
+        private IMongoBinding _binding; // set when the first request is sent to a server instance
         private int _count;
         private int _positiveLimit;
         private MongoReplyMessage<TDocument> _reply;
@@ -286,24 +286,31 @@ namespace MongoDB.Driver
         // private methods
         private MongoConnection AcquireConnection()
         {
-            if (_serverInstance == null)
+            if (_binding == null)
             {
-                // first time we need a connection let Server.AcquireConnection pick the server instance
-                var connection = _cursor.Server.AcquireConnection(_readPreference);
-                _serverInstance = connection.ServerInstance;
+                // first time we need a connection use the collection's binding
+                var binding = _cursor.Collection.Binding;
+                var connection = binding.GetConnection(_readPreference);
+
+                // if the collection's binding is to the cluster we need to bind at least to the server instance
+                // so any subsequent GetMore messages get sent to the correct server instance
+                if (binding is MongoServer)
+                {
+                    binding = connection.ServerInstance;
+                }
+
+                _binding = binding; // don't assign to _binding until we are sure no exceptions were thrown
                 return connection;
             }
             else
             {
-                // all subsequent requests for the same cursor must go to the same server instance
-                return _cursor.Server.AcquireConnection(_serverInstance);
+                return _binding.GetConnection(_readPreference);
             }
         }
 
         private MongoReplyMessage<TDocument> GetFirst()
         {
-            var connection = AcquireConnection();
-            try
+            using (var connection = AcquireConnection())
             {
                 // some of these weird conditions are necessary to get commands to run correctly
                 // specifically numberToReturn has to be 1 or -1 for commands
@@ -330,19 +337,16 @@ namespace MongoDB.Driver
                 }
 
                 var writerSettings = _cursor.Collection.GetWriterSettings(connection);
-                var queryMessage = new MongoQueryMessage(writerSettings, _cursor.Collection.FullName, _queryFlags, _cursor.Skip, numberToReturn, WrapQuery(), _cursor.Fields);
+                var forShardRouter = (connection.ServerInstance.InstanceType == MongoServerInstanceType.ShardRouter);
+                var wrappedQuery = WrapQuery(forShardRouter);
+                var queryMessage = new MongoQueryMessage(writerSettings, _cursor.Collection.FullName, _queryFlags, _cursor.Skip, numberToReturn, wrappedQuery, _cursor.Fields);
                 return GetReply(connection, queryMessage);
-            }
-            finally
-            {
-                _cursor.Server.ReleaseConnection(connection);
             }
         }
 
         private MongoReplyMessage<TDocument> GetMore()
         {
-            var connection = AcquireConnection();
-            try
+            using (var connection = AcquireConnection())
             {
                 int numberToReturn;
                 if (_positiveLimit != 0)
@@ -361,17 +365,13 @@ namespace MongoDB.Driver
                 var getMoreMessage = new MongoGetMoreMessage(_cursor.Collection.FullName, numberToReturn, _openCursorId);
                 return GetReply(connection, getMoreMessage);
             }
-            finally
-            {
-                _cursor.Server.ReleaseConnection(connection);
-            }
         }
 
         private MongoReplyMessage<TDocument> GetReply(MongoConnection connection, MongoRequestMessage message)
         {
             var readerSettings = _cursor.Collection.GetReaderSettings(connection);
-            connection.SendMessage(message, null, _cursor.Database.Name); // write concern doesn't apply to queries
-            var reply = connection.ReceiveMessage<TDocument>(readerSettings, _cursor.SerializationOptions);
+            connection.Inner.SendMessage(message, null, _cursor.Database.Name); // write concern doesn't apply to queries
+            var reply = connection.Inner.ReceiveMessage<TDocument>(readerSettings, _cursor.SerializationOptions);
             _responseFlags = reply.ResponseFlags;
             _openCursorId = reply.CursorId;
             return reply;
@@ -383,17 +383,12 @@ namespace MongoDB.Driver
             {
                 try
                 {
-                    if (_serverInstance != null && _serverInstance.State == MongoServerState.Connected)
+                    if (_binding != null)
                     {
-                        var connection = _cursor.Server.AcquireConnection(_serverInstance);
-                        try
+                        using (var connection = _binding.GetConnection(null))
                         {
-                            var killCursorsMessage = new MongoKillCursorsMessage(_openCursorId);
-                            connection.SendMessage(killCursorsMessage, WriteConcern.Unacknowledged, _cursor.Database.Name);
-                        }
-                        finally
-                        {
-                            _cursor.Server.ReleaseConnection(connection);
+                            var message = new MongoKillCursorsMessage(_openCursorId);
+                            connection.Inner.SendMessage(message, WriteConcern.Unacknowledged, _cursor.Database.Name);
                         }
                     }
                 }
@@ -404,11 +399,10 @@ namespace MongoDB.Driver
             }
         }
 
-        private IMongoQuery WrapQuery()
+        private IMongoQuery WrapQuery(bool forShardRouter)
         {
             BsonDocument formattedReadPreference = null;
-            if (_serverInstance.InstanceType == MongoServerInstanceType.ShardRouter &&
-                _readPreference.ReadPreferenceMode != ReadPreferenceMode.Primary)
+            if (forShardRouter && _readPreference.ReadPreferenceMode != ReadPreferenceMode.Primary)
             {
                 BsonArray tagSetsArray = null;
                 if (_readPreference.TagSets != null)

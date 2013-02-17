@@ -36,7 +36,7 @@ namespace MongoDB.Driver.Communication.Security
         /// </summary>
         /// <param name="connection">The connection.</param>
         /// <param name="credential">The credential.</param>
-        public void Authenticate(MongoConnection connection, MongoCredential credential)
+        public void Authenticate(MongoConnectionInternal connection, MongoCredential credential)
         {
             var nonceCommand = new CommandDocument("getnonce", 1);
             var commandResult = connection.RunCommand(credential.Source, QueryFlags.None, nonceCommand, false);

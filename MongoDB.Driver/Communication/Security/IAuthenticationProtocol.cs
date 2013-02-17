@@ -22,7 +22,7 @@ using MongoDB.Driver.Internal;
 namespace MongoDB.Driver.Communication.Security
 {
     /// <summary>
-    /// Authenticates a MongoConnection.
+    /// Authenticates a MongoConnectionInternal.
     /// </summary>
     internal interface IAuthenticationProtocol
     {
@@ -36,7 +36,7 @@ namespace MongoDB.Driver.Communication.Security
         /// </summary>
         /// <param name="connection">The connection.</param>
         /// <param name="credential">The credential.</param>
-        void Authenticate(MongoConnection connection, MongoCredential credential);
+        void Authenticate(MongoConnectionInternal connection, MongoCredential credential);
 
         /// <summary>
         /// Determines whether this instance can use the specified credential.

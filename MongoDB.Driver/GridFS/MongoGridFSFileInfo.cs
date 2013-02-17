@@ -338,11 +338,15 @@ namespace MongoDB.Driver.GridFS
         {
             if (Exists)
             {
-                using (_gridFS.Database.RequestStart(ReadPreference.Primary))
+                using (var connection = _gridFS.Database.Binding.GetConnection(ReadPreference.Primary))
                 {
-                    _gridFS.EnsureIndexes();
-                    _gridFS.Files.Remove(Query.EQ("_id", _id), _gridFS.Settings.WriteConcern);
-                    _gridFS.Chunks.Remove(Query.EQ("files_id", _id), _gridFS.Settings.WriteConcern);
+                    var databaseName = _gridFS.Database.Name;
+                    var database = connection.GetDatabase(databaseName);
+                    var gridFS = database.GridFS;
+
+                    gridFS.EnsureIndexes();
+                    gridFS.Files.Remove(Query.EQ("_id", _id), _gridFS.Settings.WriteConcern);
+                    gridFS.Chunks.Remove(Query.EQ("files_id", _id), _gridFS.Settings.WriteConcern);
                 }
             }
         }

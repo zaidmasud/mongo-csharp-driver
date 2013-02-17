@@ -26,7 +26,7 @@ namespace MongoDB.Driver
     /// <summary>
     /// Represents an instance of a MongoDB server host.
     /// </summary>
-    public sealed class MongoServerInstance
+    public sealed class MongoServerInstanceInternal
     {
         // private static fields
         private static int __nextSequentialId;
@@ -58,11 +58,11 @@ namespace MongoDB.Driver
 
         // constructors
         /// <summary>
-        /// Initializes a new instance of the <see cref="MongoServerInstance"/> class.
+        /// Initializes a new instance of the <see cref="MongoServerInstanceInternal"/> class.
         /// </summary>
         /// <param name="settings">The settings.</param>
         /// <param name="address">The address.</param>
-        internal MongoServerInstance(MongoServerProxySettings settings, MongoServerAddress address)
+        internal MongoServerInstanceInternal(MongoServerProxySettings settings, MongoServerAddress address)
         {
             _settings = settings;
             _address = address;
@@ -77,7 +77,7 @@ namespace MongoDB.Driver
             _connectionPool = new MongoConnectionPool(this);
             _pingTimeAggregator = new PingTimeAggregator(5);
             _permanentlyDisconnected = false;
-            // Console.WriteLine("MongoServerInstance[{0}]: {1}", sequentialId, address);
+            // Console.WriteLine("MongoServerInstanceInternal[{0}]: {1}", sequentialId, address);
 
             _stateVerificationAcquireConnectionOptions = new MongoConnectionPool.AcquireConnectionOptions
             {
@@ -362,7 +362,7 @@ namespace MongoDB.Driver
                 catch
                 {
                     // ignore exceptions (if any occured state will already be set to Disconnected)
-                    // Console.WriteLine("MongoServerInstance[{0}]: VerifyState failed: {1}.", sequentialId, ex.Message);
+                    // Console.WriteLine("MongoServerInstanceInternal[{0}]: VerifyState failed: {1}.", sequentialId, ex.Message);
                 }
             }
             finally
@@ -375,8 +375,8 @@ namespace MongoDB.Driver
         /// <summary>
         /// Acquires the connection.
         /// </summary>
-        /// <returns>A MongoConnection.</returns>
-        internal MongoConnection AcquireConnection()
+        /// <returns>A MongoConnectionInternal.</returns>
+        internal MongoConnectionInternal AcquireConnection()
         {
             lock (_serverInstanceLock)
             {
@@ -395,7 +395,7 @@ namespace MongoDB.Driver
         /// </summary>
         internal void Connect()
         {
-            // Console.WriteLine("MongoServerInstance[{0}]: Connect() called.", sequentialId);
+            // Console.WriteLine("MongoServerInstanceInternal[{0}]: Connect() called.", sequentialId);
             lock (_serverInstanceLock)
             {
                 if (_permanentlyDisconnected || _state == MongoServerState.Connecting || _state == MongoServerState.Connected)
@@ -455,7 +455,7 @@ namespace MongoDB.Driver
         /// </summary>
         internal void Disconnect()
         {
-            // Console.WriteLine("MongoServerInstance[{0}]: Disconnect called.", sequentialId);
+            // Console.WriteLine("MongoServerInstanceInternal[{0}]: Disconnect called.", sequentialId);
             lock (_serverInstanceLock)
             {
                 if (_stateVerificationTimer != null)
@@ -503,7 +503,7 @@ namespace MongoDB.Driver
         /// Releases the connection.
         /// </summary>
         /// <param name="connection">The connection.</param>
-        internal void ReleaseConnection(MongoConnection connection)
+        internal void ReleaseConnection(MongoConnectionInternal connection)
         {
             _connectionPool.ReleaseConnection(connection);
         }
@@ -528,7 +528,7 @@ namespace MongoDB.Driver
         }
 
         // private methods
-        private void LookupServerInformation(MongoConnection connection)
+        private void LookupServerInformation(MongoConnectionInternal connection)
         {
             IsMasterResult isMasterResult = null;
             bool ok = false;
@@ -643,7 +643,7 @@ namespace MongoDB.Driver
             }
         }
 
-        private void Ping(MongoConnection connection)
+        private void Ping(MongoConnectionInternal connection)
         {
             try
             {

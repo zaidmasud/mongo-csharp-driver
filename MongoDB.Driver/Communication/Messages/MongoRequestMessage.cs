@@ -47,7 +47,7 @@ namespace MongoDB.Driver.Internal
         // internal methods
         internal void WriteToBuffer(BsonBuffer buffer)
         {
-            // normally this method is only called once (from MongoConnection.SendMessage)
+            // normally this method is only called once (from MongoConnectionInternal.SendMessage)
             // but in the case of InsertBatch it is called before SendMessage is called to initialize the message so that AddDocument can be called
             // therefore we need the if statement to ignore subsequent calls from SendMessage
             if (_messageStartPosition == -1)

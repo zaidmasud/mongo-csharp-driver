@@ -22,41 +22,29 @@ namespace MongoDB.DriverUnitTests.CommandResults
     [TestFixture]
     public class DatabaseStatsResultTests
     {
-        private MongoServer _server;
-        private MongoDatabase _database;
-        private MongoCollection<BsonDocument> _collection;
-
-        [TestFixtureSetUp]
-        public void Setup()
-        {
-            _server = Configuration.TestServer;
-            _database = Configuration.TestDatabase;
-            _collection = Configuration.TestCollection;
-        }
-
         [Test]
         public void Test()
         {
-            using (_database.RequestStart())
+            var serverInstance = Configuration.TestServer.Primary;
+            if (serverInstance.InstanceType != MongoServerInstanceType.ShardRouter)
             {
-                var instance = _server.RequestConnection.ServerInstance;
-                if (instance.InstanceType != MongoServerInstanceType.ShardRouter)
-                {
-                    // make sure collection and database exist
-                    _collection.Insert(new BsonDocument());
+                var database = serverInstance.GetDatabase(Configuration.TestDatabase.Name);
+                var collection = database.GetCollection(Configuration.TestCollection.Name);
 
-                    var result = _database.GetStats();
-                    Assert.IsTrue(result.Ok);
-                    Assert.IsTrue(result.AverageObjectSize > 0);
-                    Assert.IsTrue(result.CollectionCount > 0);
-                    Assert.IsTrue(result.DataSize > 0);
-                    Assert.IsTrue(result.ExtentCount > 0);
-                    Assert.IsTrue(result.FileSize > 0);
-                    Assert.IsTrue(result.IndexCount > 0);
-                    Assert.IsTrue(result.IndexSize > 0);
-                    Assert.IsTrue(result.ObjectCount > 0);
-                    Assert.IsTrue(result.StorageSize > 0);
-                }
+                // make sure database exists
+                collection.Insert(new BsonDocument());
+
+                var result = database.GetStats();
+                Assert.IsTrue(result.Ok);
+                Assert.IsTrue(result.AverageObjectSize > 0);
+                Assert.IsTrue(result.CollectionCount > 0);
+                Assert.IsTrue(result.DataSize > 0);
+                Assert.IsTrue(result.ExtentCount > 0);
+                Assert.IsTrue(result.FileSize > 0);
+                Assert.IsTrue(result.IndexCount > 0);
+                Assert.IsTrue(result.IndexSize > 0);
+                Assert.IsTrue(result.ObjectCount > 0);
+                Assert.IsTrue(result.StorageSize > 0);
             }
         }
     }

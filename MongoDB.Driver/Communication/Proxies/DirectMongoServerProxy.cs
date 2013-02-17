@@ -29,7 +29,7 @@ namespace MongoDB.Driver.Internal
         private readonly object _stateLock = new object();
         private readonly int _sequentialId;
         private readonly MongoServerProxySettings _settings;
-        private readonly MongoServerInstance _instance;
+        private readonly MongoServerInstanceInternal _instance;
 
         private int _connectionAttempt;
 
@@ -43,7 +43,7 @@ namespace MongoDB.Driver.Internal
         {
             _sequentialId = sequentialId;
             _settings = settings;
-            _instance = new MongoServerInstance(settings, settings.Servers.First());
+            _instance = new MongoServerInstanceInternal(settings, settings.Servers.First());
         }
 
         /// <summary>
@@ -53,7 +53,7 @@ namespace MongoDB.Driver.Internal
         /// <param name="serverSettings">The server settings.</param>
         /// <param name="instance">The instance.</param>
         /// <param name="connectionAttempt">The connection attempt.</param>
-        public DirectMongoServerProxy(int sequentialId, MongoServerProxySettings serverSettings, MongoServerInstance instance, int connectionAttempt)
+        public DirectMongoServerProxy(int sequentialId, MongoServerProxySettings serverSettings, MongoServerInstanceInternal instance, int connectionAttempt)
         {
             _sequentialId = sequentialId;
             _settings = serverSettings;
@@ -87,9 +87,9 @@ namespace MongoDB.Driver.Internal
         /// <summary>
         /// Gets the instances.
         /// </summary>
-        public ReadOnlyCollection<MongoServerInstance> Instances
+        public ReadOnlyCollection<MongoServerInstanceInternal> Instances
         {
-            get { return new List<MongoServerInstance> { _instance }.AsReadOnly(); }
+            get { return new List<MongoServerInstanceInternal> { _instance }.AsReadOnly(); }
         }
 
         /// <summary>
@@ -119,8 +119,8 @@ namespace MongoDB.Driver.Internal
         /// Chooses the server instance.
         /// </summary>
         /// <param name="readPreference">The read preference.</param>
-        /// <returns>A MongoServerInstance.</returns>
-        public MongoServerInstance ChooseServerInstance(ReadPreference readPreference)
+        /// <returns>A MongoServerInstanceInternal.</returns>
+        public MongoServerInstanceInternal ChooseServerInstance(ReadPreference readPreference)
         {
             if (_instance.State != MongoServerState.Connected)
             {
