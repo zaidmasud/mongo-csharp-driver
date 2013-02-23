@@ -284,7 +284,7 @@ namespace MongoDB.Driver
         }
 
         // private methods
-        private MongoConnection AcquireConnection()
+        private MongoConnection GetConnection()
         {
             if (_binding == null)
             {
@@ -310,7 +310,7 @@ namespace MongoDB.Driver
 
         private MongoReplyMessage<TDocument> GetFirst()
         {
-            using (var connection = AcquireConnection())
+            using (var connection = GetConnection())
             {
                 // some of these weird conditions are necessary to get commands to run correctly
                 // specifically numberToReturn has to be 1 or -1 for commands
@@ -346,7 +346,7 @@ namespace MongoDB.Driver
 
         private MongoReplyMessage<TDocument> GetMore()
         {
-            using (var connection = AcquireConnection())
+            using (var connection = GetConnection())
             {
                 int numberToReturn;
                 if (_positiveLimit != 0)

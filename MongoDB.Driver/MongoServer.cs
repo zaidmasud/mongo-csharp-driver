@@ -27,7 +27,7 @@ namespace MongoDB.Driver
     /// <summary>
     /// Represents a MongoDB server (either a single instance or a replica set) and the settings used to access it. This class is thread-safe.
     /// </summary>
-    public class MongoServer : IMongoBinding
+    public class MongoServer : IMongoBinding, IMongoConnectionSource
     {
         // private static fields
         private static HashSet<char> __invalidDatabaseNameChars;
@@ -534,8 +534,23 @@ namespace MongoDB.Driver
         /// <returns>A MongoConnection.</returns>
         public virtual MongoConnection GetConnection(ReadPreference readPreference)
         {
+            lock (_serverLock)
+            {
+                // if a thread has called RequestStart it wants all operations to take place on the same connection
+                int threadId = Thread.CurrentThread.ManagedThreadId;
+                Request request;
+                if (_requests.TryGetValue(threadId, out request))
+                {
+                    if (!readPreference.MatchesInstance(request.InternalConnection.ServerInstance))
+                    {
+                        throw new InvalidOperationException("The thread is in a RequestStart and the current server instance is not a match for the supplied read preference.");
+                    }
+                    return new MongoConnection(this, this, request.ServerInstance, request.InternalConnection);
+                }
+            }
+
             var serverInstance = ChooseServerInstance(readPreference);
-            return serverInstance.GetConnection(null);
+            return serverInstance.GetConnection(readPreference);
         }
 
         /// <summary>
@@ -697,7 +712,7 @@ namespace MongoDB.Driver
         public virtual void RequestDone()
         {
             int threadId = Thread.CurrentThread.ManagedThreadId;
-            MongoConnectionInternal connectionToRelease = null;
+            MongoConnectionInternal internalConnectionToRelease = null;
 
             lock (_serverLock)
             {
@@ -707,7 +722,7 @@ namespace MongoDB.Driver
                     if (--request.NestingLevel == 0)
                     {
                         _requests.Remove(threadId);
-                        connectionToRelease = request.InternalConnection;
+                        internalConnectionToRelease = request.InternalConnection;
                     }
                 }
                 else
@@ -716,10 +731,10 @@ namespace MongoDB.Driver
                 }
             }
 
-            if (connectionToRelease != null)
+            if (internalConnectionToRelease != null)
             {
-                var serverInstance = connectionToRelease.ServerInstance;
-                serverInstance.ReleaseConnection(connectionToRelease);
+                var internalServerInstance = internalConnectionToRelease.ServerInstance;
+                internalServerInstance.ReleaseConnection(internalConnectionToRelease);
             }
         }
 
@@ -779,15 +794,8 @@ namespace MongoDB.Driver
 
             }
 
-            var serverInstance = _serverProxy.ChooseServerInstance(readPreference);
-            var internalConnection = serverInstance.AcquireConnection();
-
-            lock (_serverLock)
-            {
-                var request = new Request(internalConnection);
-                _requests.Add(threadId, request);
-                return new RequestStartResult(this);
-            }
+            var serverInstance = ChooseServerInstance(readPreference);
+            return RequestStart(threadId, serverInstance);
         }
 
         /// <summary>
@@ -817,14 +825,7 @@ namespace MongoDB.Driver
                 }
             }
 
-            var internalConnection = serverInstance.Inner.AcquireConnection();
-
-            lock (_serverLock)
-            {
-                var request = new Request(internalConnection);
-                _requests.Add(threadId, request);
-                return new RequestStartResult(this);
-            }
+            return RequestStart(threadId, serverInstance);
         }
 
         /// <summary>
@@ -864,52 +865,22 @@ namespace MongoDB.Driver
             _serverProxy.VerifyState();
         }
 
+        // private methods
+        private RequestStartResult RequestStart(int threadId, MongoServerInstance serverInstance)
+        {
+            var internalConnection = serverInstance.Inner.AcquireConnection();
+            var request = new Request(serverInstance, internalConnection);
+
+            lock (_serverLock)
+            {
+                _requests.Add(threadId, request);
+            }
+
+            return new RequestStartResult(this);
+        }
+
         // internal methods
-        internal MongoConnectionInternal AcquireConnection(ReadPreference readPreference)
-        {
-            lock (_serverLock)
-            {
-                // if a thread has called RequestStart it wants all operations to take place on the same connection
-                int threadId = Thread.CurrentThread.ManagedThreadId;
-                Request request;
-                if (_requests.TryGetValue(threadId, out request))
-                {
-                    if (!readPreference.MatchesInstance(request.InternalConnection.ServerInstance))
-                    {
-                        throw new InvalidOperationException("The thread is in a RequestStart and the current server instance is not a match for the supplied read preference.");
-                    }
-                    return request.InternalConnection;
-                }
-            }
-
-            var serverInstance = _serverProxy.ChooseServerInstance(readPreference);
-            return serverInstance.AcquireConnection();
-        }
-
-        internal MongoConnectionInternal AcquireConnection(MongoServerInstance serverInstance)
-        {
-            lock (_serverLock)
-            {
-                // if a thread has called RequestStart it wants all operations to take place on the same connection
-                int threadId = Thread.CurrentThread.ManagedThreadId;
-                Request request;
-                if (_requests.TryGetValue(threadId, out request))
-                {
-                    if (request.InternalConnection.ServerInstance != serverInstance.Inner)
-                    {
-                        var message = string.Format(
-                            "AcquireConnection called for server instance '{0}' but thread is in a RequestStart for server instance '{1}'.",
-                            serverInstance.Address, request.InternalConnection.ServerInstance.Address);
-                        throw new MongoConnectionException(message);
-                    }
-                    return request.InternalConnection;
-                }
-            }
-
-            return serverInstance.Inner.AcquireConnection();
-        }
-
-        void IMongoBinding.ReleaseConnection(MongoConnectionInternal internalConnection)
+        void IMongoConnectionSource.ReleaseConnection(MongoConnection connection)
         {
             lock (_serverLock)
             {
@@ -918,7 +889,7 @@ namespace MongoDB.Driver
                 Request request;
                 if (_requests.TryGetValue(threadId, out request))
                 {
-                    if (internalConnection != request.InternalConnection)
+                    if (connection.Inner != request.InternalConnection)
                     {
                         throw new ArgumentException("Connection being released is not the one assigned to the thread by RequestStart.", "connection");
                     }
@@ -926,8 +897,9 @@ namespace MongoDB.Driver
                 }
             }
 
-            var serverInstance = internalConnection.ServerInstance;
-            serverInstance.ReleaseConnection(internalConnection);
+            // TODO: do we ever get here?
+            var internalServerInstance = connection.Inner.ServerInstance;
+            internalServerInstance.ReleaseConnection(connection.Inner);
         }
 
         // explicit interface implementations
@@ -999,12 +971,14 @@ namespace MongoDB.Driver
         private class Request
         {
             // private fields
+            private MongoServerInstance _serverInstance;
             private MongoConnectionInternal _internalConnection;
             private int _nestingLevel;
 
             // constructors
-            public Request(MongoConnectionInternal internalConnection)
+            public Request(MongoServerInstance serverInstance, MongoConnectionInternal internalConnection)
             {
+                _serverInstance = serverInstance;
                 _internalConnection = internalConnection;
                 _nestingLevel = 1;
             }
@@ -1019,6 +993,11 @@ namespace MongoDB.Driver
             {
                 get { return _nestingLevel; }
                 set { _nestingLevel = value; }
+            }
+
+            public MongoServerInstance ServerInstance
+            {
+                get { return _serverInstance; }
             }
         }
 

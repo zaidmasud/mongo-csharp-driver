@@ -22,7 +22,7 @@ namespace MongoDB.Driver
     /// <summary>
     /// Represents an instance of a MongoDB server host.
     /// </summary>
-    public sealed class MongoServerInstance : IMongoBinding
+    public sealed class MongoServerInstance : IMongoBinding, IMongoConnectionSource
     {
         // private fields
         private readonly MongoServer _server;
@@ -299,9 +299,9 @@ namespace MongoDB.Driver
         /// Releases the connection.
         /// </summary>
         /// <param name="connection">The connection.</param>
-        void IMongoBinding.ReleaseConnection(MongoConnectionInternal connection)
+        void IMongoConnectionSource.ReleaseConnection(MongoConnection connection)
         {
-            _inner.ReleaseConnection(connection);
+            _inner.ReleaseConnection(connection.Inner);
         }
     }
 }

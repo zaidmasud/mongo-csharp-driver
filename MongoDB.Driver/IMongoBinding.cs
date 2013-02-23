@@ -94,11 +94,5 @@ namespace MongoDB.Driver
         /// <param name="databaseSettings">The settings to use with this database.</param>
         /// <returns>A MongoDatabase.</returns>
         MongoDatabase GetDatabase(string databaseName, MongoDatabaseSettings databaseSettings);
-
-        /// <summary>
-        /// Releases an connection (for internal use only).
-        /// </summary>
-        /// <param name="connection">The connection.</param>
-        void ReleaseConnection(MongoConnectionInternal connection);
     }
 }

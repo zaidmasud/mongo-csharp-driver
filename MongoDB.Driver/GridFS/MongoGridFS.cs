@@ -256,7 +256,7 @@ namespace MongoDB.Driver.GridFS
                 throw new MongoGridFSException("VerifyMD5 is true and file being downloaded has no MD5 hash.");
             }
 
-            using (var connection = _database.Server.GetConnection(_database.Settings.ReadPreference))
+            using (var connection = _database.Binding.GetConnection(_database.Settings.ReadPreference))
             {
                 var database = connection.GetDatabase(_database.Name);
                 var chunks = database.GetCollection(_settings.Root + ".chunks");

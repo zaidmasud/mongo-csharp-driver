@@ -158,6 +158,7 @@
     <Compile Include="Communication\Security\Mechanisms\Sspi\Win32Exception.cs" />
     <Compile Include="EvalFlags.cs" />
     <Compile Include="IMongoBinding.cs" />
+    <Compile Include="IMongoConnectionSource.cs" />
     <Compile Include="InsertFlags.cs" />
     <Compile Include="IMongoCollectionOptions.cs" />
     <Compile Include="IMongoCommand.cs" />

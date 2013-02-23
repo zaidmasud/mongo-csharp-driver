@@ -21,10 +21,10 @@ namespace MongoDB.Driver
     /// <summary>
     /// Represents a connection to a MongoServerInstance.
     /// </summary>
-    public class MongoConnection : IDisposable, IMongoBinding
+    public class MongoConnection : IDisposable, IMongoBinding, IMongoConnectionSource
     {
         // private fields
-        private readonly IMongoBinding _sourceBinding;
+        private readonly IMongoConnectionSource _source;
         private readonly MongoServer _server;
         private readonly MongoServerInstance _serverInstance;
         private readonly MongoConnectionInternal _internalConnection;
@@ -32,9 +32,9 @@ namespace MongoDB.Driver
         private bool _disposed;
 
         // constructors
-        internal MongoConnection(IMongoBinding sourceBinding, MongoServer server, MongoServerInstance serverInstance, MongoConnectionInternal internalConnection)
+        internal MongoConnection(IMongoConnectionSource source, MongoServer server, MongoServerInstance serverInstance, MongoConnectionInternal internalConnection)
         {
-            _sourceBinding = sourceBinding;
+            _source = source;
             _server = server;
             _serverInstance = serverInstance;
             _internalConnection = internalConnection;
@@ -59,7 +59,7 @@ namespace MongoDB.Driver
 
         // public methods
         /// <summary>
-        /// Disposes of the connection by calling ReleaseConnection in the source binding.
+        /// Disposes of the connection by calling ReleaseConnection in the source.
         /// </summary>
         public void Dispose()
         {
@@ -67,7 +67,7 @@ namespace MongoDB.Driver
             {
                 try
                 {
-                    _sourceBinding.ReleaseConnection(_internalConnection);
+                    _source.ReleaseConnection(this);
                 }
                 catch (Exception)
                 {
@@ -168,7 +168,7 @@ namespace MongoDB.Driver
             return new MongoConnection(this, _server, _serverInstance, _internalConnection);
         }
 
-        void IMongoBinding.ReleaseConnection(MongoConnectionInternal internalConnection)
+        void IMongoConnectionSource.ReleaseConnection(MongoConnection internalConnection)
         {
             // do nothing
         }

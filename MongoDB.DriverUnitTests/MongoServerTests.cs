@@ -214,11 +214,15 @@ namespace MongoDB.DriverUnitTests
         [Test]
         public void TestRequestStart()
         {
+            if (_collection.Exists()) { _collection.Drop(); }
+            _collection.Insert(new BsonDocument("x", 1));
+
 #pragma warning disable 618
             Assert.AreEqual(0, _server.RequestNestingLevel);
             using (_server.RequestStart(_database))
             {
                 Assert.AreEqual(1, _server.RequestNestingLevel);
+                Assert.AreEqual(1, _collection.Count());
             }
             Assert.AreEqual(0, _server.RequestNestingLevel);
 #pragma warning restore
