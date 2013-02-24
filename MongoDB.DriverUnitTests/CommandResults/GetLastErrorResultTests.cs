@@ -23,16 +23,28 @@ namespace MongoDB.DriverUnitTests.CommandResults
     [TestFixture]
     public class GetLastErrorResultTests
     {
+        private MongoClient _client;
+        private MongoServer _server;
+
+        [TestFixtureSetUp]
+        public void TestFixtureSetup()
+        {
+            var settings = Configuration.TestClient.Settings.Clone();
+            settings.WriteConcern = WriteConcern.Unacknowledged;
+            _client = new MongoClient(settings);
+            _server = _client.GetServer();
+        }
+
         [Test]
         public void TestInsert()
         {
-            using (var connection = Configuration.TestServer.GetConnection())
+            using (var connection = _server.GetConnection())
             {
                 var database = connection.GetDatabase(Configuration.TestDatabase.Name);
                 var collection = database.GetCollection<BsonDocument>(Configuration.TestCollection.Name);
 
                 collection.Insert(new BsonDocument());
-                var result = database.GetLastError();
+                var result = connection.GetLastError();
                 Assert.IsFalse(result.HasLastErrorMessage);
                 Assert.IsFalse(result.UpdatedExisting);
                 Assert.AreEqual(0, result.DocumentsAffected); // note: DocumentsAffected is only set after an Update?
@@ -42,7 +54,7 @@ namespace MongoDB.DriverUnitTests.CommandResults
         [Test]
         public void TestUpdate()
         {
-            using (var connection = Configuration.TestServer.GetConnection())
+            using (var connection = _server.GetConnection())
             {
                 var database = connection.GetDatabase(Configuration.TestDatabase.Name);
                 var collection = database.GetCollection<BsonDocument>(Configuration.TestCollection.Name);
@@ -54,11 +66,12 @@ namespace MongoDB.DriverUnitTests.CommandResults
                     { "x", 1 }
                 };
                 collection.Insert(document);
+                Assert.AreEqual(true, connection.GetLastError().Ok);
 
                 var query = Query.EQ("_id", id);
                 var update = Update.Inc("x", 1);
                 collection.Update(query, update);
-                var result = database.GetLastError();
+                var result = connection.GetLastError();
                 Assert.IsFalse(result.HasLastErrorMessage);
                 Assert.IsTrue(result.UpdatedExisting);
                 Assert.AreEqual(1, result.DocumentsAffected);

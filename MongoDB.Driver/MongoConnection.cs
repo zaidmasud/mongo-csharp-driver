@@ -162,6 +162,31 @@ namespace MongoDB.Driver
             return new MongoDatabase(this, _server, databaseName, databaseSettings);
         }
 
+        /// <summary>
+        /// Gets the last error (if any) that occurred on this connection.
+        /// Note: when using authentication, if you don't have permissions on the admin database you will have to use
+        /// the overload of GetLastError that lets you specify the name of a database you do have permissions on.
+        /// </summary>
+        /// <returns>The last error (<see cref=" GetLastErrorResult"/>)</returns>
+        public virtual GetLastErrorResult GetLastError()
+        {
+            return GetLastError("admin");
+        }
+
+        /// <summary>
+        /// Gets the last error (if any) that occurred on this connection.
+        /// </summary>
+        /// <param name="databaseName">
+        /// The name of the database to send the getLastError command to.
+        /// Only required when using authentication, in which case use the name of the database you last wrote to.
+        /// </param>
+        /// <returns>The last error (<see cref=" GetLastErrorResult"/>)</returns>
+        public virtual GetLastErrorResult GetLastError(string databaseName)
+        {
+            var database = this.GetDatabase(databaseName);
+            return database.RunCommandAs<GetLastErrorResult>("getlasterror"); // use all lowercase for backward compatibility
+        }
+
         // explicit interface implementations
         MongoConnection IMongoBinding.GetConnection(ReadPreference readPreference)
         {

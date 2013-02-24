@@ -705,6 +705,7 @@ namespace MongoDB.Driver
         /// Gets the last error (if any) that occurred on this connection. You MUST be within a RequestStart to call this method.
         /// </summary>
         /// <returns>The last error (<see cref=" GetLastErrorResult"/>)</returns>
+        [Obsolete("Use GetLastError in MongoConnection instead.")]
         public virtual GetLastErrorResult GetLastError()
         {
 #pragma warning disable 618
