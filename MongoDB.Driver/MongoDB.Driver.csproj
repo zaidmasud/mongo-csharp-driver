@@ -125,7 +125,7 @@
     <Compile Include="MongoClient.cs" />
     <Compile Include="MongoClientSettings.cs" />
     <Compile Include="MongoCollectionSettings.cs" />
-    <Compile Include="MongoCredentialsStore.cs" />
+    <Compile Include="MongoCredentialStore.cs" />
     <Compile Include="MongoDatabaseSettings.cs" />
     <Compile Include="MongoDBRef.cs" />
     <Compile Include="MongoInsertOptions.cs" />
@@ -238,7 +238,7 @@
     <Compile Include="MongoConnectionStringBuilder.cs">
       <SubType>Code</SubType>
     </Compile>
-    <Compile Include="MongoCredentials.cs" />
+    <Compile Include="MongoCredential.cs" />
     <Compile Include="CommandResults\MapReduceResult.cs" />
     <Compile Include="MongoServer.cs" />
     <Compile Include="MongoCursor.cs" />
