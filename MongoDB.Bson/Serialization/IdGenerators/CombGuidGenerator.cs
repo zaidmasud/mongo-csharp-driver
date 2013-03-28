@@ -57,7 +57,7 @@ namespace MongoDB.Bson.Serialization.IdGenerators
             var baseDate = new DateTime(1900, 1, 1, 0, 0, 0, DateTimeKind.Utc);
             var now = DateTime.UtcNow;
             var days = (ushort)(now - baseDate).Days;
-            var timeTicks = now.TimeOfDay.Ticks * 300 / 10000000; // convert from .NET resolution to SQL Server resolution
+            var timeTicks = (int)(now.TimeOfDay.Ticks * 300 / TimeSpan.TicksPerSecond); // convert from .NET resolution to SQL Server resolution
 
             // replace last 6 bytes of a new Guid with 2 bytes from days and 4 bytes from time of day
             // see: The Cost of GUIDs as Primary Keys by Jimmy Nilson

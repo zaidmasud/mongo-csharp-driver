@@ -28,11 +28,14 @@ namespace MongoDB.BsonUnitTests.Serialization
         [Test]
         public void TestGenerateId()
         {
-            var guid1 = (Guid)_generator.GenerateId(null, null);
-            var guid2 = (Guid)_generator.GenerateId(null, null);
-            var ts1 = ExtractTimestamp(guid1);
-            var ts2 = ExtractTimestamp(guid2);
-            Assert.IsTrue(ts2 - ts1 < TimeSpan.FromMilliseconds(3.34));
+            var before = DateTime.UtcNow;
+            var beforeRoundedDown = WithSqlServerResolution(before);
+            var guid = (Guid)_generator.GenerateId(null, null);
+            var after = DateTime.UtcNow;
+            var timestamp = ExtractTimestamp(guid);
+            Assert.IsTrue(beforeRoundedDown <= before);
+            Assert.IsTrue(beforeRoundedDown <= timestamp);
+            Assert.IsTrue(timestamp <= after);
         }
 
         [Test]
@@ -43,7 +46,7 @@ namespace MongoDB.BsonUnitTests.Serialization
             Assert.IsFalse(_generator.IsEmpty(Guid.NewGuid()));
         }
 
-        private TimeSpan ExtractTimestamp(Guid guid)
+        private DateTime ExtractTimestamp(Guid guid)
         {
             var bytes = guid.ToByteArray();
             if (BitConverter.IsLittleEndian)
@@ -51,9 +54,18 @@ namespace MongoDB.BsonUnitTests.Serialization
                 Array.Reverse(bytes, 10, 2);
                 Array.Reverse(bytes, 12, 4);
             }
-            var dayTicks = BitConverter.ToInt16(bytes, 10);
+            var dayTicks = BitConverter.ToUInt16(bytes, 10);
             var timeTicks = BitConverter.ToInt32(bytes, 12);
-            return TimeSpan.FromDays(dayTicks) + TimeSpan.FromSeconds(timeTicks / 300);
+
+            var baseDate = new DateTime(1900, 1, 1, 0, 0, 0, DateTimeKind.Utc);
+            return baseDate + TimeSpan.FromDays(dayTicks) + TimeSpan.FromTicks(timeTicks * TimeSpan.TicksPerSecond / 300);
+        }
+
+        private DateTime WithSqlServerResolution(DateTime value)
+        {
+            var timeTicks = (int)(value.TimeOfDay.Ticks * 300 / TimeSpan.TicksPerSecond); // convert from .NET resolution to SQL Server resolution
+            var adjusted = value.Date + TimeSpan.FromTicks(timeTicks * TimeSpan.TicksPerSecond / 300);
+            return adjusted;
         }
     }
 }
