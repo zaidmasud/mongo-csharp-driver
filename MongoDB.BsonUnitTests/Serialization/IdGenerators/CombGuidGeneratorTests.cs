@@ -26,15 +26,13 @@ namespace MongoDB.BsonUnitTests.Serialization
         private IIdGenerator _generator = new CombGuidGenerator();
 
         [Test]
-        public void TestGenerateId()
+        public void TestTimestamp()
         {
-            var before = DateTime.UtcNow;
-            var beforeRoundedDown = WithSqlServerResolution(before);
+            var before = WithSqlServerResolution(DateTime.UtcNow);
             var guid = (Guid)_generator.GenerateId(null, null);
             var after = DateTime.UtcNow;
             var timestamp = ExtractTimestamp(guid);
-            Assert.IsTrue(beforeRoundedDown <= before);
-            Assert.IsTrue(beforeRoundedDown <= timestamp);
+            Assert.IsTrue(before <= timestamp);
             Assert.IsTrue(timestamp <= after);
         }
 
