@@ -25,10 +25,10 @@ namespace MongoDB.DriverUnitTests.CommandResults
         [Test]
         public void Test()
         {
-            var nodeBinding = Configuration.TestServer.GetNodeBinding(new PrimaryNodeSelector());
-            if (nodeBinding.Node.InstanceType != MongoServerInstanceType.ShardRouter)
+            var node = Configuration.TestServer.GetNode(new PrimaryNodeSelector());
+            if (node.InstanceType != MongoServerInstanceType.ShardRouter)
             {
-                var database = Configuration.TestDatabase.Rebind(nodeBinding);
+                var database = Configuration.TestDatabase.Rebind(node);
                 var collection = database.GetCollection(Configuration.TestCollection.Name);
 
                 // make sure collection and database exist

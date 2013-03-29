@@ -338,9 +338,9 @@ namespace MongoDB.Driver.GridFS
         {
             if (Exists)
             {
-                using (var connection = _gridFS.Settings.Binding.GetConnectionBinding(new PrimaryNodeSelector()))
+                using (var connectionBinding = _gridFS.Database.Binding.GetConnectionBinding(new PrimaryNodeSelector()))
                 {
-                    var database = _gridFS.Database.Rebind(connection);
+                    var database = _gridFS.Database.Rebind(connectionBinding);
                     var gridFS = database.GridFS;
 
                     gridFS.EnsureIndexes();

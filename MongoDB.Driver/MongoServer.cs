@@ -27,7 +27,7 @@ namespace MongoDB.Driver
     /// <summary>
     /// Represents a MongoDB server (either a single instance or a replica set) and the settings used to access it. This class is thread-safe.
     /// </summary>
-    public class MongoServer
+    public class MongoServer : IMongoBinding
     {
         // private static fields
         private readonly static object __staticLock = new object();
@@ -539,15 +539,6 @@ namespace MongoDB.Driver
         }
 
         /// <summary>
-        /// Gets a binding to this cluster.
-        /// </summary>
-        /// <returns>A cluster binding.</returns>
-        public ClusterBinding GetClusterBinding()
-        {
-            return new ClusterBinding(this);
-        }
-
-        /// <summary>
         /// Gets a binding to a connection (to a node in this cluster).
         /// </summary>
         /// <param name="selector">The node selector.</param>
@@ -560,7 +551,7 @@ namespace MongoDB.Driver
                 throw new ArgumentNullException("selector");
             }
             var node = selector.SelectNode(this);
-            var connection = node.AcquireConnection();
+            var connection = node.Instance.AcquireConnection();
             return new ConnectionBinding(this, node, connection);
         }
 
@@ -622,7 +613,7 @@ namespace MongoDB.Driver
             {
                 throw new ArgumentNullException("databaseSettings");
             }
-            return new MongoDatabase(this, databaseName, databaseSettings);
+            return new MongoDatabase(this, this, databaseName, databaseSettings);
         }
 
         /// <summary>
@@ -649,14 +640,13 @@ namespace MongoDB.Driver
         /// <param name="selector">The selector.</param>
         /// <returns>A node binding.</returns>
         /// <exception cref="System.ArgumentNullException">selector</exception>
-        public NodeBinding GetNodeBinding(INodeSelector selector)
+        public MongoNode GetNode(INodeSelector selector)
         {
             if (selector == null)
             {
                 throw new ArgumentNullException("selector");
             }
-            var node = selector.SelectNode(this);
-            return new NodeBinding(this, node);
+            return selector.SelectNode(this);
         }
 
         /// <summary>
@@ -762,6 +752,22 @@ namespace MongoDB.Driver
         internal MongoServerInstance ChooseServerInstance(ReadPreference readPreference)
         {
             return _serverProxy.ChooseServerInstance(readPreference);
+        }
+
+        // explicit interface implementations
+        MongoServer IMongoBinding.Cluster
+        {
+            get { return this; }
+        }
+
+        MongoNode IMongoBinding.Node
+        {
+            get { return null; }
+        }
+
+        IMongoBinding IMongoBinding.GetNodeBinding(INodeSelector selector)
+        {
+            return GetNode(selector);
         }
     }
 }

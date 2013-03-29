@@ -688,10 +688,10 @@ namespace MongoDB.DriverUnitTests
         [Test]
         public void TestGeoHaystackSearch()
         {
-            var nodeBinding = _server.GetNodeBinding(new PrimaryNodeSelector());
-            if (nodeBinding.Node.InstanceType != MongoServerInstanceType.ShardRouter)
+            var node = _server.GetNode(new PrimaryNodeSelector());
+            if (node.InstanceType != MongoServerInstanceType.ShardRouter)
             {
-                var collection = _collection.Rebind(nodeBinding);
+                var collection = _collection.Rebind(node);
 
                 if (collection.Exists()) { collection.Drop(); }
                 collection.Insert(new Place { Location = new[] { 34.2, 33.3 }, Type = "restaurant" });
@@ -721,10 +721,10 @@ namespace MongoDB.DriverUnitTests
         [Test]
         public void TestGeoHaystackSearch_Typed()
         {
-            var nodeBinding = _server.GetNodeBinding(new PrimaryNodeSelector());
-            if (nodeBinding.Node.InstanceType != MongoServerInstanceType.ShardRouter)
+            var node = _server.GetNode(new PrimaryNodeSelector());
+            if (node.InstanceType != MongoServerInstanceType.ShardRouter)
             {
-                var collection = _collection.Rebind(nodeBinding);
+                var collection = _collection.Rebind(node);
 
                 if (collection.Exists()) { collection.Drop(); }
                 collection.Insert(new Place { Location = new[] { 34.2, 33.3 }, Type = "restaurant" });
@@ -977,12 +977,12 @@ namespace MongoDB.DriverUnitTests
         [Test]
         public void TestGetMore()
         {
-            var nodeBinding = _server.GetNodeBinding(new PrimaryNodeSelector());
-            var collection = _collection.Rebind(nodeBinding);
+            var node = _server.GetNode(new PrimaryNodeSelector());
+            var collection = _collection.Rebind(node);
 
             collection.RemoveAll();
 
-            var count = (nodeBinding.Node.MaxMessageLength / 1000000 + 1) * 2; // should result in at least 2 calls to GetMore
+            var count = (node.MaxMessageLength / 1000000 + 1) * 2; // should result in at least 2 calls to GetMore
             for (int i = 0; i < count; i++)
             {
                 var document = new BsonDocument("data", new BsonBinaryData(new byte[1000000]));
@@ -1120,13 +1120,13 @@ namespace MongoDB.DriverUnitTests
         [Test]
         public void TestInsertBatchMultipleBatchesWriteConcernDisabledContinueOnErrorFalse()
         {
-            var nodeBinding = Configuration.TestServer.GetNodeBinding(new PrimaryNodeSelector());
-            var database = Configuration.TestDatabase.Rebind(nodeBinding);
+            var node = Configuration.TestServer.GetNode(new PrimaryNodeSelector());
+            var database = Configuration.TestDatabase.Rebind(node);
             var collectionSettings = new MongoCollectionSettings { WriteConcern = WriteConcern.Unacknowledged };
             var collection = database.GetCollection<BsonDocument>(Configuration.TestCollection.Name, collectionSettings);
             if (collection.Exists()) { collection.Drop(); }
 
-            var maxMessageLength = nodeBinding.Node.MaxMessageLength;
+            var maxMessageLength = node.MaxMessageLength;
 
             var filler = new string('x', maxMessageLength / 3); // after overhead results in two documents per sub-batch
             var documents = new BsonDocument[]
@@ -1155,13 +1155,13 @@ namespace MongoDB.DriverUnitTests
         [Test]
         public void TestInsertBatchMultipleBatchesWriteConcernDisabledContinueOnErrorTrue()
         {
-            var nodeBinding = Configuration.TestServer.GetNodeBinding(new PrimaryNodeSelector());
-            var database = Configuration.TestDatabase.Rebind(nodeBinding);
+            var node = Configuration.TestServer.GetNode(new PrimaryNodeSelector());
+            var database = Configuration.TestDatabase.Rebind(node);
             var collectionSettings = new MongoCollectionSettings { WriteConcern = WriteConcern.Unacknowledged };
             var collection = database.GetCollection<BsonDocument>(Configuration.TestCollection.Name, collectionSettings);
             if (collection.Exists()) { collection.Drop(); }
 
-            var maxMessageLength = nodeBinding.Node.MaxMessageLength;
+            var maxMessageLength = node.MaxMessageLength;
 
             var filler = new string('x', maxMessageLength / 3); // after overhead results in two documents per sub-batch
             var documents = new BsonDocument[]
@@ -1190,11 +1190,11 @@ namespace MongoDB.DriverUnitTests
         [Test]
         public void TestInsertBatchSmallFinalSubbatch()
         {
-            var nodeBinding = Configuration.TestServer.GetNodeBinding(new PrimaryNodeSelector());
-            var collection = Configuration.TestCollection.Rebind(nodeBinding);
+            var node = Configuration.TestServer.GetNode(new PrimaryNodeSelector());
+            var collection = Configuration.TestCollection.Rebind(node);
             if (collection.Exists()) { collection.Drop(); }
 
-            var maxMessageLength = nodeBinding.Node.MaxMessageLength;
+            var maxMessageLength = node.MaxMessageLength;
             var documentCount = maxMessageLength / (1024 * 1024) + 1; // 1 document will overflow to second sub batch
 
             var documents = new BsonDocument[documentCount];
@@ -1511,10 +1511,10 @@ namespace MongoDB.DriverUnitTests
         [Test]
         public void TestReIndex()
         {
-            var nodeBinding = _server.GetNodeBinding(new PrimaryNodeSelector());
-            if (nodeBinding.Node.InstanceType != MongoServerInstanceType.ShardRouter)
+            var node = _server.GetNode(new PrimaryNodeSelector());
+            if (node.InstanceType != MongoServerInstanceType.ShardRouter)
             {
-                var collection = _collection.Rebind(nodeBinding);
+                var collection = _collection.Rebind(node);
 
                 collection.RemoveAll();
                 collection.Insert(new BsonDocument("x", 1));
@@ -1723,10 +1723,10 @@ namespace MongoDB.DriverUnitTests
         [Test]
         public void TestValidate()
         {
-            var nodeBinding = _server.GetNodeBinding(new PrimaryNodeSelector());
-            if (nodeBinding.Node.InstanceType != MongoServerInstanceType.ShardRouter)
+            var node = _server.GetNode(new PrimaryNodeSelector());
+            if (node.InstanceType != MongoServerInstanceType.ShardRouter)
             {
-                var collection = _collection.Rebind(nodeBinding);
+                var collection = _collection.Rebind(node);
 
                 // ensure collection exists
                 collection.RemoveAll();

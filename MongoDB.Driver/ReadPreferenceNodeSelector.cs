@@ -48,14 +48,14 @@ namespace MongoDB.Driver
         /// <param name="node">The node.</param>
         /// <exception cref="System.ArgumentNullException">node</exception>
         /// <exception cref="MongoConnectionException"></exception>
-        public void EnsureCurrentNodeIsAcceptable(MongoServerInstance node)
+        public void EnsureCurrentNodeIsAcceptable(MongoNode node)
         {
             if (node == null)
             {
                 throw new ArgumentNullException("node");
             }
             
-            if (!_readPreference.MatchesInstance(node))
+            if (!_readPreference.MatchesInstance(node.Instance))
             {
                 var message = string.Format("Node {0} no longer matches ReadPreference: {1}.", node.Address, _readPreference);
                 throw new MongoConnectionException(message);
@@ -70,14 +70,15 @@ namespace MongoDB.Driver
         /// A node.
         /// </returns>
         /// <exception cref="System.ArgumentNullException">cluster</exception>
-        public MongoServerInstance SelectNode(MongoServer cluster)
+        public MongoNode SelectNode(MongoServer cluster)
         {
             if (cluster == null)
             {
                 throw new ArgumentNullException("cluster");
             }
 
-            return cluster.ChooseServerInstance(_readPreference);
+            var instance = cluster.ChooseServerInstance(_readPreference);
+            return new MongoNode(cluster, instance);
         }
     }
 }

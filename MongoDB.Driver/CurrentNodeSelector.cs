@@ -20,13 +20,13 @@ namespace MongoDB.Driver
     /// <summary>
     /// Represents a dummy selector that is useful when you are already bound to a node or a connection.
     /// </summary>
-    public class BoundNodeSelector : INodeSelector
+    public class CurrentNodeSelector : INodeSelector
     {
         /// <summary>
         /// Ensures that the current node is acceptable.
         /// </summary>
         /// <param name="node">The node.</param>
-        public void EnsureCurrentNodeIsAcceptable(MongoServerInstance node)
+        public void EnsureCurrentNodeIsAcceptable(MongoNode node)
         {
         }
 
@@ -38,7 +38,7 @@ namespace MongoDB.Driver
         /// Throws an exception.
         /// </returns>
         /// <exception cref="System.NotImplementedException">BoundNodeSelector can only be used with a binding to a node or a connection.</exception>
-        public MongoServerInstance SelectNode(MongoServer cluster)
+        public MongoNode SelectNode(MongoServer cluster)
         {
             throw new NotImplementedException("BoundNodeSelector can only be used with a binding to a node or a connection.");
         }

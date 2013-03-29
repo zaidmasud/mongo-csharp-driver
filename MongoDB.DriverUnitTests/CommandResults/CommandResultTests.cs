@@ -156,8 +156,8 @@ namespace MongoDB.DriverUnitTests.CommandResults
         [Test]
         public void TestInvalidCommand()
         {
-            var nodeBinding = _server.GetNodeBinding(new PrimaryNodeSelector());
-            var database = _database.Rebind(nodeBinding);
+            var node = _server.GetNode(new PrimaryNodeSelector());
+            var database = _database.Rebind(node);
 
             try
             {
@@ -169,7 +169,7 @@ namespace MongoDB.DriverUnitTests.CommandResults
                 // but when connected to mongos a MongoQueryException is thrown
                 // this should be considered a server bug that they don't report the error in the same way
 
-                if (nodeBinding.Node.InstanceType == MongoServerInstanceType.ShardRouter)
+                if (node.InstanceType == MongoServerInstanceType.ShardRouter)
                 {
                     Assert.IsInstanceOf<MongoQueryException>(ex);
                     Assert.IsTrue(ex.Message.StartsWith("QueryFailure flag was unrecognized command: ", StringComparison.Ordinal));

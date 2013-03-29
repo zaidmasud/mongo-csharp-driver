@@ -96,7 +96,6 @@
     <Compile Include="Builders\QueryBuilder.cs" />
     <Compile Include="Builders\SortByBuilder.cs" />
     <Compile Include="Builders\UpdateBuilder.cs" />
-    <Compile Include="ClusterBinding.cs" />
     <Compile Include="CommandResults\AggregateResult.cs" />
     <Compile Include="CommandResults\CollectionStatsResult.cs" />
     <Compile Include="CommandResults\CommandResult.cs" />
@@ -245,7 +244,7 @@
     <Compile Include="MongoUpdateOptions.cs" />
     <Compile Include="MongoUrlBuilder.cs" />
     <Compile Include="MongoUser.cs" />
-    <Compile Include="NodeBinding.cs" />
+    <Compile Include="MongoNode.cs" />
     <Compile Include="PasswordEvidence.cs" />
     <Compile Include="PrimaryNodeSelector.cs" />
     <Compile Include="ProfilingLevel.cs" />
@@ -254,7 +253,7 @@
     <Compile Include="ReplicaSetTag.cs" />
     <Compile Include="ReplicaSetTagSet.cs" />
     <Compile Include="Setting.cs" />
-    <Compile Include="BoundNodeSelector.cs" />
+    <Compile Include="CurrentNodeSelector.cs" />
     <Compile Include="SslSettings.cs" />
     <Compile Include="SystemProfileInfo.cs" />
     <Compile Include="Wrappers\BaseWrapper.cs" />

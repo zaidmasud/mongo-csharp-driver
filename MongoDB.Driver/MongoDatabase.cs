@@ -29,6 +29,7 @@ namespace MongoDB.Driver
     public class MongoDatabase
     {
         // private fields
+        private readonly IMongoBinding _binding;
         private readonly MongoServer _server;
         private readonly MongoDatabaseSettings _settings;
         private readonly string _name;
@@ -43,7 +44,7 @@ namespace MongoDB.Driver
         /// <param name="settings">The settings to use to access this database.</param>
         [Obsolete("Use MongoDatabase(MongoServer server, string name, MongoDatabaseSettings settings) instead.")]
         public MongoDatabase(MongoServer server, MongoDatabaseSettings settings)
-            : this(server, settings.DatabaseName, settings)
+            : this(server, server, settings.DatabaseName, settings)
         {
         }
 
@@ -55,7 +56,24 @@ namespace MongoDB.Driver
         /// <param name="name">The name of the database.</param>
         /// <param name="settings">The settings to use to access this database.</param>
         public MongoDatabase(MongoServer server, string name, MongoDatabaseSettings settings)
+            : this(server, server, name, settings)
         {
+        }
+
+        /// <summary>
+        /// Creates a new instance of MongoDatabase. Normally you would call one of the indexers or GetDatabase methods
+        /// of MongoServer instead.
+        /// </summary>
+        /// <param name="binding">The binding.</param>
+        /// <param name="server">The server that contains this database.</param>
+        /// <param name="name">The name of the database.</param>
+        /// <param name="settings">The settings to use to access this database.</param>
+        public MongoDatabase(IMongoBinding binding, MongoServer server, string name, MongoDatabaseSettings settings)
+        {
+            if (binding == null)
+            {
+                throw new ArgumentNullException("binding");
+            }
             if (server == null)
             {
                 throw new ArgumentNullException("server");
@@ -68,6 +86,10 @@ namespace MongoDB.Driver
             {
                 throw new ArgumentNullException("settings");
             }
+            if (binding.Cluster != server)
+            {
+                throw new ArgumentException("Binding is to a different cluster.", "binding");
+            }
             string message;
             if (!server.IsDatabaseNameValid(name, out message))
             {
@@ -75,9 +97,10 @@ namespace MongoDB.Driver
             }
 
             settings = settings.Clone();
-            settings.ApplyDefaultValues(server);
+            settings.ApplyDefaultValues(server.Settings);
             settings.Freeze();
 
+            _binding = binding;
             _server = server;
             _settings = settings;
             _name = name;
@@ -182,6 +205,17 @@ namespace MongoDB.Driver
         }
 
         // public properties
+        /// <summary>
+        /// Gets the binding.
+        /// </summary>
+        /// <value>
+        /// The binding.
+        /// </value>
+        public IMongoBinding Binding
+        {
+            get { return _binding; }
+        }
+
         /// <summary>
         /// Gets the command collection for this database.
         /// </summary>
@@ -518,7 +552,7 @@ namespace MongoDB.Driver
         public virtual MongoCollection<TDefaultDocument> GetCollection<TDefaultDocument>(
             string collectionName, MongoCollectionSettings collectionSettings)
         {
-            return new MongoCollection<TDefaultDocument>(this, collectionName, collectionSettings);
+            return new MongoCollection<TDefaultDocument>(_binding, this, collectionName, collectionSettings);
         }
 
         /// <summary>
@@ -753,15 +787,13 @@ namespace MongoDB.Driver
         // TODO: mongo shell has IsMaster at database level?
 
         /// <summary>
-        /// Returns a new MongoDatabase instance with the specified binding.
+        /// Returns a new instance of MongoDatabase will all the same settings but with a different binding.
         /// </summary>
         /// <param name="binding">The binding.</param>
-        /// <returns>A MongoDatabase with the specified binding.</returns>
+        /// <returns>A new MongoDatabase with a different binding.</returns>
         public MongoDatabase Rebind(IMongoBinding binding)
         {
-            var settings = _settings.Clone();
-            settings.Binding = binding;
-            return _server.GetDatabase(_name, settings);
+            return new MongoDatabase(binding, _server, _name, _settings);
         }
 
         /// <summary>

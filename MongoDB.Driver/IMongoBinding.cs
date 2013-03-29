@@ -35,9 +35,17 @@ namespace MongoDB.Driver
         /// <value>
         /// The node (null if bound only to the cluster).
         /// </value>
-        MongoServerInstance Node { get; }
+        MongoNode Node { get; }
 
         // methods
+        /// <summary>
+        /// Gets a database with this binding.
+        /// </summary>
+        /// <param name="databaseName">The name of the database.</param>
+        /// <param name="settings">The settings.</param>
+        /// <returns>A database.</returns>
+        MongoDatabase GetDatabase(string databaseName, MongoDatabaseSettings settings);
+
         /// <summary>
         /// Gets a binding to a node.
         /// </summary>

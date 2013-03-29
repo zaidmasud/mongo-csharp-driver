@@ -24,13 +24,13 @@ namespace MongoDB.Driver
         /// Ensures that the current node is acceptable.
         /// </summary>
         /// <param name="node">The node.</param>
-        void EnsureCurrentNodeIsAcceptable(MongoServerInstance node);
+        void EnsureCurrentNodeIsAcceptable(MongoNode node);
 
         /// <summary>
         /// Selects the node.
         /// </summary>
         /// <param name="cluster">The cluster.</param>
         /// <returns>A node.</returns>
-        MongoServerInstance SelectNode(MongoServer cluster);
+        MongoNode SelectNode(MongoServer cluster);
     }
 }

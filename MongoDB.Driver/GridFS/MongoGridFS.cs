@@ -62,10 +62,7 @@ namespace MongoDB.Driver.GridFS
         /// </summary>
         public MongoCollection<BsonDocument> Chunks
         {
-            get
-            {
-                return _database.GetCollection<BsonDocument>(_settings.Root + ".chunks");
-            }
+            get { return _database.GetCollection<BsonDocument>(_settings.Root + ".chunks"); }
         }
 
         /// <summary>
@@ -259,7 +256,7 @@ namespace MongoDB.Driver.GridFS
                 throw new MongoGridFSException("VerifyMD5 is true and file being downloaded has no MD5 hash.");
             }
 
-            using (var connectionBinding = _settings.Binding.GetConnectionBinding(new ReadPreferenceNodeSelector(_database.Settings.ReadPreference)))
+            using (var connectionBinding = _database.Binding.GetConnectionBinding(new ReadPreferenceNodeSelector(_database.Settings.ReadPreference)))
             {
                 var database = _database.Rebind(connectionBinding);
                 var chunks = database.GetCollection<BsonDocument>(_settings.Root + ".chunks");
@@ -762,9 +759,9 @@ namespace MongoDB.Driver.GridFS
             string remoteFileName,
             MongoGridFSCreateOptions createOptions)
         {
-            using (var connection = _settings.Binding.GetConnectionBinding(new PrimaryNodeSelector()))
+            using (var connectionBinding = _database.Binding.GetConnectionBinding(new PrimaryNodeSelector()))
             {
-                var database = _database.Rebind(connection);
+                var database = _database.Rebind(connectionBinding);
                 var files = database.GetCollection<BsonDocument>(_settings.Root + ".files");
                 var chunks = database.GetCollection<BsonDocument>(_settings.Root + ".chunks");
 

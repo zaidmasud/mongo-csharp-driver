@@ -44,7 +44,9 @@ namespace MongoDB.DriverUnitTests.CommandResults
         {
             using (var connectionBinding = Configuration.TestServer.GetConnectionBinding(new PrimaryNodeSelector()))
             {
-                var collection = Configuration.TestCollection.Rebind(connectionBinding);
+                var database = Configuration.TestDatabase.Rebind(connectionBinding);
+                var collectionSettings = new MongoCollectionSettings { WriteConcern = WriteConcern.Unacknowledged };
+                var collection = database.GetCollection<BsonDocument>(Configuration.TestCollection.Name, collectionSettings);
 
                 var id = ObjectId.GenerateNewId();
                 var document = new BsonDocument

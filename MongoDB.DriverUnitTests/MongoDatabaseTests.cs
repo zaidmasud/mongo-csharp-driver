@@ -186,10 +186,10 @@ namespace MongoDB.DriverUnitTests
         [Test]
         public void TestGetProfilingInfo()
         {
-            var nodeBinding = _server.GetNodeBinding(new PrimaryNodeSelector());
-            if (nodeBinding.Node.InstanceType != MongoServerInstanceType.ShardRouter)
+            var node = _server.GetNode(new PrimaryNodeSelector());
+            if (node.InstanceType != MongoServerInstanceType.ShardRouter)
             {
-                var database = Configuration.TestDatabase.Rebind(nodeBinding);
+                var database = Configuration.TestDatabase.Rebind(node);
                 var collection = database.GetCollection(Configuration.TestCollection.Name);
 
                 if (collection.Exists()) { collection.Drop(); }
@@ -260,10 +260,10 @@ namespace MongoDB.DriverUnitTests
         [Test]
         public void TestSetProfilingLevel()
         {
-            var nodeBinding = _server.GetNodeBinding(new PrimaryNodeSelector());
-            if (nodeBinding.Node.InstanceType != MongoServerInstanceType.ShardRouter)
+            var node = _server.GetNode(new PrimaryNodeSelector());
+            if (node.InstanceType != MongoServerInstanceType.ShardRouter)
             {
-                var database = _database.Rebind(nodeBinding);
+                var database = _database.Rebind(node);
 
                 database.SetProfilingLevel(ProfilingLevel.None, TimeSpan.FromMilliseconds(100));
                 var result = database.GetProfilingLevel();

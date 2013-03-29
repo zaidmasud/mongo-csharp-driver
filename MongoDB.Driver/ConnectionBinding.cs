@@ -25,9 +25,9 @@ namespace MongoDB.Driver
     {
         // private fields
         private readonly MongoServer _cluster;
-        private readonly MongoServerInstance _node;
+        private readonly MongoNode _node;
         private readonly MongoConnection _connection;
-        private readonly ConnectionBinding _connectionBinding;
+        private readonly ConnectionBinding _wrappedBinding;
         private bool _disposed;
 
         // constructors
@@ -44,7 +44,7 @@ namespace MongoDB.Driver
         /// or
         /// connection
         /// </exception>
-        public ConnectionBinding(MongoServer cluster, MongoServerInstance node, MongoConnection connection)
+        public ConnectionBinding(MongoServer cluster, MongoNode node, MongoConnection connection)
         {
             if (cluster == null)
             {
@@ -63,20 +63,15 @@ namespace MongoDB.Driver
             _connection = connection;
         }
 
-        /// <summary>
-        /// Initializes a new instance of the <see cref="ConnectionBinding"/> class.
-        /// </summary>
-        /// <param name="connectionBinding">The connection binding.</param>
-        /// <exception cref="System.ArgumentNullException">connectionBinding</exception>
-        public ConnectionBinding(ConnectionBinding connectionBinding)
+        private ConnectionBinding(ConnectionBinding wrappedBinding)
         {
-            if (connectionBinding == null)
+            if (wrappedBinding == null)
             {
-                throw new ArgumentNullException("connectionBinding");
+                throw new ArgumentNullException("wrappedBinding");
             }
-            _cluster = connectionBinding.Cluster;
-            _node = connectionBinding.Node;
-            _connectionBinding = connectionBinding;
+            _cluster = wrappedBinding.Cluster;
+            _node = wrappedBinding.Node;
+            _wrappedBinding = wrappedBinding;
         }
 
         // public properties
@@ -88,7 +83,11 @@ namespace MongoDB.Driver
         /// </value>
         public MongoServer Cluster
         {
-            get { return _cluster; }
+            get
+            {
+                if (_disposed) { throw new ObjectDisposedException("ConnectionBinding"); }
+                return _cluster;
+            }
         }
 
         /// <summary>
@@ -103,7 +102,7 @@ namespace MongoDB.Driver
             get
             {
                 if (_disposed) { throw new ObjectDisposedException("ConnectionBinding"); }
-                return _connection ?? _connectionBinding.Connection;
+                return _connection ?? _wrappedBinding.Connection;
             }
         }
 
@@ -113,9 +112,13 @@ namespace MongoDB.Driver
         /// <value>
         /// The node.
         /// </value>
-        public MongoServerInstance Node
+        public MongoNode Node
         {
-            get { return _node; }
+            get
+            {
+                if (_disposed) { throw new ObjectDisposedException("ConnectionBinding"); }
+                return _node;
+            }
         }
 
         // public methods
@@ -145,7 +148,35 @@ namespace MongoDB.Driver
             }
             if (_disposed) { throw new ObjectDisposedException("ConnectionBinding"); }
             selector.EnsureCurrentNodeIsAcceptable(_node);
-            return new ConnectionBinding(this); // chained binding
+
+            return new ConnectionBinding(this); // wrap this binding
+        }
+
+        /// <summary>
+        /// Gets a database bound to this connection.
+        /// </summary>
+        /// <param name="databaseName">Name of the database.</param>
+        /// <param name="databaseSettings">The database settings.</param>
+        /// <returns></returns>
+        /// <exception cref="System.ArgumentNullException">
+        /// databaseName
+        /// or
+        /// databaseSettings
+        /// </exception>
+        /// <exception cref="System.ObjectDisposedException">ConnectionBinding</exception>
+        public MongoDatabase GetDatabase(string databaseName, MongoDatabaseSettings databaseSettings)
+        {
+            if (databaseName == null)
+            {
+                throw new ArgumentNullException("databaseName");
+            }
+            if (databaseSettings == null)
+            {
+                throw new ArgumentNullException("databaseSettings");
+            }
+            if (_disposed) { throw new ObjectDisposedException("ConnectionBinding"); }
+
+            return new MongoDatabase(this, _cluster, databaseName, databaseSettings);
         }
 
         /// <summary>
@@ -173,8 +204,9 @@ namespace MongoDB.Driver
                 throw new ArgumentNullException("databaseName");
             }
             if (_disposed) { throw new ObjectDisposedException("ConnectionBinding"); }
-            var databaseSettings = new MongoDatabaseSettings { Binding = this };
-            var database = _cluster.GetDatabase(databaseName, databaseSettings);
+
+            var databaseSettings = new MongoDatabaseSettings();
+            var database = GetDatabase(databaseName, databaseSettings);
             return database.RunCommandAs<GetLastErrorResult>("getlasterror"); // use all lowercase for backward compatibility
         }
 
@@ -187,6 +219,7 @@ namespace MongoDB.Driver
         /// </returns>
         public IMongoBinding GetNodeBinding(INodeSelector selector)
         {
+            // keep binding focused on the connection
             return GetConnectionBinding(selector);
         }
 
