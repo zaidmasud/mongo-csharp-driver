@@ -26,6 +26,7 @@ namespace MongoDB.Driver
     public class MongoCollectionSettings
     {
         // private fields
+        private Setting<IMongoBinding> _binding;
         private Setting<string> _collectionName;
         private Setting<bool> _assignIdOnInsert;
         private Setting<Type> _defaultDocumentType;
@@ -136,6 +137,24 @@ namespace MongoDB.Driver
                 if (_isFrozen) { throw new InvalidOperationException("MongoCollectionSettings is frozen."); }
                 _assignIdOnInsert.Value = value;
             }
+        }
+
+        /// <summary>
+        /// Gets or sets the binding.
+        /// </summary>
+        public IMongoBinding Binding
+        {
+            get { return _binding.Value; }
+            set
+            {
+                if (_isFrozen) { throw new InvalidOperationException("MongoCollectionSettings is frozen."); }
+                if (value == null)
+                {
+                    throw new ArgumentNullException("value");
+                }
+                _binding.Value = value;
+            }
+
         }
 
         /// <summary>
@@ -280,6 +299,7 @@ namespace MongoDB.Driver
         public virtual MongoCollectionSettings Clone()
         {
             var clone = new MongoCollectionSettings();
+            clone._binding = _binding;
             clone._collectionName = _collectionName.Clone();
             clone._assignIdOnInsert = _assignIdOnInsert.Clone();
             clone._defaultDocumentType = _defaultDocumentType.Clone();
@@ -298,30 +318,18 @@ namespace MongoDB.Driver
         /// <returns>True if the two instances are equal.</returns>
         public override bool Equals(object obj)
         {
-            var rhs = obj as MongoCollectionSettings;
-            if (rhs == null)
-            {
-                return false;
-            }
-            else
-            {
-                if (_isFrozen && rhs._isFrozen)
-                {
-                    return _frozenStringRepresentation == rhs._frozenStringRepresentation;
-                }
-                else
-                {
-                    return
-                        _collectionName.Value == rhs._collectionName.Value &&
-                        _assignIdOnInsert.Value == rhs._assignIdOnInsert.Value &&
-                        _defaultDocumentType.Value == rhs._defaultDocumentType.Value &&
-                        _guidRepresentation.Value == rhs._guidRepresentation.Value &&
-                        object.Equals(_readEncoding, rhs._readEncoding) &&
-                        _readPreference.Value == rhs._readPreference.Value &&
-                        _writeConcern.Value == rhs._writeConcern.Value &&
-                        object.Equals(_writeEncoding, rhs._writeEncoding);
-                }
-            }
+            if (object.ReferenceEquals(obj, null) || GetType() != obj.GetType()) { return false; }
+            var rhs = (MongoCollectionSettings)obj;
+            return
+                _binding.Value == rhs._binding.Value &&
+                _collectionName.Value == rhs._collectionName.Value &&
+                _assignIdOnInsert.Value == rhs._assignIdOnInsert.Value &&
+                _defaultDocumentType.Value == rhs._defaultDocumentType.Value &&
+                _guidRepresentation.Value == rhs._guidRepresentation.Value &&
+                object.Equals(_readEncoding, rhs._readEncoding) &&
+                _readPreference.Value == rhs._readPreference.Value &&
+                _writeConcern.Value == rhs._writeConcern.Value &&
+                object.Equals(_writeEncoding, rhs._writeEncoding);
         }
 
         /// <summary>
@@ -370,6 +378,7 @@ namespace MongoDB.Driver
 
             // see Effective Java by Joshua Bloch
             int hash = 17;
+            hash = 37 * hash + ((_binding.Value == null) ? 0 : _binding.Value.GetHashCode());
             hash = 37 * hash + ((_collectionName.Value == null) ? 0 : _collectionName.Value.GetHashCode());
             hash = 37 * hash + _assignIdOnInsert.Value.GetHashCode();
             hash = 37 * hash + ((_defaultDocumentType.Value == null) ? 0 : _defaultDocumentType.Value.GetHashCode());
@@ -393,6 +402,10 @@ namespace MongoDB.Driver
             }
 
             var parts = new List<string>();
+            if (_binding.HasBeenSet)
+            {
+                parts.Add(string.Format("Binding={0}", _binding.Value));
+            }
             if (_collectionName.HasBeenSet)
             {
                 parts.Add(string.Format("CollectionName={0}", _collectionName.Value));
@@ -422,6 +435,10 @@ namespace MongoDB.Driver
             if (!_assignIdOnInsert.HasBeenSet)
             {
                 AssignIdOnInsert = MongoDefaults.AssignIdOnInsert;
+            }
+            if (!_binding.HasBeenSet)
+            {
+                Binding = databaseSettings.Binding;
             }
             if (!_guidRepresentation.HasBeenSet)
             {

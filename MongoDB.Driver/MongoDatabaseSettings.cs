@@ -26,6 +26,7 @@ namespace MongoDB.Driver
     public class MongoDatabaseSettings
     {
         // private fields
+        private Setting<IMongoBinding> _binding;
         private Setting<string> _databaseName;
         private Setting<GuidRepresentation> _guidRepresentation;
         private Setting<UTF8Encoding> _readEncoding;
@@ -73,6 +74,23 @@ namespace MongoDB.Driver
         }
 
         // public properties
+        /// <summary>
+        /// Gets or sets the binding.
+        /// </summary>
+        public IMongoBinding Binding
+        {
+            get { return _binding.Value; }
+            set
+            {
+                if (value == null)
+                {
+                    throw new ArgumentNullException("value");
+                }
+                if (_isFrozen) { throw new InvalidOperationException("MongoDatabaseSettings is frozen."); }
+                _binding.Value = value;
+            }
+        }
+
         /// <summary>
         /// Gets the name of the database.
         /// </summary>
@@ -206,6 +224,7 @@ namespace MongoDB.Driver
         public MongoDatabaseSettings Clone()
         {
             var clone =  new MongoDatabaseSettings();
+            clone._binding = _binding.Clone();
             clone._databaseName = _databaseName.Clone();
             clone._guidRepresentation = _guidRepresentation.Clone();
             clone._readEncoding = _readEncoding.Clone();
@@ -222,28 +241,16 @@ namespace MongoDB.Driver
         /// <returns>True if the two instances are equal.</returns>
         public override bool Equals(object obj)
         {
-            var rhs = obj as MongoDatabaseSettings;
-            if (rhs == null)
-            {
-                return false;
-            }
-            else
-            {
-                if (_isFrozen && rhs._isFrozen)
-                {
-                    return _frozenStringRepresentation == rhs._frozenStringRepresentation;
-                }
-                else
-                {
-                    return
-                        _databaseName.Value == rhs._databaseName.Value &&
-                        _guidRepresentation.Value == rhs._guidRepresentation.Value &&
-                        object.Equals(_readEncoding, rhs._readEncoding) &&
-                        _readPreference.Value == rhs._readPreference.Value &&
-                        _writeConcern.Value == rhs._writeConcern.Value &&
-                        object.Equals(_writeEncoding, rhs._writeEncoding);
-                }
-            }
+            if (object.ReferenceEquals(obj, null) || GetType() != obj.GetType()) { return false; }
+            var rhs = (MongoDatabaseSettings)obj;
+            return
+                _binding.Value == rhs._binding.Value &&
+                _databaseName.Value == rhs._databaseName.Value &&
+                _guidRepresentation.Value == rhs._guidRepresentation.Value &&
+                object.Equals(_readEncoding, rhs._readEncoding) &&
+                _readPreference.Value == rhs._readPreference.Value &&
+                _writeConcern.Value == rhs._writeConcern.Value &&
+                object.Equals(_writeEncoding, rhs._writeEncoding);
         }
 
         /// <summary>
@@ -292,6 +299,7 @@ namespace MongoDB.Driver
 
             // see Effective Java by Joshua Bloch
             int hash = 17;
+            hash = 37 * hash + ((_binding.Value == null) ? 0 : _binding.GetHashCode());
             hash = 37 * hash + ((_databaseName.Value == null) ? 0 : _databaseName.GetHashCode());
             hash = 37 * hash + _guidRepresentation.Value.GetHashCode();
             hash = 37 * hash + ((_readEncoding.Value == null) ? 0 : _readEncoding.GetHashCode());
@@ -313,6 +321,10 @@ namespace MongoDB.Driver
             }
 
             var parts = new List<string>();
+            if (_binding.HasBeenSet)
+            {
+                parts.Add(string.Format("Binding={0}", _binding.Value));
+            }
             if (_databaseName.HasBeenSet)
             {
                 parts.Add(string.Format("DatabaseName={0}", _databaseName.Value));
@@ -332,27 +344,31 @@ namespace MongoDB.Driver
         }
 
         // internal methods
-        internal void ApplyDefaultValues(MongoServerSettings serverSettings)
+        internal void ApplyDefaultValues(MongoServer server)
         {
+            if (!_binding.HasBeenSet)
+            {
+                Binding = new ClusterBinding(server);
+            }
             if (!_guidRepresentation.HasBeenSet)
             {
-                GuidRepresentation = serverSettings.GuidRepresentation;
+                GuidRepresentation = server.Settings.GuidRepresentation;
             }
             if (!_readEncoding.HasBeenSet)
             {
-                ReadEncoding = serverSettings.ReadEncoding;
+                ReadEncoding = server.Settings.ReadEncoding;
             }
             if (!_readPreference.HasBeenSet)
             {
-                ReadPreference = serverSettings.ReadPreference;
+                ReadPreference = server.Settings.ReadPreference;
             }
             if (!_writeConcern.HasBeenSet)
             {
-                WriteConcern  = serverSettings.WriteConcern;
+                WriteConcern  = server.Settings.WriteConcern;
             }
             if (!_writeEncoding.HasBeenSet)
             {
-                WriteEncoding = serverSettings.WriteEncoding;
+                WriteEncoding = server.Settings.WriteEncoding;
             }
         }
     }

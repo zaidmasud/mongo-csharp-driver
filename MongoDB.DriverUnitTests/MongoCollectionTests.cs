@@ -688,66 +688,66 @@ namespace MongoDB.DriverUnitTests
         [Test]
         public void TestGeoHaystackSearch()
         {
-            using (_database.RequestStart())
+            var nodeBinding = _server.GetNodeBinding(new PrimaryNodeSelector());
+            if (nodeBinding.Node.InstanceType != MongoServerInstanceType.ShardRouter)
             {
-                var instance = _server.RequestConnection.ServerInstance;
-                if (instance.InstanceType != MongoServerInstanceType.ShardRouter)
-                {
-                    if (_collection.Exists()) { _collection.Drop(); }
-                    _collection.Insert(new Place { Location = new[] { 34.2, 33.3 }, Type = "restaurant" });
-                    _collection.Insert(new Place { Location = new[] { 34.2, 37.3 }, Type = "restaurant" });
-                    _collection.Insert(new Place { Location = new[] { 59.1, 87.2 }, Type = "office" });
-                    _collection.CreateIndex(IndexKeys.GeoSpatialHaystack("Location", "Type"), IndexOptions.SetBucketSize(1));
+                var collection = _collection.Rebind(nodeBinding);
 
-                    var options = GeoHaystackSearchOptions
-                        .SetLimit(30)
-                        .SetMaxDistance(6)
-                        .SetQuery("Type", "restaurant");
-                    var result = _collection.GeoHaystackSearchAs<Place>(33, 33, options);
-                    Assert.IsTrue(result.Ok);
-                    Assert.IsTrue(result.Stats.Duration >= TimeSpan.Zero);
-                    Assert.AreEqual(2, result.Stats.BTreeMatches);
-                    Assert.AreEqual(2, result.Stats.NumberOfHits);
-                    Assert.AreEqual(34.2, result.Hits[0].Document.Location[0]);
-                    Assert.AreEqual(33.3, result.Hits[0].Document.Location[1]);
-                    Assert.AreEqual("restaurant", result.Hits[0].Document.Type);
-                    Assert.AreEqual(34.2, result.Hits[1].Document.Location[0]);
-                    Assert.AreEqual(37.3, result.Hits[1].Document.Location[1]);
-                    Assert.AreEqual("restaurant", result.Hits[1].Document.Type);
-                }
+                if (collection.Exists()) { collection.Drop(); }
+                collection.Insert(new Place { Location = new[] { 34.2, 33.3 }, Type = "restaurant" });
+                collection.Insert(new Place { Location = new[] { 34.2, 37.3 }, Type = "restaurant" });
+                collection.Insert(new Place { Location = new[] { 59.1, 87.2 }, Type = "office" });
+                collection.CreateIndex(IndexKeys.GeoSpatialHaystack("Location", "Type"), IndexOptions.SetBucketSize(1));
+
+                var options = GeoHaystackSearchOptions
+                    .SetLimit(30)
+                    .SetMaxDistance(6)
+                    .SetQuery("Type", "restaurant");
+                var result = collection.GeoHaystackSearchAs<Place>(33, 33, options);
+
+                Assert.IsTrue(result.Ok);
+                Assert.IsTrue(result.Stats.Duration >= TimeSpan.Zero);
+                Assert.AreEqual(2, result.Stats.BTreeMatches);
+                Assert.AreEqual(2, result.Stats.NumberOfHits);
+                Assert.AreEqual(34.2, result.Hits[0].Document.Location[0]);
+                Assert.AreEqual(33.3, result.Hits[0].Document.Location[1]);
+                Assert.AreEqual("restaurant", result.Hits[0].Document.Type);
+                Assert.AreEqual(34.2, result.Hits[1].Document.Location[0]);
+                Assert.AreEqual(37.3, result.Hits[1].Document.Location[1]);
+                Assert.AreEqual("restaurant", result.Hits[1].Document.Type);
             }
         }
 
         [Test]
         public void TestGeoHaystackSearch_Typed()
         {
-            using (_database.RequestStart())
+            var nodeBinding = _server.GetNodeBinding(new PrimaryNodeSelector());
+            if (nodeBinding.Node.InstanceType != MongoServerInstanceType.ShardRouter)
             {
-                var instance = _server.RequestConnection.ServerInstance;
-                if (instance.InstanceType != MongoServerInstanceType.ShardRouter)
-                {
-                    if (_collection.Exists()) { _collection.Drop(); }
-                    _collection.Insert(new Place { Location = new[] { 34.2, 33.3 }, Type = "restaurant" });
-                    _collection.Insert(new Place { Location = new[] { 34.2, 37.3 }, Type = "restaurant" });
-                    _collection.Insert(new Place { Location = new[] { 59.1, 87.2 }, Type = "office" });
-                    _collection.CreateIndex(IndexKeys<Place>.GeoSpatialHaystack(x => x.Location, x => x.Type), IndexOptions.SetBucketSize(1));
+                var collection = _collection.Rebind(nodeBinding);
 
-                    var options = GeoHaystackSearchOptions<Place>
-                        .SetLimit(30)
-                        .SetMaxDistance(6)
-                        .SetQuery(x => x.Type, "restaurant");
-                    var result = _collection.GeoHaystackSearchAs<Place>(33, 33, options);
-                    Assert.IsTrue(result.Ok);
-                    Assert.IsTrue(result.Stats.Duration >= TimeSpan.Zero);
-                    Assert.AreEqual(2, result.Stats.BTreeMatches);
-                    Assert.AreEqual(2, result.Stats.NumberOfHits);
-                    Assert.AreEqual(34.2, result.Hits[0].Document.Location[0]);
-                    Assert.AreEqual(33.3, result.Hits[0].Document.Location[1]);
-                    Assert.AreEqual("restaurant", result.Hits[0].Document.Type);
-                    Assert.AreEqual(34.2, result.Hits[1].Document.Location[0]);
-                    Assert.AreEqual(37.3, result.Hits[1].Document.Location[1]);
-                    Assert.AreEqual("restaurant", result.Hits[1].Document.Type);
-                }
+                if (collection.Exists()) { collection.Drop(); }
+                collection.Insert(new Place { Location = new[] { 34.2, 33.3 }, Type = "restaurant" });
+                collection.Insert(new Place { Location = new[] { 34.2, 37.3 }, Type = "restaurant" });
+                collection.Insert(new Place { Location = new[] { 59.1, 87.2 }, Type = "office" });
+                collection.CreateIndex(IndexKeys<Place>.GeoSpatialHaystack(x => x.Location, x => x.Type), IndexOptions.SetBucketSize(1));
+
+                var options = GeoHaystackSearchOptions<Place>
+                    .SetLimit(30)
+                    .SetMaxDistance(6)
+                    .SetQuery(x => x.Type, "restaurant");
+                var result = collection.GeoHaystackSearchAs<Place>(33, 33, options);
+
+                Assert.IsTrue(result.Ok);
+                Assert.IsTrue(result.Stats.Duration >= TimeSpan.Zero);
+                Assert.AreEqual(2, result.Stats.BTreeMatches);
+                Assert.AreEqual(2, result.Stats.NumberOfHits);
+                Assert.AreEqual(34.2, result.Hits[0].Document.Location[0]);
+                Assert.AreEqual(33.3, result.Hits[0].Document.Location[1]);
+                Assert.AreEqual("restaurant", result.Hits[0].Document.Type);
+                Assert.AreEqual(34.2, result.Hits[1].Document.Location[0]);
+                Assert.AreEqual(37.3, result.Hits[1].Document.Location[1]);
+                Assert.AreEqual("restaurant", result.Hits[1].Document.Type);
             }
         }
 
@@ -977,17 +977,20 @@ namespace MongoDB.DriverUnitTests
         [Test]
         public void TestGetMore()
         {
-            using (_server.RequestStart(_database))
+            var nodeBinding = _server.GetNodeBinding(new PrimaryNodeSelector());
+            var collection = _collection.Rebind(nodeBinding);
+
+            collection.RemoveAll();
+
+            var count = (nodeBinding.Node.MaxMessageLength / 1000000 + 1) * 2; // should result in at least 2 calls to GetMore
+            for (int i = 0; i < count; i++)
             {
-                _collection.RemoveAll();
-                var count = _server.Primary.MaxMessageLength / 1000000;
-                for (int i = 0; i < count; i++)
-                {
-                    var document = new BsonDocument("data", new BsonBinaryData(new byte[1000000]));
-                    _collection.Insert(document);
-                }
-                var list = _collection.FindAll().ToList();
+                var document = new BsonDocument("data", new BsonBinaryData(new byte[1000000]));
+                collection.Insert(document);
             }
+
+            var list = collection.FindAll().ToList();
+            Assert.AreEqual(count, list.Count);
         }
 
         [Test]
@@ -1117,17 +1120,16 @@ namespace MongoDB.DriverUnitTests
         [Test]
         public void TestInsertBatchMultipleBatchesWriteConcernDisabledContinueOnErrorFalse()
         {
-            var collectionName = Configuration.TestCollection.Name;
+            var nodeBinding = Configuration.TestServer.GetNodeBinding(new PrimaryNodeSelector());
+            var database = Configuration.TestDatabase.Rebind(nodeBinding);
             var collectionSettings = new MongoCollectionSettings { WriteConcern = WriteConcern.Unacknowledged };
-            var collection = Configuration.TestDatabase.GetCollection<BsonDocument>(collectionName, collectionSettings);
+            var collection = database.GetCollection<BsonDocument>(Configuration.TestCollection.Name, collectionSettings);
             if (collection.Exists()) { collection.Drop(); }
 
-            using (Configuration.TestDatabase.RequestStart())
-            {
-                var maxMessageLength = Configuration.TestServer.RequestConnection.ServerInstance.MaxMessageLength;
+            var maxMessageLength = nodeBinding.Node.MaxMessageLength;
 
-                var filler = new string('x', maxMessageLength / 3); // after overhead results in two documents per sub-batch
-                var documents = new BsonDocument[]
+            var filler = new string('x', maxMessageLength / 3); // after overhead results in two documents per sub-batch
+            var documents = new BsonDocument[]
                 {
                     // first sub-batch
                     new BsonDocument { { "_id", 1 }, { "filler", filler } },
@@ -1140,31 +1142,29 @@ namespace MongoDB.DriverUnitTests
                     new BsonDocument { { "_id", 5 }, { "filler", filler } },
                 };
 
-                var options = new MongoInsertOptions { Flags = InsertFlags.None }; // no ContinueOnError
-                collection.InsertBatch(documents, options);
+            var options = new MongoInsertOptions { Flags = InsertFlags.None }; // no ContinueOnError
+            collection.InsertBatch(documents, options);
 
-                Assert.AreEqual(1, collection.Count(Query.EQ("_id", 1)));
-                Assert.AreEqual(1, collection.Count(Query.EQ("_id", 2)));
-                Assert.AreEqual(1, collection.Count(Query.EQ("_id", 3)));
-                Assert.AreEqual(0, collection.Count(Query.EQ("_id", 4)));
-                Assert.AreEqual(0, collection.Count(Query.EQ("_id", 5)));
-            }
+            Assert.AreEqual(1, collection.Count(Query.EQ("_id", 1)));
+            Assert.AreEqual(1, collection.Count(Query.EQ("_id", 2)));
+            Assert.AreEqual(1, collection.Count(Query.EQ("_id", 3)));
+            Assert.AreEqual(0, collection.Count(Query.EQ("_id", 4)));
+            Assert.AreEqual(0, collection.Count(Query.EQ("_id", 5)));
         }
 
         [Test]
         public void TestInsertBatchMultipleBatchesWriteConcernDisabledContinueOnErrorTrue()
         {
-            var collectionName = Configuration.TestCollection.Name;
+            var nodeBinding = Configuration.TestServer.GetNodeBinding(new PrimaryNodeSelector());
+            var database = Configuration.TestDatabase.Rebind(nodeBinding);
             var collectionSettings = new MongoCollectionSettings { WriteConcern = WriteConcern.Unacknowledged };
-            var collection = Configuration.TestDatabase.GetCollection<BsonDocument>(collectionName, collectionSettings);
+            var collection = database.GetCollection<BsonDocument>(Configuration.TestCollection.Name, collectionSettings);
             if (collection.Exists()) { collection.Drop(); }
 
-            using (Configuration.TestDatabase.RequestStart())
-            {
-                var maxMessageLength = Configuration.TestServer.RequestConnection.ServerInstance.MaxMessageLength;
+            var maxMessageLength = nodeBinding.Node.MaxMessageLength;
 
-                var filler = new string('x', maxMessageLength / 3); // after overhead results in two documents per sub-batch
-                var documents = new BsonDocument[]
+            var filler = new string('x', maxMessageLength / 3); // after overhead results in two documents per sub-batch
+            var documents = new BsonDocument[]
                 {
                     // first sub-batch
                     new BsonDocument { { "_id", 1 }, { "filler", filler } },
@@ -1177,45 +1177,40 @@ namespace MongoDB.DriverUnitTests
                     new BsonDocument { { "_id", 5 }, { "filler", filler } },
                 };
 
-                var options = new MongoInsertOptions { Flags = InsertFlags.ContinueOnError };
-                collection.InsertBatch(documents, options);
+            var options = new MongoInsertOptions { Flags = InsertFlags.ContinueOnError };
+            collection.InsertBatch(documents, options);
 
-                Assert.AreEqual(1, collection.Count(Query.EQ("_id", 1)));
-                Assert.AreEqual(1, collection.Count(Query.EQ("_id", 2)));
-                Assert.AreEqual(1, collection.Count(Query.EQ("_id", 3)));
-                Assert.AreEqual(1, collection.Count(Query.EQ("_id", 4)));
-                Assert.AreEqual(1, collection.Count(Query.EQ("_id", 5)));
-            }
+            Assert.AreEqual(1, collection.Count(Query.EQ("_id", 1)));
+            Assert.AreEqual(1, collection.Count(Query.EQ("_id", 2)));
+            Assert.AreEqual(1, collection.Count(Query.EQ("_id", 3)));
+            Assert.AreEqual(1, collection.Count(Query.EQ("_id", 4)));
+            Assert.AreEqual(1, collection.Count(Query.EQ("_id", 5)));
         }
 
         [Test]
         public void TestInsertBatchSmallFinalSubbatch()
         {
-            var collectionName = Configuration.TestCollection.Name;
-            var collectionSettings = new MongoCollectionSettings { WriteConcern = WriteConcern.Unacknowledged };
-            var collection = Configuration.TestDatabase.GetCollection<BsonDocument>(collectionName, collectionSettings);
+            var nodeBinding = Configuration.TestServer.GetNodeBinding(new PrimaryNodeSelector());
+            var collection = Configuration.TestCollection.Rebind(nodeBinding);
             if (collection.Exists()) { collection.Drop(); }
 
-            using (Configuration.TestDatabase.RequestStart())
-            {
-                var maxMessageLength = Configuration.TestServer.RequestConnection.ServerInstance.MaxMessageLength;
-                var documentCount = maxMessageLength / (1024 * 1024) + 1; // 1 document will overflow to second sub batch
+            var maxMessageLength = nodeBinding.Node.MaxMessageLength;
+            var documentCount = maxMessageLength / (1024 * 1024) + 1; // 1 document will overflow to second sub batch
 
-                var documents = new BsonDocument[documentCount];
-                for (var i = 0; i < documentCount; i++)
-                {
-                    var document = new BsonDocument
+            var documents = new BsonDocument[documentCount];
+            for (var i = 0; i < documentCount; i++)
+            {
+                var document = new BsonDocument
                     {
                         { "_id", i },
                         { "filler", new string('x', 1024 * 1024) }
                     };
-                    documents[i] = document;
-                }
-
-                collection.InsertBatch(documents);
-
-                Assert.AreEqual(documentCount, collection.Count());
+                documents[i] = document;
             }
+
+            collection.InsertBatch(documents);
+
+            Assert.AreEqual(documentCount, collection.Count());
         }
 
         [Test]
@@ -1516,27 +1511,27 @@ namespace MongoDB.DriverUnitTests
         [Test]
         public void TestReIndex()
         {
-            using (_database.RequestStart())
+            var nodeBinding = _server.GetNodeBinding(new PrimaryNodeSelector());
+            if (nodeBinding.Node.InstanceType != MongoServerInstanceType.ShardRouter)
             {
-                var instance = _server.RequestConnection.ServerInstance;
-                if (instance.InstanceType != MongoServerInstanceType.ShardRouter)
+                var collection = _collection.Rebind(nodeBinding);
+
+                collection.RemoveAll();
+                collection.Insert(new BsonDocument("x", 1));
+                collection.Insert(new BsonDocument("x", 2));
+                collection.DropAllIndexes();
+                collection.CreateIndex("x");
+
+                // note: prior to 1.8.1 the reIndex command was returning duplicate ok elements
+                try
                 {
-                    _collection.RemoveAll();
-                    _collection.Insert(new BsonDocument("x", 1));
-                    _collection.Insert(new BsonDocument("x", 2));
-                    _collection.DropAllIndexes();
-                    _collection.CreateIndex("x");
-                    // note: prior to 1.8.1 the reIndex command was returning duplicate ok elements
-                    try
-                    {
-                        var result = _collection.ReIndex();
-                        Assert.AreEqual(2, result.Response["nIndexes"].ToInt32());
-                        Assert.AreEqual(2, result.Response["nIndexesWas"].ToInt32());
-                    }
-                    catch (InvalidOperationException ex)
-                    {
-                        Assert.AreEqual("Duplicate element name 'ok'.", ex.Message);
-                    }
+                    var result = collection.ReIndex();
+                    Assert.AreEqual(2, result.Response["nIndexes"].ToInt32());
+                    Assert.AreEqual(2, result.Response["nIndexesWas"].ToInt32());
+                }
+                catch (InvalidOperationException ex)
+                {
+                    Assert.AreEqual("Duplicate element name 'ok'.", ex.Message);
                 }
             }
         }
@@ -1728,40 +1723,39 @@ namespace MongoDB.DriverUnitTests
         [Test]
         public void TestValidate()
         {
-            using (_database.RequestStart())
+            var nodeBinding = _server.GetNodeBinding(new PrimaryNodeSelector());
+            if (nodeBinding.Node.InstanceType != MongoServerInstanceType.ShardRouter)
             {
-                var instance = _server.RequestConnection.ServerInstance;
-                if (instance.InstanceType != MongoServerInstanceType.ShardRouter)
-                {
-                    // ensure collection exists
-                    _collection.RemoveAll();
-                    _collection.Insert(new BsonDocument("x", 1));
+                var collection = _collection.Rebind(nodeBinding);
 
-                    var result = _collection.Validate();
-                    var ns = result.Namespace;
-                    var firstExtent = result.FirstExtent;
-                    var lastExtent = result.LastExtent;
-                    var extentCount = result.ExtentCount;
-                    var dataSize = result.DataSize;
-                    var nrecords = result.RecordCount;
-                    var lastExtentSize = result.LastExtentSize;
-                    var padding = result.Padding;
-                    var firstExtentDetails = result.FirstExtentDetails;
-                    var loc = firstExtentDetails.Loc;
-                    var xnext = firstExtentDetails.XNext;
-                    var xprev = firstExtentDetails.XPrev;
-                    var nsdiag = firstExtentDetails.NSDiag;
-                    var size = firstExtentDetails.Size;
-                    var firstRecord = firstExtentDetails.FirstRecord;
-                    var lastRecord = firstExtentDetails.LastRecord;
-                    var deletedCount = result.DeletedCount;
-                    var deletedSize = result.DeletedSize;
-                    var nindexes = result.IndexCount;
-                    var keysPerIndex = result.KeysPerIndex;
-                    var valid = result.IsValid;
-                    var errors = result.Errors;
-                    var warning = result.Warning;
-                }
+                // ensure collection exists
+                collection.RemoveAll();
+                collection.Insert(new BsonDocument("x", 1));
+
+                var result = _collection.Validate();
+                var ns = result.Namespace;
+                var firstExtent = result.FirstExtent;
+                var lastExtent = result.LastExtent;
+                var extentCount = result.ExtentCount;
+                var dataSize = result.DataSize;
+                var nrecords = result.RecordCount;
+                var lastExtentSize = result.LastExtentSize;
+                var padding = result.Padding;
+                var firstExtentDetails = result.FirstExtentDetails;
+                var loc = firstExtentDetails.Loc;
+                var xnext = firstExtentDetails.XNext;
+                var xprev = firstExtentDetails.XPrev;
+                var nsdiag = firstExtentDetails.NSDiag;
+                var size = firstExtentDetails.Size;
+                var firstRecord = firstExtentDetails.FirstRecord;
+                var lastRecord = firstExtentDetails.LastRecord;
+                var deletedCount = result.DeletedCount;
+                var deletedSize = result.DeletedSize;
+                var nindexes = result.IndexCount;
+                var keysPerIndex = result.KeysPerIndex;
+                var valid = result.IsValid;
+                var errors = result.Errors;
+                var warning = result.Warning;
             }
         }
     }

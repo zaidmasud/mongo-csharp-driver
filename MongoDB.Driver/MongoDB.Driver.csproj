@@ -96,6 +96,7 @@
     <Compile Include="Builders\QueryBuilder.cs" />
     <Compile Include="Builders\SortByBuilder.cs" />
     <Compile Include="Builders\UpdateBuilder.cs" />
+    <Compile Include="ClusterBinding.cs" />
     <Compile Include="CommandResults\AggregateResult.cs" />
     <Compile Include="CommandResults\CollectionStatsResult.cs" />
     <Compile Include="CommandResults\CommandResult.cs" />
@@ -149,6 +150,7 @@
     <Compile Include="Communication\Security\Mechanisms\Sspi\SspiPackage.cs" />
     <Compile Include="Communication\Security\Mechanisms\Sspi\Win32.cs" />
     <Compile Include="Communication\Security\Mechanisms\Sspi\Win32Exception.cs" />
+    <Compile Include="ConnectionBinding.cs" />
     <Compile Include="EvalFlags.cs" />
     <Compile Include="GeoJsonObjectModel\GeoJson.cs" />
     <Compile Include="GeoJsonObjectModel\GeoJsonBoundingBox.cs" />
@@ -210,6 +212,8 @@
     <Compile Include="GeoJsonObjectModel\Serializers\GeoJsonPolygonCoordinatesSerializer.cs" />
     <Compile Include="GeoJsonObjectModel\Serializers\GeoJsonPolygonSerializer.cs" />
     <Compile Include="GeoJsonObjectModel\Serializers\GeoJson2DCoordinatesSerializer.cs" />
+    <Compile Include="IMongoBinding.cs" />
+    <Compile Include="INodeSelector.cs" />
     <Compile Include="InsertFlags.cs" />
     <Compile Include="IMongoCollectionOptions.cs" />
     <Compile Include="IMongoCommand.cs" />
@@ -241,12 +245,16 @@
     <Compile Include="MongoUpdateOptions.cs" />
     <Compile Include="MongoUrlBuilder.cs" />
     <Compile Include="MongoUser.cs" />
+    <Compile Include="NodeBinding.cs" />
     <Compile Include="PasswordEvidence.cs" />
+    <Compile Include="PrimaryNodeSelector.cs" />
     <Compile Include="ProfilingLevel.cs" />
     <Compile Include="ReadPreference.cs" />
+    <Compile Include="ReadPreferenceNodeSelector.cs" />
     <Compile Include="ReplicaSetTag.cs" />
     <Compile Include="ReplicaSetTagSet.cs" />
     <Compile Include="Setting.cs" />
+    <Compile Include="BoundNodeSelector.cs" />
     <Compile Include="SslSettings.cs" />
     <Compile Include="SystemProfileInfo.cs" />
     <Compile Include="Wrappers\BaseWrapper.cs" />

@@ -14,6 +14,7 @@
 */
 
 using MongoDB.Bson;
+using MongoDB.Driver;
 using NUnit.Framework;
 
 namespace MongoDB.DriverUnitTests.Jira.CSharp103
@@ -24,12 +25,11 @@ namespace MongoDB.DriverUnitTests.Jira.CSharp103
         [Test]
         public void TestNullReferenceException()
         {
-            var server = Configuration.TestServer;
-            var database = Configuration.TestDatabase;
-            var collection = Configuration.TestCollection;
-            collection.RemoveAll();
-            using (database.RequestStart())
+            using (var connectionBinding = Configuration.TestServer.GetConnectionBinding(new PrimaryNodeSelector()))
             {
+                var collection = Configuration.TestCollection.Rebind(connectionBinding);
+
+                collection.RemoveAll();
                 for (int i = 0; i < 1; i++)
                 {
                     collection.Insert(new BsonDocument { { "blah", i } });

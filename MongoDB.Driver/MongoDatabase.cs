@@ -29,10 +29,10 @@ namespace MongoDB.Driver
     public class MongoDatabase
     {
         // private fields
-        private MongoServer _server;
-        private MongoDatabaseSettings _settings;
-        private string _name;
-        private MongoCollection<BsonDocument> _commandCollection;
+        private readonly MongoServer _server;
+        private readonly MongoDatabaseSettings _settings;
+        private readonly string _name;
+        private readonly MongoCollection<BsonDocument> _commandCollection;
 
         // constructors
         /// <summary>
@@ -75,7 +75,7 @@ namespace MongoDB.Driver
             }
 
             settings = settings.Clone();
-            settings.ApplyDefaultValues(server.Settings);
+            settings.ApplyDefaultValues(server);
             settings.Freeze();
 
             _server = server;
@@ -670,19 +670,6 @@ namespace MongoDB.Driver
             return new MongoGridFS(this, gridFSSettings);
         }
 
-        /// <summary>
-        /// Gets the last error (if any) that occurred on this connection. You MUST be within a RequestStart to call this method.
-        /// </summary>
-        /// <returns>The last error (<see cref=" GetLastErrorResult"/>)</returns>
-        public virtual GetLastErrorResult GetLastError()
-        {
-            if (Server.RequestNestingLevel == 0)
-            {
-                throw new InvalidOperationException("GetLastError can only be called if RequestStart has been called first.");
-            }
-            return RunCommandAs<GetLastErrorResult>("getlasterror"); // use all lowercase for backward compatibility
-        }
-
         // TODO: mongo shell has GetPrevError at the database level?
         // TODO: mongo shell has GetProfilingLevel at the database level?
         // TODO: mongo shell has GetReplicationInfo at the database level?
@@ -766,6 +753,18 @@ namespace MongoDB.Driver
         // TODO: mongo shell has IsMaster at database level?
 
         /// <summary>
+        /// Returns a new MongoDatabase instance with the specified binding.
+        /// </summary>
+        /// <param name="binding">The binding.</param>
+        /// <returns>A MongoDatabase with the specified binding.</returns>
+        public MongoDatabase Rebind(IMongoBinding binding)
+        {
+            var settings = _settings.Clone();
+            settings.Binding = binding;
+            return _server.GetDatabase(_name, settings);
+        }
+
+        /// <summary>
         /// Removes a user from this database.
         /// </summary>
         /// <param name="user">The user to remove.</param>
@@ -826,51 +825,6 @@ namespace MongoDB.Driver
             };
             var adminDatabase = _server.GetDatabase("admin");
             return adminDatabase.RunCommand(command);
-        }
-
-        /// <summary>
-        /// Lets the server know that this thread is done with a series of related operations. Instead of calling this method it is better
-        /// to put the return value of RequestStart in a using statement.
-        /// </summary>
-        public virtual void RequestDone()
-        {
-            _server.RequestDone();
-        }
-
-        /// <summary>
-        /// Lets the server know that this thread is about to begin a series of related operations that must all occur
-        /// on the same connection. The return value of this method implements IDisposable and can be placed in a
-        /// using statement (in which case RequestDone will be called automatically when leaving the using statement).
-        /// </summary>
-        /// <returns>A helper object that implements IDisposable and calls <see cref="RequestDone"/> from the Dispose method.</returns>
-        public virtual IDisposable RequestStart()
-        {
-            return RequestStart(ReadPreference.Primary);
-        }
-
-        /// <summary>
-        /// Lets the server know that this thread is about to begin a series of related operations that must all occur
-        /// on the same connection. The return value of this method implements IDisposable and can be placed in a
-        /// using statement (in which case RequestDone will be called automatically when leaving the using statement).
-        /// </summary>
-        /// <param name="slaveOk">Whether queries should be sent to secondary servers.</param>
-        /// <returns>A helper object that implements IDisposable and calls <see cref="RequestDone"/> from the Dispose method.</returns>
-        [Obsolete("Use the overload of RequestStart that has a ReadPreference parameter instead.")]
-        public virtual IDisposable RequestStart(bool slaveOk)
-        {
-            return _server.RequestStart(this, ReadPreference.FromSlaveOk(slaveOk));
-        }
-
-        /// <summary>
-        /// Lets the server know that this thread is about to begin a series of related operations that must all occur
-        /// on the same connection. The return value of this method implements IDisposable and can be placed in a
-        /// using statement (in which case RequestDone will be called automatically when leaving the using statement).
-        /// </summary>
-        /// <param name="readPreference">The read preference.</param>
-        /// <returns>A helper object that implements IDisposable and calls <see cref="RequestDone"/> from the Dispose method.</returns>
-        public virtual IDisposable RequestStart(ReadPreference readPreference)
-        {
-            return _server.RequestStart(this, readPreference);
         }
 
         // TODO: mongo shell has ResetError at the database level

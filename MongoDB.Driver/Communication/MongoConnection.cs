@@ -334,6 +334,18 @@ namespace MongoDB.Driver.Internal
             }
         }
 
+        internal void Release()
+        {
+            if (_connectionPool == null)
+            {
+                Close();
+            }
+            else
+            {
+                _connectionPool.ReleaseConnection(this);
+            }
+        }
+
         internal WriteConcernResult SendMessage(BsonBuffer buffer, MongoRequestMessage message, WriteConcern writeConcern, string databaseName)
         {
             if (_state == MongoConnectionState.Closed) { throw new InvalidOperationException("Connection is closed."); }

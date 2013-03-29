@@ -31,39 +31,34 @@ namespace MongoDB.DriverUnitTests.Jira.CSharp130
         }
 #pragma warning restore
 
-        private MongoServer _server;
-        private MongoDatabase _database;
-        private MongoCollection _collection;
-
-        [TestFixtureSetUp]
-        public void TestFixtureSetup()
+        [Test]
+        public void TestLastErrorMessage()
         {
             var clientSettings = Configuration.TestClient.Settings.Clone();
             clientSettings.WriteConcern = WriteConcern.Unacknowledged;
             var client = new MongoClient(clientSettings); // WriteConcern disabled
-            _server = client.GetServer();
-            _database = _server.GetDatabase(Configuration.TestDatabase.Name);
-            _collection = _database.GetCollection<C>(Configuration.TestCollection.Name);
-        }
+            var server = client.GetServer();
 
-        [Test]
-        public void TestLastErrorMessage()
-        {
-            using (_server.RequestStart(_database))
+            using (var connectionBinding = server.GetConnectionBinding(new PrimaryNodeSelector()))
             {
+                var database = server.GetDatabase(Configuration.TestDatabase.Name).Rebind(connectionBinding);
+                var collection = database.GetCollection<C>(Configuration.TestCollection.Name);
+
                 var c = new C { List = new List<int>() };
 
                 // insert it once
-                _collection.Insert(c);
-                var lastError = _server.GetLastError();
+                collection.Insert(c);
+                var lastError = connectionBinding.GetLastError();
+
                 Assert.AreEqual(0, lastError.DocumentsAffected);
                 Assert.IsFalse(lastError.HasLastErrorMessage);
                 Assert.IsNull(lastError.LastErrorMessage);
                 Assert.IsFalse(lastError.UpdatedExisting);
 
                 // insert it again (expect duplicate key error, but no exception because WriteConcern = WriteConcern.Unacknowledged)
-                _collection.Insert(c);
-                lastError = _server.GetLastError();
+                collection.Insert(c);
+                lastError = connectionBinding.GetLastError();
+
                 Assert.AreEqual(0, lastError.DocumentsAffected);
                 Assert.IsTrue(lastError.HasLastErrorMessage);
                 Assert.IsNotNull(lastError.LastErrorMessage);

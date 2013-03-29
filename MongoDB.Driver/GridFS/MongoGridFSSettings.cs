@@ -27,6 +27,7 @@ namespace MongoDB.Driver.GridFS
         private static MongoGridFSSettings __defaults = new MongoGridFSSettings();
 
         // private fields
+        private Setting<IMongoBinding> _binding;
         private Setting<int> _chunkSize;
         private Setting<string> _root;
         private Setting<bool> _updateMD5;
@@ -112,6 +113,27 @@ namespace MongoDB.Driver.GridFS
         }
 
         // public properties
+        /// <summary>
+        /// Gets or sets the binding.
+        /// </summary>
+        /// <value>
+        /// The binding.
+        /// </value>
+        /// <exception cref="System.ArgumentNullException">value</exception>
+        public IMongoBinding Binding
+        {
+            get { return _binding.Value; }
+            set
+            {
+                if (_isFrozen) { ThrowFrozen(); }
+                if (value == null)
+                {
+                    throw new ArgumentNullException("value");
+                }
+                _binding.Value = value;
+            }
+        }
+
         /// <summary>
         /// Gets the chunks collection name.
         /// </summary>
@@ -258,6 +280,7 @@ namespace MongoDB.Driver.GridFS
         public MongoGridFSSettings Clone()
         {
             var clone = new MongoGridFSSettings();
+            clone._binding = _binding;
             clone._chunkSize = _chunkSize.Clone();
             clone._root = _root.Clone();
             clone._updateMD5 = _updateMD5.Clone();
@@ -275,6 +298,7 @@ namespace MongoDB.Driver.GridFS
         {
             if (object.ReferenceEquals(rhs, null) || GetType() != rhs.GetType()) { return false; }
             return
+                _binding.Value == rhs._binding.Value &&
                 _chunkSize.Value == rhs._chunkSize.Value &&
                 _root.Value == rhs._root.Value &&
                 _updateMD5.Value == rhs._updateMD5.Value &&
@@ -336,6 +360,7 @@ namespace MongoDB.Driver.GridFS
 
             // see Effective Java by Joshua Bloch
             int hash = 17;
+            hash = 37 * hash + ((_binding.Value == null) ? 0 : _binding.Value.GetHashCode());
             hash = 37 * hash + _chunkSize.Value.GetHashCode();
             hash = 37 * hash + ((_root.Value == null) ? 0 : _root.Value.GetHashCode());
             hash = 37 * hash + _updateMD5.Value.GetHashCode();
@@ -347,6 +372,10 @@ namespace MongoDB.Driver.GridFS
         // internal methods
         internal void ApplyDefaultValues(MongoDatabaseSettings databaseSettings)
         {
+            if (!_binding.HasBeenSet)
+            {
+                Binding = databaseSettings.Binding;
+            }
             if (!_chunkSize.HasBeenSet)
             {
                 ChunkSize = __defaults.ChunkSize;

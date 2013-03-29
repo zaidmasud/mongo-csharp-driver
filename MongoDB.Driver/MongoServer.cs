@@ -40,7 +40,6 @@ namespace MongoDB.Driver
         private readonly object _serverLock = new object();
         private readonly IMongoServerProxy _serverProxy;
         private readonly MongoServerSettings _settings;
-        private readonly Dictionary<int, Request> _requests = new Dictionary<int, Request>(); // tracks threads that have called RequestStart
         private readonly IndexCache _indexCache = new IndexCache();
         private int _sequentialId;
 
@@ -306,52 +305,6 @@ namespace MongoDB.Driver
         }
 
         /// <summary>
-        /// Gets the connection reserved by the current RequestStart scope (null if not in the scope of a RequestStart).
-        /// </summary>
-        public virtual MongoConnection RequestConnection
-        {
-            get
-            {
-                lock (_serverLock)
-                {
-                    int threadId = Thread.CurrentThread.ManagedThreadId;
-                    Request request;
-                    if (_requests.TryGetValue(threadId, out request))
-                    {
-                        return request.Connection;
-                    }
-                    else
-                    {
-                        return null;
-                    }
-                }
-            }
-        }
-
-        /// <summary>
-        /// Gets the RequestStart nesting level for the current thread.
-        /// </summary>
-        public virtual int RequestNestingLevel
-        {
-            get
-            {
-                lock (_serverLock)
-                {
-                    int threadId = Thread.CurrentThread.ManagedThreadId;
-                    Request request;
-                    if (_requests.TryGetValue(threadId, out request))
-                    {
-                        return request.NestingLevel;
-                    }
-                    else
-                    {
-                        return 0;
-                    }
-                }
-            }
-        }
-
-        /// <summary>
         /// Gets the secondary instances.
         /// </summary>
         public virtual MongoServerInstance[] Secondaries
@@ -586,6 +539,32 @@ namespace MongoDB.Driver
         }
 
         /// <summary>
+        /// Gets a binding to this cluster.
+        /// </summary>
+        /// <returns>A cluster binding.</returns>
+        public ClusterBinding GetClusterBinding()
+        {
+            return new ClusterBinding(this);
+        }
+
+        /// <summary>
+        /// Gets a binding to a connection (to a node in this cluster).
+        /// </summary>
+        /// <param name="selector">The node selector.</param>
+        /// <returns>A binding to a connection.</returns>
+        /// <exception cref="System.ArgumentNullException">selector</exception>
+        public ConnectionBinding GetConnectionBinding(INodeSelector selector)
+        {
+            if (selector == null)
+            {
+                throw new ArgumentNullException("selector");
+            }
+            var node = selector.SelectNode(this);
+            var connection = node.AcquireConnection();
+            return new ConnectionBinding(this, node, connection);
+        }
+
+        /// <summary>
         /// Gets a MongoDatabase instance representing a database on this server. Only one instance
         /// is created for each combination of database settings.
         /// </summary>
@@ -665,13 +644,19 @@ namespace MongoDB.Driver
         }
 
         /// <summary>
-        /// Gets the last error (if any) that occurred on this connection. You MUST be within a RequestStart to call this method.
+        /// Gets a binding to a node in this cluster.
         /// </summary>
-        /// <returns>The last error (<see cref=" GetLastErrorResult"/>)</returns>
-        public virtual GetLastErrorResult GetLastError()
+        /// <param name="selector">The selector.</param>
+        /// <returns>A node binding.</returns>
+        /// <exception cref="System.ArgumentNullException">selector</exception>
+        public NodeBinding GetNodeBinding(INodeSelector selector)
         {
-            var adminDatabase = GetDatabase("admin");
-            return adminDatabase.GetLastError();
+            if (selector == null)
+            {
+                throw new ArgumentNullException("selector");
+            }
+            var node = selector.SelectNode(this);
+            return new NodeBinding(this, node);
         }
 
         /// <summary>
@@ -737,139 +722,6 @@ namespace MongoDB.Driver
         }
 
         /// <summary>
-        /// Lets the server know that this thread is done with a series of related operations. Instead of calling this method it is better
-        /// to put the return value of RequestStart in a using statement.
-        /// </summary>
-        public virtual void RequestDone()
-        {
-            int threadId = Thread.CurrentThread.ManagedThreadId;
-            MongoConnection connectionToRelease = null;
-
-            lock (_serverLock)
-            {
-                Request request;
-                if (_requests.TryGetValue(threadId, out request))
-                {
-                    if (--request.NestingLevel == 0)
-                    {
-                        _requests.Remove(threadId);
-                        connectionToRelease = request.Connection;
-                    }
-                }
-                else
-                {
-                    throw new InvalidOperationException("Thread is not in a request (did you call RequestStart?).");
-                }
-            }
-
-            if (connectionToRelease != null)
-            {
-                connectionToRelease.ServerInstance.ReleaseConnection(connectionToRelease);
-            }
-        }
-
-        /// <summary>
-        /// Lets the server know that this thread is about to begin a series of related operations that must all occur
-        /// on the same connection. The return value of this method implements IDisposable and can be placed in a
-        /// using statement (in which case RequestDone will be called automatically when leaving the using statement).
-        /// </summary>
-        /// <param name="initialDatabase">One of the databases involved in the related operations.</param>
-        /// <returns>A helper object that implements IDisposable and calls <see cref="RequestDone"/> from the Dispose method.</returns>
-        public virtual IDisposable RequestStart(MongoDatabase initialDatabase)
-        {
-            return RequestStart(initialDatabase, ReadPreference.Primary);
-        }
-
-        /// <summary>
-        /// Lets the server know that this thread is about to begin a series of related operations that must all occur
-        /// on the same connection. The return value of this method implements IDisposable and can be placed in a
-        /// using statement (in which case RequestDone will be called automatically when leaving the using statement).
-        /// </summary>
-        /// <param name="initialDatabase">One of the databases involved in the related operations.</param>
-        /// <param name="slaveOk">Whether a secondary is acceptable.</param>
-        /// <returns>A helper object that implements IDisposable and calls <see cref="RequestDone"/> from the Dispose method.</returns>
-        [Obsolete("Use the overload of RequestStart that has a ReadPreference parameter instead.")]
-        public virtual IDisposable RequestStart(MongoDatabase initialDatabase, bool slaveOk)
-        {
-            var readPreference = ReadPreference.FromSlaveOk(slaveOk);
-            return RequestStart(initialDatabase, readPreference);
-        }
-
-        /// <summary>
-        /// Lets the server know that this thread is about to begin a series of related operations that must all occur
-        /// on the same connection. The return value of this method implements IDisposable and can be placed in a
-        /// using statement (in which case RequestDone will be called automatically when leaving the using statement).
-        /// </summary>
-        /// <param name="initialDatabase">One of the databases involved in the related operations.</param>
-        /// <param name="readPreference">The read preference.</param>
-        /// <returns>A helper object that implements IDisposable and calls <see cref="RequestDone"/> from the Dispose method.</returns>
-        public virtual IDisposable RequestStart(MongoDatabase initialDatabase, ReadPreference readPreference)
-        {
-            int threadId = Thread.CurrentThread.ManagedThreadId;
-
-            lock (_serverLock)
-            {
-                Request request;
-                if (_requests.TryGetValue(threadId, out request))
-                {
-                    if (!readPreference.MatchesInstance(request.Connection.ServerInstance))
-                    {
-                        throw new InvalidOperationException("A nested call to RequestStart was made and the current instance does not match the nested read preference.");
-                    }
-                    request.NestingLevel++;
-                    return new RequestStartResult(this);
-                }
-
-            }
-
-            var serverInstance = _serverProxy.ChooseServerInstance(readPreference);
-            var connection = serverInstance.AcquireConnection();
-
-            lock (_serverLock)
-            {
-                var request = new Request(connection);
-                _requests.Add(threadId, request);
-                return new RequestStartResult(this);
-            }
-        }
-
-        /// <summary>
-        /// Lets the server know that this thread is about to begin a series of related operations that must all occur
-        /// on the same connection. The return value of this method implements IDisposable and can be placed in a
-        /// using statement (in which case RequestDone will be called automatically when leaving the using statement).
-        /// </summary>
-        /// <param name="initialDatabase">One of the databases involved in the related operations.</param>
-        /// <param name="serverInstance">The server instance this request should be tied to.</param>
-        /// <returns>A helper object that implements IDisposable and calls <see cref="RequestDone"/> from the Dispose method.</returns>
-        public virtual IDisposable RequestStart(MongoDatabase initialDatabase, MongoServerInstance serverInstance)
-        {
-            int threadId = Thread.CurrentThread.ManagedThreadId;
-
-            lock (_serverLock)
-            {
-                Request request;
-                if (_requests.TryGetValue(threadId, out request))
-                {
-                    if (serverInstance != request.Connection.ServerInstance)
-                    {
-                        throw new InvalidOperationException("The server instance passed to a nested call to RequestStart does not match the server instance of the current Request.");
-                    }
-                    request.NestingLevel++;
-                    return new RequestStartResult(this);
-                }
-            }
-
-            var connection = serverInstance.AcquireConnection();
-
-            lock (_serverLock)
-            {
-                var request = new Request(connection);
-                _requests.Add(threadId, request);
-                return new RequestStartResult(this);
-            }
-        }
-
-        /// <summary>
         /// Removes all entries in the index cache used by EnsureIndex. Call this method
         /// when you know (or suspect) that a process other than this one may have dropped one or
         /// more indexes.
@@ -907,126 +759,9 @@ namespace MongoDB.Driver
         }
 
         // internal methods
-        internal MongoConnection AcquireConnection(ReadPreference readPreference)
+        internal MongoServerInstance ChooseServerInstance(ReadPreference readPreference)
         {
-            MongoConnection requestConnection = null;
-            lock (_serverLock)
-            {
-                // if a thread has called RequestStart it wants all operations to take place on the same connection
-                int threadId = Thread.CurrentThread.ManagedThreadId;
-                Request request;
-                if (_requests.TryGetValue(threadId, out request))
-                {
-                    if (!readPreference.MatchesInstance(request.Connection.ServerInstance))
-                    {
-                        throw new InvalidOperationException("The thread is in a RequestStart and the current server instance is not a match for the supplied read preference.");
-                    }
-                    requestConnection = request.Connection;
-                }
-            }
-
-            // check authentication outside of lock
-            if (requestConnection != null)
-            {
-                return requestConnection;
-            }
-
-            var serverInstance = _serverProxy.ChooseServerInstance(readPreference);
-            return serverInstance.AcquireConnection();
-        }
-
-        internal MongoConnection AcquireConnection(MongoServerInstance serverInstance)
-        {
-            MongoConnection requestConnection = null;
-            lock (_serverLock)
-            {
-                // if a thread has called RequestStart it wants all operations to take place on the same connection
-                int threadId = Thread.CurrentThread.ManagedThreadId;
-                Request request;
-                if (_requests.TryGetValue(threadId, out request))
-                {
-                    if (request.Connection.ServerInstance != serverInstance)
-                    {
-                        var message = string.Format(
-                            "AcquireConnection called for server instance '{0}' but thread is in a RequestStart for server instance '{1}'.",
-                            serverInstance.Address, request.Connection.ServerInstance.Address);
-                        throw new MongoConnectionException(message);
-                    }
-                    requestConnection = request.Connection;
-                }
-            }
-
-            if (requestConnection != null)
-            {
-                return requestConnection;
-            }
-
-            return serverInstance.AcquireConnection();
-        }
-
-        internal void ReleaseConnection(MongoConnection connection)
-        {
-            lock (_serverLock)
-            {
-                // if the thread has called RequestStart just verify that the connection it is releasing is the right one
-                int threadId = Thread.CurrentThread.ManagedThreadId;
-                Request request;
-                if (_requests.TryGetValue(threadId, out request))
-                {
-                    if (connection != request.Connection)
-                    {
-                        throw new ArgumentException("Connection being released is not the one assigned to the thread by RequestStart.", "connection");
-                    }
-                    return; // hold on to the connection until RequestDone is called
-                }
-            }
-
-            connection.ServerInstance.ReleaseConnection(connection);
-        }
-
-        // private nested classes
-        private class Request
-        {
-            // private fields
-            private MongoConnection _connection;
-            private int _nestingLevel;
-
-            // constructors
-            public Request(MongoConnection connection)
-            {
-                _connection = connection;
-                _nestingLevel = 1;
-            }
-
-            // public properties
-            public MongoConnection Connection
-            {
-                get { return _connection; }
-            }
-
-            public int NestingLevel
-            {
-                get { return _nestingLevel; }
-                set { _nestingLevel = value; }
-            }
-        }
-
-        private class RequestStartResult : IDisposable
-        {
-            // private fields
-            private MongoServer _server;
-
-            // constructors
-            public RequestStartResult(MongoServer server)
-            {
-                _server = server;
-            }
-
-            // public methods
-            public void Dispose()
-            {
-                _server.RequestDone();
-            }
+            return _serverProxy.ChooseServerInstance(readPreference);
         }
     }
 }

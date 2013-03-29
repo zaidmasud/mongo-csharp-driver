@@ -34,10 +34,10 @@ namespace MongoDB.Driver
     public abstract class MongoCollection
     {
         // private fields
-        private MongoServer _server;
-        private MongoDatabase _database;
-        private MongoCollectionSettings _settings;
-        private string _name;
+        private readonly MongoServer _server;
+        private readonly MongoDatabase _database;
+        private readonly MongoCollectionSettings _settings;
+        private readonly string _name;
         private MongoCollection<BsonDocument> _commandCollection; // used to run commands with this collection's settings
 
         // constructors
@@ -1151,14 +1151,13 @@ namespace MongoDB.Driver
                 throw new ArgumentNullException("options");
             }
 
-            var connection = _server.AcquireConnection(ReadPreference.Primary);
-            try
+            using (var connectionBinding = _settings.Binding.GetConnectionBinding(new PrimaryNodeSelector()))
             {
                 var writeConcern = options.WriteConcern ?? _settings.WriteConcern;
 
                 List<WriteConcernResult> results = (writeConcern.Enabled) ? new List<WriteConcernResult>() : null;
 
-                var writerSettings = GetWriterSettings(connection);
+                var writerSettings = GetWriterSettings(connectionBinding.Node);
                 using (var bsonBuffer = new BsonBuffer(new MultiChunkBuffer(BsonChunkPool.Default), true))
                 {
                     var message = new MongoInsertMessage(writerSettings, FullName, options.CheckElementNames, options.Flags);
@@ -1192,13 +1191,13 @@ namespace MongoDB.Driver
                         }
                         message.AddDocument(bsonBuffer, nominalType, document);
 
-                        if (message.MessageLength > connection.ServerInstance.MaxMessageLength)
+                        if (message.MessageLength > connectionBinding.Node.MaxMessageLength)
                         {
                             byte[] lastDocument = message.RemoveLastDocument(bsonBuffer);
 
                             if (writeConcern.Enabled || (options.Flags & InsertFlags.ContinueOnError) != 0)
                             {
-                                var intermediateResult = connection.SendMessage(bsonBuffer, message, writeConcern, _database.Name);
+                                var intermediateResult = connectionBinding.Connection.SendMessage(bsonBuffer, message, writeConcern, _database.Name);
                                 if (writeConcern.Enabled) { results.Add(intermediateResult); }
                             }
                             else
@@ -1206,7 +1205,7 @@ namespace MongoDB.Driver
                                 // if WriteConcern is disabled and ContinueOnError is false we have to check for errors and stop if sub-batch has error
                                 try
                                 {
-                                    connection.SendMessage(bsonBuffer, message, WriteConcern.Acknowledged, _database.Name);
+                                    connectionBinding.Connection.SendMessage(bsonBuffer, message, WriteConcern.Acknowledged, _database.Name);
                                 }
                                 catch (WriteConcernException)
                                 {
@@ -1218,15 +1217,11 @@ namespace MongoDB.Driver
                         }
                     }
 
-                    var finalResult = connection.SendMessage(bsonBuffer, message, writeConcern, _database.Name);
+                    var finalResult = connectionBinding.Connection.SendMessage(bsonBuffer, message, writeConcern, _database.Name);
                     if (writeConcern.Enabled) { results.Add(finalResult); }
 
                     return results;
                 }
-            }
-            finally
-            {
-                _server.ReleaseConnection(connection);
             }
         }
 
@@ -1308,6 +1303,19 @@ namespace MongoDB.Driver
         }
 
         /// <summary>
+        /// Returns a new instance of MongoCollection just like this one but with a different binding.
+        /// </summary>
+        /// <typeparam name="TNewDefaultDocument">The type of the new default document.</typeparam>
+        /// <param name="binding">The binding.</param>
+        /// <returns>A new instance of MongoCollection with a different binding.</returns>
+        public MongoCollection<TNewDefaultDocument> Rebind<TNewDefaultDocument>(IMongoBinding binding)
+        {
+            var settings = _settings.Clone();
+            settings.Binding = binding;
+            return _database.GetCollection<TNewDefaultDocument>(_name, settings);
+        }
+
+        /// <summary>
         /// Runs the ReIndex command on this collection.
         /// </summary>
         /// <returns>A CommandResult.</returns>
@@ -1358,16 +1366,11 @@ namespace MongoDB.Driver
         /// <returns>A WriteConcernResult (or null if WriteConcern is disabled).</returns>
         public virtual WriteConcernResult Remove(IMongoQuery query, RemoveFlags flags, WriteConcern writeConcern)
         {
-            var connection = _server.AcquireConnection(ReadPreference.Primary);
-            try
+            using (var connectionBinding = _settings.Binding.GetConnectionBinding(new PrimaryNodeSelector()))
             {
-                var writerSettings = GetWriterSettings(connection);
+                var writerSettings = GetWriterSettings(connectionBinding.Node);
                 var message = new MongoDeleteMessage(writerSettings, FullName, flags, query);
-                return connection.SendMessage(message, writeConcern ?? _settings.WriteConcern, _database.Name);
-            }
-            finally
-            {
-                _server.ReleaseConnection(connection);
+                return connectionBinding.Connection.SendMessage(message, writeConcern ?? _settings.WriteConcern, _database.Name);
             }
         }
 
@@ -1586,17 +1589,12 @@ namespace MongoDB.Driver
                 throw new ArgumentNullException("options");
             }
 
-            var connection = _server.AcquireConnection(ReadPreference.Primary);
-            try
+            using (var connectionBinding = _settings.Binding.GetConnectionBinding(new PrimaryNodeSelector()))
             {
-                var writerSettings = GetWriterSettings(connection);
+                var writerSettings = GetWriterSettings(connectionBinding.Node);
                 var message = new MongoUpdateMessage(writerSettings, FullName, options.CheckElementNames, options.Flags, query, update);
                 var writeConcern = options.WriteConcern ?? _settings.WriteConcern;
-                return connection.SendMessage(message, writeConcern, _database.Name);
-            }
-            finally
-            {
-                _server.ReleaseConnection(connection);
+                return connectionBinding.Connection.SendMessage(message, writeConcern, _database.Name);
             }
         }
 
@@ -1669,13 +1667,13 @@ namespace MongoDB.Driver
             };
         }
 
-        internal BsonBinaryWriterSettings GetWriterSettings(MongoConnection connection)
+        internal BsonBinaryWriterSettings GetWriterSettings(MongoServerInstance node)
         {
             return new BsonBinaryWriterSettings
             {
                 Encoding = _settings.WriteEncoding ?? MongoDefaults.WriteEncoding,
                 GuidRepresentation = _settings.GuidRepresentation,
-                MaxDocumentSize = connection.ServerInstance.MaxDocumentSize
+                MaxDocumentSize = node.MaxDocumentSize
             };
         }
 
@@ -2017,6 +2015,16 @@ namespace MongoDB.Driver
             WriteConcern writeConcern)
         {
             return InsertBatch<TDefaultDocument>(documents, writeConcern);
+        }
+
+        /// <summary>
+        /// Returns a new instance of MongoCollection just like this one but with a different binding.
+        /// </summary>
+        /// <param name="binding">The binding.</param>
+        /// <returns>A new instance of MongoCollection with a different binding.</returns>
+        public MongoCollection<TDefaultDocument> Rebind(IMongoBinding binding)
+        {
+            return Rebind<TDefaultDocument>(binding);
         }
 
         /// <summary>
