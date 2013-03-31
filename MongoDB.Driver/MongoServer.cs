@@ -27,7 +27,7 @@ namespace MongoDB.Driver
     /// <summary>
     /// Represents a MongoDB server (either a single instance or a replica set) and the settings used to access it. This class is thread-safe.
     /// </summary>
-    public class MongoServer : IMongoBinding
+    public class MongoServer : IClusterBinding
     {
         // private static fields
         private readonly static object __staticLock = new object();
@@ -544,7 +544,7 @@ namespace MongoDB.Driver
         /// <param name="selector">The node selector.</param>
         /// <returns>A binding to a connection.</returns>
         /// <exception cref="System.ArgumentNullException">selector</exception>
-        public ConnectionBinding GetConnectionBinding(INodeSelector selector)
+        public IConnectionBinding GetConnectionBinding(INodeSelector selector)
         {
             if (selector == null)
             {
@@ -755,17 +755,12 @@ namespace MongoDB.Driver
         }
 
         // explicit interface implementations
-        MongoServer IMongoBinding.Cluster
+        MongoServer IClusterBinding.Cluster
         {
             get { return this; }
         }
 
-        MongoNode IMongoBinding.Node
-        {
-            get { return null; }
-        }
-
-        IMongoBinding IMongoBinding.GetNodeBinding(INodeSelector selector)
+        INodeBinding IMongoBinding.GetNodeBinding(INodeSelector selector)
         {
             return GetNode(selector);
         }

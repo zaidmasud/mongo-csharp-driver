@@ -67,7 +67,7 @@ namespace MongoDB.Driver
             {
                 throw new ArgumentNullException("settings");
             }
-            if (binding.Cluster != database.Server)
+            if (((IClusterBinding)binding).Cluster != database.Server)
             {
                 throw new ArgumentException("Binding is to a different cluster.", "binding");
             }

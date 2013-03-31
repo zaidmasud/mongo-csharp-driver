@@ -211,7 +211,10 @@
     <Compile Include="GeoJsonObjectModel\Serializers\GeoJsonPolygonCoordinatesSerializer.cs" />
     <Compile Include="GeoJsonObjectModel\Serializers\GeoJsonPolygonSerializer.cs" />
     <Compile Include="GeoJsonObjectModel\Serializers\GeoJson2DCoordinatesSerializer.cs" />
+    <Compile Include="IClusterBinding.cs" />
+    <Compile Include="IConnectionBinding.cs" />
     <Compile Include="IMongoBinding.cs" />
+    <Compile Include="INodeBinding.cs" />
     <Compile Include="INodeSelector.cs" />
     <Compile Include="InsertFlags.cs" />
     <Compile Include="IMongoCollectionOptions.cs" />

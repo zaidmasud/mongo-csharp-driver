@@ -21,7 +21,7 @@ namespace MongoDB.Driver
     /// <summary>
     /// Represents a binding to a connection.
     /// </summary>
-    public class ConnectionBinding : IMongoBinding, IDisposable
+    public class ConnectionBinding : IConnectionBinding
     {
         // private fields
         private readonly MongoServer _cluster;
@@ -31,20 +31,7 @@ namespace MongoDB.Driver
         private bool _disposed;
 
         // constructors
-        /// <summary>
-        /// Initializes a new instance of the <see cref="ConnectionBinding"/> class.
-        /// </summary>
-        /// <param name="cluster">The cluster.</param>
-        /// <param name="node">The node.</param>
-        /// <param name="connection">The connection.</param>
-        /// <exception cref="System.ArgumentNullException">
-        /// cluster
-        /// or
-        /// node
-        /// or
-        /// connection
-        /// </exception>
-        public ConnectionBinding(MongoServer cluster, MongoNode node, MongoConnection connection)
+        internal ConnectionBinding(MongoServer cluster, MongoNode node, MongoConnection connection)
         {
             if (cluster == null)
             {
@@ -58,6 +45,7 @@ namespace MongoDB.Driver
             {
                 throw new ArgumentNullException("connection");
             }
+
             _cluster = cluster;
             _node = node;
             _connection = connection;
@@ -140,7 +128,7 @@ namespace MongoDB.Driver
         /// </returns>
         /// <exception cref="System.ArgumentNullException">selector</exception>
         /// <exception cref="System.ObjectDisposedException">ConnectionBinding</exception>
-        public ConnectionBinding GetConnectionBinding(INodeSelector selector)
+        public IConnectionBinding GetConnectionBinding(INodeSelector selector)
         {
             if (selector == null)
             {
@@ -217,7 +205,7 @@ namespace MongoDB.Driver
         /// <returns>
         /// A node binding.
         /// </returns>
-        public IMongoBinding GetNodeBinding(INodeSelector selector)
+        public INodeBinding GetNodeBinding(INodeSelector selector)
         {
             // keep binding focused on the connection
             return GetConnectionBinding(selector);

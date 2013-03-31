@@ -20,7 +20,7 @@ namespace MongoDB.Driver
     /// <summary>
     /// Represents a node in a cluster.
     /// </summary>
-    public class MongoNode : IMongoBinding
+    public class MongoNode : INodeBinding
     {
         // private fields
         private readonly MongoServer _cluster;
@@ -109,17 +109,6 @@ namespace MongoDB.Driver
         }
 
         /// <summary>
-        /// Gets the node.
-        /// </summary>
-        /// <value>
-        /// The node.
-        /// </value>
-        public MongoNode Node
-        {
-            get { return this; }
-        }
-
-        /// <summary>
         /// Gets the state.
         /// </summary>
         /// <value>
@@ -145,7 +134,7 @@ namespace MongoDB.Driver
         /// A connection binding.
         /// </returns>
         /// <exception cref="System.ArgumentNullException">selector</exception>
-        public ConnectionBinding GetConnectionBinding(INodeSelector selector)
+        public IConnectionBinding GetConnectionBinding(INodeSelector selector)
         {
             if (selector == null)
             {
@@ -189,7 +178,7 @@ namespace MongoDB.Driver
         /// A node binding.
         /// </returns>
         /// <exception cref="System.ArgumentNullException">selector</exception>
-        public IMongoBinding GetNodeBinding(INodeSelector selector)
+        public INodeBinding GetNodeBinding(INodeSelector selector)
         {
             if (selector == null)
             {
@@ -198,6 +187,12 @@ namespace MongoDB.Driver
 
             selector.EnsureCurrentNodeIsAcceptable(this);
             return this;
+        }
+
+        // explicit interface implementations
+        MongoNode INodeBinding.Node
+        {
+            get { return this; }
         }
     }
 }

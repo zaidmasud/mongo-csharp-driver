@@ -105,7 +105,7 @@ namespace MongoDB.Driver
         private bool _disposed = false;
         private bool _started = false;
         private bool _done = false;
-        private IMongoBinding _binding; // set by GetFirst to ensure GetMore goes to same node
+        private INodeBinding _nodeBinding; // set by GetFirst to ensure GetMore goes to same node
         private int _count;
         private int _positiveLimit;
         private MongoReplyMessage<TDocument> _reply;
@@ -284,16 +284,16 @@ namespace MongoDB.Driver
         }
 
         // private methods
-        private ConnectionBinding GetConnectionBinding()
+        private IConnectionBinding GetConnectionBinding()
         {
             var nodeSelector = new ReadPreferenceNodeSelector(_readPreference);
 
-            if (_binding == null)
+            if (_nodeBinding == null)
             {
-                _binding = _cursor.Collection.Binding.GetNodeBinding(nodeSelector);
+                _nodeBinding = _cursor.Collection.Binding.GetNodeBinding(nodeSelector);
             }
 
-            return _binding.GetConnectionBinding(nodeSelector);
+            return _nodeBinding.GetConnectionBinding(nodeSelector);
         }
 
         private MongoReplyMessage<TDocument> GetFirst()
@@ -369,9 +369,9 @@ namespace MongoDB.Driver
             {
                 try
                 {
-                    if (_binding != null && _binding.Node.State == MongoServerState.Connected)
+                    if (_nodeBinding != null && _nodeBinding.Node.State == MongoServerState.Connected)
                     {
-                        using (var connectionBinding = _binding.GetConnectionBinding(new CurrentNodeSelector()))
+                        using (var connectionBinding = _nodeBinding.GetConnectionBinding(new CurrentNodeSelector()))
                         {
                             var killCursorsMessage = new MongoKillCursorsMessage(_openCursorId);
                             connectionBinding.Connection.SendMessage(killCursorsMessage, WriteConcern.Unacknowledged, _cursor.Database.Name);
@@ -388,7 +388,7 @@ namespace MongoDB.Driver
         private IMongoQuery WrapQuery()
         {
             BsonDocument formattedReadPreference = null;
-            if (_binding.Node.InstanceType == MongoServerInstanceType.ShardRouter &&
+            if (_nodeBinding.Node.InstanceType == MongoServerInstanceType.ShardRouter &&
                 _readPreference.ReadPreferenceMode != ReadPreferenceMode.Primary)
             {
                 BsonArray tagSetsArray = null;
