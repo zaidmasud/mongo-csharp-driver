@@ -28,7 +28,9 @@ namespace MongoDB.DriverUnitTests
         private static MongoClient __testClient;
         private static MongoServer __testServer;
         private static MongoDatabase __testDatabase;
+        private static string __testDatabaseName = "csharpdriverunittests";
         private static MongoCollection<BsonDocument> __testCollection;
+        private static string __testCollectionName = "testcollection";
 
         // static constructor
         static Configuration()
@@ -45,8 +47,8 @@ namespace MongoDB.DriverUnitTests
 
             __testClient = new MongoClient(clientSettings);
             __testServer = __testClient.GetServer();
-            __testDatabase = __testServer.GetDatabase("csharpdriverunittests");
-            __testCollection = __testDatabase.GetCollection("testcollection");
+            __testDatabase = __testServer.GetDatabase(__testDatabaseName);
+            __testCollection = __testDatabase.GetCollection(__testCollectionName);
         }
 
         // public static properties
@@ -67,11 +69,33 @@ namespace MongoDB.DriverUnitTests
         }
 
         /// <summary>
+        /// Gets the name of the test collection.
+        /// </summary>
+        /// <value>
+        /// The name of the test collection.
+        /// </value>
+        public static string TestCollectionName
+        {
+            get { return __testCollectionName; }
+        }
+
+        /// <summary>
         /// Gets the test database.
         /// </summary>
         public static MongoDatabase TestDatabase
         {
             get { return __testDatabase; }
+        }
+
+        /// <summary>
+        /// Gets the name of the test database.
+        /// </summary>
+        /// <value>
+        /// The name of the test database.
+        /// </value>
+        public static string TestDatabaseName
+        {
+            get { return __testDatabaseName; }
         }
 
         /// <summary>
@@ -90,7 +114,7 @@ namespace MongoDB.DriverUnitTests
         /// <returns>The collection.</returns>
         public static MongoCollection<T> GetTestCollection<T>()
         {
-            return __testDatabase.GetCollection<T>(__testCollection.Name);
+            return __testDatabase.GetCollection<T>(__testCollectionName);
         }
     }
 }

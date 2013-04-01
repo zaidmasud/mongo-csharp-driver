@@ -552,7 +552,7 @@ namespace MongoDB.Driver
         public virtual MongoCollection<TDefaultDocument> GetCollection<TDefaultDocument>(
             string collectionName, MongoCollectionSettings collectionSettings)
         {
-            return new MongoCollection<TDefaultDocument>(_binding, this, collectionName, collectionSettings);
+            return new MongoCollection<TDefaultDocument>(this, collectionName, collectionSettings);
         }
 
         /// <summary>
@@ -785,16 +785,6 @@ namespace MongoDB.Driver
         }
 
         // TODO: mongo shell has IsMaster at database level?
-
-        /// <summary>
-        /// Returns a new instance of MongoDatabase will all the same settings but with a different binding.
-        /// </summary>
-        /// <param name="binding">The binding.</param>
-        /// <returns>A new MongoDatabase with a different binding.</returns>
-        public MongoDatabase Rebind(IMongoBinding binding)
-        {
-            return new MongoDatabase(binding, _server, _name, _settings);
-        }
 
         /// <summary>
         /// Removes a user from this database.

@@ -25,6 +25,13 @@ namespace MongoDB.Driver
         /// Gets a database with this binding.
         /// </summary>
         /// <param name="databaseName">The name of the database.</param>
+        /// <returns>A database.</returns>
+        MongoDatabase GetDatabase(string databaseName);
+
+        /// <summary>
+        /// Gets a database with this binding.
+        /// </summary>
+        /// <param name="databaseName">The name of the database.</param>
         /// <param name="settings">The settings.</param>
         /// <returns>A database.</returns>
         MongoDatabase GetDatabase(string databaseName, MongoDatabaseSettings settings);

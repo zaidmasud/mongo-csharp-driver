@@ -27,7 +27,8 @@ namespace MongoDB.DriverUnitTests.Jira.CSharp103
         {
             using (var connectionBinding = Configuration.TestServer.GetConnectionBinding(new PrimaryNodeSelector()))
             {
-                var collection = Configuration.TestCollection.Rebind(connectionBinding);
+                var database = connectionBinding.GetDatabase(Configuration.TestDatabaseName);
+                var collection = database.GetCollection<BsonDocument>(Configuration.TestCollectionName);
 
                 collection.RemoveAll();
                 for (int i = 0; i < 1; i++)

@@ -41,8 +41,8 @@ namespace MongoDB.DriverUnitTests.Jira.CSharp130
 
             using (var connectionBinding = server.GetConnectionBinding(new PrimaryNodeSelector()))
             {
-                var database = server.GetDatabase(Configuration.TestDatabase.Name).Rebind(connectionBinding);
-                var collection = database.GetCollection<C>(Configuration.TestCollection.Name);
+                var database = connectionBinding.GetDatabase(Configuration.TestDatabaseName);
+                var collection = database.GetCollection<C>(Configuration.TestCollectionName);
 
                 var c = new C { List = new List<int>() };
 

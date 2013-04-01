@@ -150,6 +150,23 @@ namespace MongoDB.Driver
         /// Gets a database bound to this node.
         /// </summary>
         /// <param name="databaseName">Name of the database.</param>
+        /// <returns>A database bound to this node.</returns>
+        /// <exception cref="System.ArgumentNullException">
+        /// databaseName
+        /// </exception>
+        public MongoDatabase GetDatabase(string databaseName)
+        {
+            if (databaseName == null)
+            {
+                throw new ArgumentNullException("databaseName");
+            }
+            return GetDatabase(databaseName, new MongoDatabaseSettings());
+        }
+
+        /// <summary>
+        /// Gets a database bound to this node.
+        /// </summary>
+        /// <param name="databaseName">Name of the database.</param>
         /// <param name="databaseSettings">The database settings.</param>
         /// <returns>A database bound to this node.</returns>
         /// <exception cref="System.ArgumentNullException">

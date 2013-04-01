@@ -144,6 +144,26 @@ namespace MongoDB.Driver
         /// Gets a database bound to this connection.
         /// </summary>
         /// <param name="databaseName">Name of the database.</param>
+        /// <returns></returns>
+        /// <exception cref="System.ArgumentNullException">
+        /// databaseName
+        /// </exception>
+        /// <exception cref="System.ObjectDisposedException">ConnectionBinding</exception>
+        public MongoDatabase GetDatabase(string databaseName)
+        {
+            if (databaseName == null)
+            {
+                throw new ArgumentNullException("databaseName");
+            }
+            if (_disposed) { throw new ObjectDisposedException("ConnectionBinding"); }
+
+            return GetDatabase(databaseName, new MongoDatabaseSettings());
+        }
+
+        /// <summary>
+        /// Gets a database bound to this connection.
+        /// </summary>
+        /// <param name="databaseName">Name of the database.</param>
         /// <param name="databaseSettings">The database settings.</param>
         /// <returns></returns>
         /// <exception cref="System.ArgumentNullException">

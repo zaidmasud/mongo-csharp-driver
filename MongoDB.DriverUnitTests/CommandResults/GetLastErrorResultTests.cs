@@ -28,7 +28,8 @@ namespace MongoDB.DriverUnitTests.CommandResults
         {
             using (var connectionBinding = Configuration.TestServer.GetConnectionBinding(new PrimaryNodeSelector()))
             {
-                var collection = Configuration.TestCollection.Rebind(connectionBinding);
+                var database = connectionBinding.GetDatabase(Configuration.TestDatabaseName);
+                var collection = database.GetCollection<BsonDocument>(Configuration.TestCollectionName);
 
                 collection.Insert(new BsonDocument());
                 var result = connectionBinding.GetLastError();
@@ -44,9 +45,9 @@ namespace MongoDB.DriverUnitTests.CommandResults
         {
             using (var connectionBinding = Configuration.TestServer.GetConnectionBinding(new PrimaryNodeSelector()))
             {
-                var database = Configuration.TestDatabase.Rebind(connectionBinding);
+                var database = connectionBinding.GetDatabase(Configuration.TestDatabaseName);
                 var collectionSettings = new MongoCollectionSettings { WriteConcern = WriteConcern.Unacknowledged };
-                var collection = database.GetCollection<BsonDocument>(Configuration.TestCollection.Name, collectionSettings);
+                var collection = database.GetCollection<BsonDocument>(Configuration.TestCollectionName, collectionSettings);
 
                 var id = ObjectId.GenerateNewId();
                 var document = new BsonDocument

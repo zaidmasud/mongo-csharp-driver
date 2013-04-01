@@ -691,7 +691,8 @@ namespace MongoDB.DriverUnitTests
             var node = _server.GetNode(new PrimaryNodeSelector());
             if (node.InstanceType != MongoServerInstanceType.ShardRouter)
             {
-                var collection = _collection.Rebind(node);
+                var database = node.GetDatabase(Configuration.TestDatabaseName);
+                var collection = database.GetCollection<BsonDocument>(Configuration.TestCollectionName);
 
                 if (collection.Exists()) { collection.Drop(); }
                 collection.Insert(new Place { Location = new[] { 34.2, 33.3 }, Type = "restaurant" });
@@ -724,7 +725,8 @@ namespace MongoDB.DriverUnitTests
             var node = _server.GetNode(new PrimaryNodeSelector());
             if (node.InstanceType != MongoServerInstanceType.ShardRouter)
             {
-                var collection = _collection.Rebind(node);
+                var database = node.GetDatabase(Configuration.TestDatabaseName);
+                var collection = database.GetCollection<BsonDocument>(Configuration.TestCollectionName);
 
                 if (collection.Exists()) { collection.Drop(); }
                 collection.Insert(new Place { Location = new[] { 34.2, 33.3 }, Type = "restaurant" });
@@ -978,7 +980,8 @@ namespace MongoDB.DriverUnitTests
         public void TestGetMore()
         {
             var node = _server.GetNode(new PrimaryNodeSelector());
-            var collection = _collection.Rebind(node);
+            var database = node.GetDatabase(Configuration.TestDatabaseName);
+            var collection = database.GetCollection<BsonDocument>(Configuration.TestCollectionName);
 
             collection.RemoveAll();
 
@@ -1121,9 +1124,9 @@ namespace MongoDB.DriverUnitTests
         public void TestInsertBatchMultipleBatchesWriteConcernDisabledContinueOnErrorFalse()
         {
             var node = Configuration.TestServer.GetNode(new PrimaryNodeSelector());
-            var database = Configuration.TestDatabase.Rebind(node);
+            var database = node.GetDatabase(Configuration.TestDatabaseName);
             var collectionSettings = new MongoCollectionSettings { WriteConcern = WriteConcern.Unacknowledged };
-            var collection = database.GetCollection<BsonDocument>(Configuration.TestCollection.Name, collectionSettings);
+            var collection = database.GetCollection<BsonDocument>(Configuration.TestCollectionName, collectionSettings);
             if (collection.Exists()) { collection.Drop(); }
 
             var maxMessageLength = node.MaxMessageLength;
@@ -1156,9 +1159,9 @@ namespace MongoDB.DriverUnitTests
         public void TestInsertBatchMultipleBatchesWriteConcernDisabledContinueOnErrorTrue()
         {
             var node = Configuration.TestServer.GetNode(new PrimaryNodeSelector());
-            var database = Configuration.TestDatabase.Rebind(node);
+            var database = node.GetDatabase(Configuration.TestDatabaseName);
             var collectionSettings = new MongoCollectionSettings { WriteConcern = WriteConcern.Unacknowledged };
-            var collection = database.GetCollection<BsonDocument>(Configuration.TestCollection.Name, collectionSettings);
+            var collection = database.GetCollection<BsonDocument>(Configuration.TestCollectionName, collectionSettings);
             if (collection.Exists()) { collection.Drop(); }
 
             var maxMessageLength = node.MaxMessageLength;
@@ -1191,7 +1194,8 @@ namespace MongoDB.DriverUnitTests
         public void TestInsertBatchSmallFinalSubbatch()
         {
             var node = Configuration.TestServer.GetNode(new PrimaryNodeSelector());
-            var collection = Configuration.TestCollection.Rebind(node);
+            var database = node.GetDatabase(Configuration.TestDatabaseName);
+            var collection = database.GetCollection<BsonDocument>(Configuration.TestCollectionName);
             if (collection.Exists()) { collection.Drop(); }
 
             var maxMessageLength = node.MaxMessageLength;
@@ -1240,7 +1244,7 @@ namespace MongoDB.DriverUnitTests
         public void TestLenientRead()
         {
             var settings = new MongoCollectionSettings { ReadEncoding = new UTF8Encoding(false, false) };
-            var collection = _database.GetCollection(Configuration.TestCollection.Name, settings);
+            var collection = _database.GetCollection(Configuration.TestCollectionName, settings);
 
             var document = new BsonDocument { { "_id", ObjectId.GenerateNewId() }, { "x", "abc" } };
             var bson = document.ToBson();
@@ -1258,7 +1262,7 @@ namespace MongoDB.DriverUnitTests
         public void TestLenientWrite()
         {
             var settings = new MongoCollectionSettings { WriteEncoding = new UTF8Encoding(false, false) };
-            var collection = _database.GetCollection(Configuration.TestCollection.Name, settings);
+            var collection = _database.GetCollection(Configuration.TestCollectionName, settings);
 
             var document = new BsonDocument("x", "\udc00"); // invalid lone low surrogate
             collection.Save(document);
@@ -1514,7 +1518,8 @@ namespace MongoDB.DriverUnitTests
             var node = _server.GetNode(new PrimaryNodeSelector());
             if (node.InstanceType != MongoServerInstanceType.ShardRouter)
             {
-                var collection = _collection.Rebind(node);
+                var database = node.GetDatabase(Configuration.TestDatabaseName);
+                var collection = database.GetCollection<BsonDocument>(Configuration.TestCollectionName);
 
                 collection.RemoveAll();
                 collection.Insert(new BsonDocument("x", 1));
@@ -1624,7 +1629,7 @@ namespace MongoDB.DriverUnitTests
         public void TestStrictRead()
         {
             var settings = new MongoCollectionSettings { ReadEncoding = new UTF8Encoding(false, true) };
-            var collection = _database.GetCollection(Configuration.TestCollection.Name, settings);
+            var collection = _database.GetCollection(Configuration.TestCollectionName, settings);
 
             var document = new BsonDocument { { "_id", ObjectId.GenerateNewId() }, { "x", "abc" } };
             var bson = document.ToBson();
@@ -1641,7 +1646,7 @@ namespace MongoDB.DriverUnitTests
         public void TestStrictWrite()
         {
             var settings = new MongoCollectionSettings { WriteEncoding = new UTF8Encoding(false, true) };
-            var collection = _database.GetCollection(Configuration.TestCollection.Name, settings);
+            var collection = _database.GetCollection(Configuration.TestCollectionName, settings);
 
             var document = new BsonDocument("x", "\udc00"); // invalid lone low surrogate
             Assert.Throws<EncoderFallbackException>(() => { collection.Insert(document); });
@@ -1726,7 +1731,8 @@ namespace MongoDB.DriverUnitTests
             var node = _server.GetNode(new PrimaryNodeSelector());
             if (node.InstanceType != MongoServerInstanceType.ShardRouter)
             {
-                var collection = _collection.Rebind(node);
+                var database = node.GetDatabase(Configuration.TestDatabaseName);
+                var collection = database.GetCollection<BsonDocument>(Configuration.TestCollectionName);
 
                 // ensure collection exists
                 collection.RemoveAll();

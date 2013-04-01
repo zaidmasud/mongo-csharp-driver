@@ -153,7 +153,7 @@ namespace MongoDB.DriverUnitTests
         [Test]
         public void TestGetCollection()
         {
-            var collectionName = Configuration.TestCollection.Name;
+            var collectionName = Configuration.TestCollectionName;
             var collection = _database.GetCollection(typeof(BsonDocument), collectionName);
             Assert.AreSame(_database, collection.Database);
             Assert.AreEqual(_database.Name + "." + collectionName, collection.FullName);
@@ -164,7 +164,7 @@ namespace MongoDB.DriverUnitTests
         [Test]
         public void TestGetCollectionGeneric()
         {
-            var collectionName = Configuration.TestCollection.Name;
+            var collectionName = Configuration.TestCollectionName;
             var collection = _database.GetCollection(collectionName);
             Assert.AreSame(_database, collection.Database);
             Assert.AreEqual(_database.Name + "." + collectionName, collection.FullName);
@@ -189,8 +189,8 @@ namespace MongoDB.DriverUnitTests
             var node = _server.GetNode(new PrimaryNodeSelector());
             if (node.InstanceType != MongoServerInstanceType.ShardRouter)
             {
-                var database = Configuration.TestDatabase.Rebind(node);
-                var collection = database.GetCollection(Configuration.TestCollection.Name);
+                var database = node.GetDatabase(Configuration.TestDatabaseName);
+                var collection = database.GetCollection(Configuration.TestCollectionName);
 
                 if (collection.Exists()) { collection.Drop(); }
                 collection.Insert(new BsonDocument("x", 1));
@@ -263,7 +263,7 @@ namespace MongoDB.DriverUnitTests
             var node = _server.GetNode(new PrimaryNodeSelector());
             if (node.InstanceType != MongoServerInstanceType.ShardRouter)
             {
-                var database = _database.Rebind(node);
+                var database = node.GetDatabase(Configuration.TestDatabaseName);
 
                 database.SetProfilingLevel(ProfilingLevel.None, TimeSpan.FromMilliseconds(100));
                 var result = database.GetProfilingLevel();

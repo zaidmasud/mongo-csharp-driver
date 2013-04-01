@@ -290,7 +290,7 @@ namespace MongoDB.Driver
 
             if (_nodeBinding == null)
             {
-                _nodeBinding = _cursor.Collection.Binding.GetNodeBinding(nodeSelector);
+                _nodeBinding = _cursor.Database.Binding.GetNodeBinding(nodeSelector);
             }
 
             return _nodeBinding.GetConnectionBinding(nodeSelector);

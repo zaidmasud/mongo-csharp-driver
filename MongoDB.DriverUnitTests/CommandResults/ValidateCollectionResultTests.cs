@@ -28,7 +28,8 @@ namespace MongoDB.DriverUnitTests.CommandResults
             var node = Configuration.TestServer.GetNode(new PrimaryNodeSelector());
             if (node.InstanceType != MongoServerInstanceType.ShardRouter)
             {
-                var collection = Configuration.TestCollection.Rebind(node);
+                var database = node.GetDatabase(Configuration.TestDatabaseName);
+                var collection = database.GetCollection<BsonDocument>(Configuration.TestCollectionName);
 
                 // make sure collection exists and has exactly one document
                 collection.RemoveAll();

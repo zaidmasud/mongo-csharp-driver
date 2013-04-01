@@ -258,7 +258,7 @@ namespace MongoDB.Driver.GridFS
 
             using (var connectionBinding = _database.Binding.GetConnectionBinding(new ReadPreferenceNodeSelector(_database.Settings.ReadPreference)))
             {
-                var database = _database.Rebind(connectionBinding);
+                var database = connectionBinding.GetDatabase(_database.Name, _database.Settings);
                 var chunks = database.GetCollection<BsonDocument>(_settings.Root + ".chunks");
 
                 string md5Client = null;
@@ -761,7 +761,7 @@ namespace MongoDB.Driver.GridFS
         {
             using (var connectionBinding = _database.Binding.GetConnectionBinding(new PrimaryNodeSelector()))
             {
-                var database = _database.Rebind(connectionBinding);
+                var database = connectionBinding.GetDatabase(_database.Name, _database.Settings);
                 var files = database.GetCollection<BsonDocument>(_settings.Root + ".files");
                 var chunks = database.GetCollection<BsonDocument>(_settings.Root + ".chunks");
 
