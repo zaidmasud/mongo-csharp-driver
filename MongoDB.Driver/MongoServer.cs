@@ -544,7 +544,7 @@ namespace MongoDB.Driver
         /// <param name="selector">The node selector.</param>
         /// <returns>A binding to a connection.</returns>
         /// <exception cref="System.ArgumentNullException">selector</exception>
-        public IConnectionBinding GetConnectionBinding(INodeSelector selector)
+        public IConnectionBinding NarrowToConnection(INodeSelector selector)
         {
             if (selector == null)
             {
@@ -760,7 +760,7 @@ namespace MongoDB.Driver
             get { return this; }
         }
 
-        INodeBinding IMongoBinding.GetNodeBinding(INodeSelector selector)
+        INodeBinding IMongoBinding.NarrowToNode(INodeSelector selector)
         {
             return GetNode(selector);
         }

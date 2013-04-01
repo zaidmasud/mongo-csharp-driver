@@ -134,7 +134,7 @@ namespace MongoDB.Driver
         /// A connection binding.
         /// </returns>
         /// <exception cref="System.ArgumentNullException">selector</exception>
-        public IConnectionBinding GetConnectionBinding(INodeSelector selector)
+        public IConnectionBinding NarrowToConnection(INodeSelector selector)
         {
             if (selector == null)
             {
@@ -195,7 +195,7 @@ namespace MongoDB.Driver
         /// A node binding.
         /// </returns>
         /// <exception cref="System.ArgumentNullException">selector</exception>
-        public INodeBinding GetNodeBinding(INodeSelector selector)
+        public INodeBinding NarrowToNode(INodeSelector selector)
         {
             if (selector == null)
             {

@@ -128,7 +128,7 @@ namespace MongoDB.Driver
         /// </returns>
         /// <exception cref="System.ArgumentNullException">selector</exception>
         /// <exception cref="System.ObjectDisposedException">ConnectionBinding</exception>
-        public IConnectionBinding GetConnectionBinding(INodeSelector selector)
+        public IConnectionBinding NarrowToConnection(INodeSelector selector)
         {
             if (selector == null)
             {
@@ -225,10 +225,10 @@ namespace MongoDB.Driver
         /// <returns>
         /// A node binding.
         /// </returns>
-        public INodeBinding GetNodeBinding(INodeSelector selector)
+        public INodeBinding NarrowToNode(INodeSelector selector)
         {
             // keep binding focused on the connection
-            return GetConnectionBinding(selector);
+            return NarrowToConnection(selector);
         }
 
         // private methods

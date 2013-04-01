@@ -45,7 +45,7 @@ namespace MongoDB.Driver
         /// If the current binding is to a cluster, the selector is used to select a node.
         /// If the current binding is to a node or connection, the selector is used to verify that the selected node is still acceptable.
         /// </remarks>
-        INodeBinding GetNodeBinding(INodeSelector selector);
+        INodeBinding NarrowToNode(INodeSelector selector);
 
         /// <summary>
         /// Gets a binding to a connection.
@@ -58,10 +58,10 @@ namespace MongoDB.Driver
         /// The first connection binding returned for a connection owns the connection and will release the connection
         /// back to the connection pool when Dispose is called.
         /// 
-        /// If you call GetConnectionBinding on a connection binding, you will get a new connection binding that does
+        /// If you call NarrowToConnection on a connection binding, you will get a new connection binding that does
         /// not own the connection and will not release it when Dispose is called. Not until Dispose is called for
         /// the outermost connection binding is the connection itself released.
         /// </remarks>
-        IConnectionBinding GetConnectionBinding(INodeSelector selector);
+        IConnectionBinding NarrowToConnection(INodeSelector selector);
     }
 }

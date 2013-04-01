@@ -256,7 +256,7 @@ namespace MongoDB.Driver.GridFS
                 throw new MongoGridFSException("VerifyMD5 is true and file being downloaded has no MD5 hash.");
             }
 
-            using (var connectionBinding = _database.Binding.GetConnectionBinding(new ReadPreferenceNodeSelector(_database.Settings.ReadPreference)))
+            using (var connectionBinding = _database.Binding.NarrowToConnection(new ReadPreferenceNodeSelector(_database.Settings.ReadPreference)))
             {
                 var database = connectionBinding.GetDatabase(_database.Name, _database.Settings);
                 var chunks = database.GetCollection<BsonDocument>(_settings.Root + ".chunks");
@@ -759,7 +759,7 @@ namespace MongoDB.Driver.GridFS
             string remoteFileName,
             MongoGridFSCreateOptions createOptions)
         {
-            using (var connectionBinding = _database.Binding.GetConnectionBinding(new PrimaryNodeSelector()))
+            using (var connectionBinding = _database.Binding.NarrowToConnection(new PrimaryNodeSelector()))
             {
                 var database = connectionBinding.GetDatabase(_database.Name, _database.Settings);
                 var files = database.GetCollection<BsonDocument>(_settings.Root + ".files");

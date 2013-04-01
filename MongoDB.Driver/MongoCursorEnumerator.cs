@@ -290,10 +290,10 @@ namespace MongoDB.Driver
 
             if (_nodeBinding == null)
             {
-                _nodeBinding = _cursor.Database.Binding.GetNodeBinding(nodeSelector);
+                _nodeBinding = _cursor.Database.Binding.NarrowToNode(nodeSelector);
             }
 
-            return _nodeBinding.GetConnectionBinding(nodeSelector);
+            return _nodeBinding.NarrowToConnection(nodeSelector);
         }
 
         private MongoReplyMessage<TDocument> GetFirst()
@@ -371,7 +371,7 @@ namespace MongoDB.Driver
                 {
                     if (_nodeBinding != null && _nodeBinding.Node.State == MongoServerState.Connected)
                     {
-                        using (var connectionBinding = _nodeBinding.GetConnectionBinding(new CurrentNodeSelector()))
+                        using (var connectionBinding = _nodeBinding.NarrowToConnection(new CurrentNodeSelector()))
                         {
                             var killCursorsMessage = new MongoKillCursorsMessage(_openCursorId);
                             connectionBinding.Connection.SendMessage(killCursorsMessage, WriteConcern.Unacknowledged, _cursor.Database.Name);
