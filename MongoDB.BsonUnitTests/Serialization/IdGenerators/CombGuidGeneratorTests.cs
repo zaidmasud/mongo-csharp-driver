@@ -14,6 +14,7 @@
 */
 
 using System;
+using System.Linq;
 using MongoDB.Bson.Serialization;
 using MongoDB.Bson.Serialization.IdGenerators;
 using NUnit.Framework;
@@ -26,15 +27,16 @@ namespace MongoDB.BsonUnitTests.Serialization
         private CombGuidGenerator _generator = new CombGuidGenerator();
 
         [Test]
-        public void TestTimestamp()
+        public void TestNewCombGuid()
         {
+            var guid = Guid.NewGuid();
             var timestamp = new DateTime(2013, 4, 2, 0, 0, 0, 500, DateTimeKind.Utc); // half a second past midnight
-            var guid = _generator.NewGuid(timestamp);
+            var combGuid = _generator.NewCombGuid(guid, timestamp);
 
             var expectedDays = (short)(timestamp.Date - new DateTime(1900, 1, 1, 0, 0, 0, DateTimeKind.Utc)).Days;
             var expectedTimeTicks = 150; // half a second in SQL Server resolution
 
-            var bytes = guid.ToByteArray();
+            var bytes = combGuid.ToByteArray();
             if (BitConverter.IsLittleEndian)
             {
                 Array.Reverse(bytes, 10, 2);
@@ -43,6 +45,7 @@ namespace MongoDB.BsonUnitTests.Serialization
             var days = BitConverter.ToInt16(bytes, 10);
             var timeTicks = BitConverter.ToInt32(bytes, 12);
 
+            Assert.IsTrue(guid.ToByteArray().Take(10).SequenceEqual(bytes.Take(10))); // first 10 bytes are from the base Guid
             Assert.AreEqual(expectedDays, days);
             Assert.AreEqual(expectedTimeTicks, timeTicks);
         }
