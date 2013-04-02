@@ -40,6 +40,7 @@ namespace MongoDB.Driver
         private readonly object _serverLock = new object();
         private readonly IMongoServerProxy _serverProxy;
         private readonly MongoServerSettings _settings;
+        private readonly Dictionary<int, Request> _requests = new Dictionary<int, Request>(); // tracks threads that have called RequestStart
         private readonly IndexCache _indexCache = new IndexCache();
         private int _sequentialId;
 
@@ -301,6 +302,54 @@ namespace MongoDB.Driver
                 }
 
                 return null;
+            }
+        }
+
+        /// <summary>
+        /// Gets the connection reserved by the current RequestStart scope (null if not in the scope of a RequestStart).
+        /// </summary>
+        [Obsolete("Use connection bindings instead.")]
+        public virtual MongoConnection RequestConnection
+        {
+            get
+            {
+                lock (_serverLock)
+                {
+                    int threadId = Thread.CurrentThread.ManagedThreadId;
+                    Request request;
+                    if (_requests.TryGetValue(threadId, out request))
+                    {
+                        return request.ConnectionBinding.Connection;
+                    }
+                    else
+                    {
+                        return null;
+                    }
+                }
+            }
+        }
+
+        /// <summary>
+        /// Gets the RequestStart nesting level for the current thread.
+        /// </summary>
+        [Obsolete("Use connection bindings instead.")]
+        public virtual int RequestNestingLevel
+        {
+            get
+            {
+                lock (_serverLock)
+                {
+                    int threadId = Thread.CurrentThread.ManagedThreadId;
+                    Request request;
+                    if (_requests.TryGetValue(threadId, out request))
+                    {
+                        return request.NestingLevel;
+                    }
+                    else
+                    {
+                        return 0;
+                    }
+                }
             }
         }
 
@@ -635,6 +684,17 @@ namespace MongoDB.Driver
         }
 
         /// <summary>
+        /// Gets the last error (if any) that occurred on this connection. You MUST be within a RequestStart to call this method.
+        /// </summary>
+        /// <returns>The last error (<see cref=" GetLastErrorResult"/>)</returns>
+        [Obsolete("Use ConnectionBinding.GetLastError instead.")]
+        public virtual GetLastErrorResult GetLastError()
+        {
+            var adminDatabase = GetDatabase("admin");
+            return adminDatabase.GetLastError();
+        }
+
+        /// <summary>
         /// Gets a node in this cluster.
         /// </summary>
         /// <param name="selector">The selector.</param>
@@ -725,6 +785,146 @@ namespace MongoDB.Driver
         }
 
         /// <summary>
+        /// Lets the server know that this thread is done with a series of related operations. Instead of calling this method it is better
+        /// to put the return value of RequestStart in a using statement.
+        /// </summary>
+        [Obsolete("Use connection bindings instead.")]
+        public virtual void RequestDone()
+        {
+            int threadId = Thread.CurrentThread.ManagedThreadId;
+            ConnectionBinding connectionBindingToDispose = null;
+
+            lock (_serverLock)
+            {
+                Request request;
+                if (_requests.TryGetValue(threadId, out request))
+                {
+                    if (--request.NestingLevel == 0)
+                    {
+                        _requests.Remove(threadId);
+                        connectionBindingToDispose = request.ConnectionBinding;
+                    }
+                }
+                else
+                {
+                    throw new InvalidOperationException("Thread is not in a request (did you call RequestStart?).");
+                }
+            }
+
+            if (connectionBindingToDispose != null)
+            {
+                connectionBindingToDispose.Dispose();
+            }
+        }
+
+        /// <summary>
+        /// Lets the server know that this thread is about to begin a series of related operations that must all occur
+        /// on the same connection. The return value of this method implements IDisposable and can be placed in a
+        /// using statement (in which case RequestDone will be called automatically when leaving the using statement).
+        /// </summary>
+        /// <param name="initialDatabase">One of the databases involved in the related operations.</param>
+        /// <returns>A helper object that implements IDisposable and calls <see cref="RequestDone"/> from the Dispose method.</returns>
+        [Obsolete("Use connection bindings instead.")]
+        public virtual IDisposable RequestStart(MongoDatabase initialDatabase)
+        {
+            return RequestStart(initialDatabase, ReadPreference.Primary);
+        }
+
+        /// <summary>
+        /// Lets the server know that this thread is about to begin a series of related operations that must all occur
+        /// on the same connection. The return value of this method implements IDisposable and can be placed in a
+        /// using statement (in which case RequestDone will be called automatically when leaving the using statement).
+        /// </summary>
+        /// <param name="initialDatabase">One of the databases involved in the related operations.</param>
+        /// <param name="slaveOk">Whether a secondary is acceptable.</param>
+        /// <returns>A helper object that implements IDisposable and calls <see cref="RequestDone"/> from the Dispose method.</returns>
+        [Obsolete("Use connection bindings instead.")]
+        public virtual IDisposable RequestStart(MongoDatabase initialDatabase, bool slaveOk)
+        {
+            var readPreference = ReadPreference.FromSlaveOk(slaveOk);
+            return RequestStart(initialDatabase, readPreference);
+        }
+
+        /// <summary>
+        /// Lets the server know that this thread is about to begin a series of related operations that must all occur
+        /// on the same connection. The return value of this method implements IDisposable and can be placed in a
+        /// using statement (in which case RequestDone will be called automatically when leaving the using statement).
+        /// </summary>
+        /// <param name="initialDatabase">One of the databases involved in the related operations.</param>
+        /// <param name="readPreference">The read preference.</param>
+        /// <returns>A helper object that implements IDisposable and calls <see cref="RequestDone"/> from the Dispose method.</returns>
+        [Obsolete("Use connection bindings instead.")]
+        public virtual IDisposable RequestStart(MongoDatabase initialDatabase, ReadPreference readPreference)
+        {
+            var nodeSelector = new ReadPreferenceNodeSelector(readPreference);
+            int threadId = Thread.CurrentThread.ManagedThreadId;
+
+            lock (_serverLock)
+            {
+                Request request;
+                if (_requests.TryGetValue(threadId, out request))
+                {
+                    nodeSelector.EnsureCurrentNodeIsAcceptable(request.ConnectionBinding.Node);
+                    request.NestingLevel++;
+                    return new RequestStartResult(this);
+                }
+
+            }
+
+            var node = GetNode(nodeSelector);
+            var connection = node.Instance.AcquireConnection();
+            var connectionBinding = new ConnectionBinding(this, node, connection);
+
+            lock (_serverLock)
+            {
+                var request = new Request(connectionBinding);
+                _requests.Add(threadId, request);
+            }
+
+            return new RequestStartResult(this);
+        }
+
+        /// <summary>
+        /// Lets the server know that this thread is about to begin a series of related operations that must all occur
+        /// on the same connection. The return value of this method implements IDisposable and can be placed in a
+        /// using statement (in which case RequestDone will be called automatically when leaving the using statement).
+        /// </summary>
+        /// <param name="initialDatabase">One of the databases involved in the related operations.</param>
+        /// <param name="serverInstance">The server instance this request should be tied to.</param>
+        /// <returns>A helper object that implements IDisposable and calls <see cref="RequestDone"/> from the Dispose method.</returns>
+        [Obsolete("Use connection bindings instead.")]
+        public virtual IDisposable RequestStart(MongoDatabase initialDatabase, MongoServerInstance serverInstance)
+        {
+            var node = new MongoNode(this, serverInstance);
+            int threadId = Thread.CurrentThread.ManagedThreadId;
+
+            lock (_serverLock)
+            {
+                Request request;
+                if (_requests.TryGetValue(threadId, out request))
+                {
+                    if (serverInstance != request.ConnectionBinding.Node.Instance)
+                    {
+                        throw new InvalidOperationException("The server instance passed to a nested call to RequestStart does not match the server instance of the current Request.");
+                    }
+                    request.NestingLevel++;
+                    return new RequestStartResult(this);
+                }
+            }
+
+            var connection = node.Instance.AcquireConnection();
+            var connectionBinding = new ConnectionBinding(this, node, connection);
+
+            lock (_serverLock)
+            {
+                var request = new Request(connectionBinding);
+                _requests.Add(threadId, request);
+            }
+
+            return new RequestStartResult(this);
+        }
+
+        /// <summary>
         /// Removes all entries in the index cache used by EnsureIndex. Call this method
         /// when you know (or suspect) that a process other than this one may have dropped one or
         /// more indexes.
@@ -767,10 +967,74 @@ namespace MongoDB.Driver
             return _serverProxy.ChooseServerInstance(readPreference);
         }
 
+        internal Request GetRequest()
+        {
+            int threadId = Thread.CurrentThread.ManagedThreadId;
+
+            lock (_serverLock)
+            {
+                Request request;
+                if (_requests.TryGetValue(threadId, out request))
+                {
+                    return request;
+                }
+
+            }
+
+            return null;
+        }
+
         // explicit interface implementations
         MongoServer IMongoBinding.Cluster
         {
             get { return this; }
+        }
+
+        // private nested classes
+        internal class Request
+        {
+            // private fields
+            private ConnectionBinding _connectionBinding;
+            private int _nestingLevel;
+
+            // constructors
+            public Request(ConnectionBinding connectionBinding)
+            {
+                _connectionBinding = connectionBinding;
+                _nestingLevel = 1;
+            }
+
+            // public properties
+            public ConnectionBinding ConnectionBinding
+            {
+                get { return _connectionBinding; }
+            }
+
+            public int NestingLevel
+            {
+                get { return _nestingLevel; }
+                set { _nestingLevel = value; }
+            }
+        }
+
+        private class RequestStartResult : IDisposable
+        {
+            // private fields
+            private MongoServer _server;
+
+            // constructors
+            public RequestStartResult(MongoServer server)
+            {
+                _server = server;
+            }
+
+            // public methods
+            public void Dispose()
+            {
+#pragma warning disable 618
+                _server.RequestDone();
+#pragma warning restore
+            }
         }
     }
 }
