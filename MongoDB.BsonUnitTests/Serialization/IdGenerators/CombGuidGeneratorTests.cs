@@ -23,17 +23,28 @@ namespace MongoDB.BsonUnitTests.Serialization
     [TestFixture]
     public class CombGuidGeneratorTests
     {
-        private IIdGenerator _generator = new CombGuidGenerator();
+        private CombGuidGenerator _generator = new CombGuidGenerator();
 
         [Test]
         public void TestTimestamp()
         {
-            var before = WithSqlServerResolution(DateTime.UtcNow);
-            var guid = (Guid)_generator.GenerateId(null, null);
-            var after = DateTime.UtcNow;
-            var timestamp = ExtractTimestamp(guid);
-            Assert.IsTrue(before <= timestamp);
-            Assert.IsTrue(timestamp <= after);
+            var timestamp = new DateTime(2013, 4, 2, 0, 0, 0, 500, DateTimeKind.Utc); // half a second past midnight
+            var guid = _generator.NewGuid(timestamp);
+
+            var expectedDays = (short)(timestamp.Date - new DateTime(1900, 1, 1, 0, 0, 0, DateTimeKind.Utc)).Days;
+            var expectedTimeTicks = 150; // half a second in SQL Server resolution
+
+            var bytes = guid.ToByteArray();
+            if (BitConverter.IsLittleEndian)
+            {
+                Array.Reverse(bytes, 10, 2);
+                Array.Reverse(bytes, 12, 4);
+            }
+            var days = BitConverter.ToInt16(bytes, 10);
+            var timeTicks = BitConverter.ToInt32(bytes, 12);
+
+            Assert.AreEqual(expectedDays, days);
+            Assert.AreEqual(expectedTimeTicks, timeTicks);
         }
 
         [Test]
@@ -42,28 +53,6 @@ namespace MongoDB.BsonUnitTests.Serialization
             Assert.IsTrue(_generator.IsEmpty(null));
             Assert.IsTrue(_generator.IsEmpty(Guid.Empty));
             Assert.IsFalse(_generator.IsEmpty(Guid.NewGuid()));
-        }
-
-        private DateTime ExtractTimestamp(Guid guid)
-        {
-            var bytes = guid.ToByteArray();
-            if (BitConverter.IsLittleEndian)
-            {
-                Array.Reverse(bytes, 10, 2);
-                Array.Reverse(bytes, 12, 4);
-            }
-            var dayTicks = BitConverter.ToUInt16(bytes, 10);
-            var timeTicks = BitConverter.ToInt32(bytes, 12);
-
-            var baseDate = new DateTime(1900, 1, 1, 0, 0, 0, DateTimeKind.Utc);
-            return baseDate + TimeSpan.FromDays(dayTicks) + TimeSpan.FromTicks(timeTicks * TimeSpan.TicksPerSecond / 300);
-        }
-
-        private DateTime WithSqlServerResolution(DateTime value)
-        {
-            var timeTicks = (int)(value.TimeOfDay.Ticks * 300 / TimeSpan.TicksPerSecond); // convert from .NET resolution to SQL Server resolution
-            var adjusted = value.Date + TimeSpan.FromTicks(timeTicks * TimeSpan.TicksPerSecond / 300);
-            return adjusted;
         }
     }
 }
