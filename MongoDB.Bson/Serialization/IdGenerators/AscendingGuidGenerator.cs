@@ -77,6 +77,24 @@ namespace MongoDB.Bson.Serialization.IdGenerators
         {
             get { return __instance; }
         }
+		
+		// public methods
+		/// <summary>
+		/// Generates an Id for a document.
+		/// </summary>
+		/// <param name="container">The container of the document (will be a 
+		/// MongoCollection when called from the driver). </param>
+		/// <param name="document">The document.</param>
+		/// <returns>An Id.</returns>
+		public object GenerateId(object container,
+		                         object document)
+		{
+			int increment = Interlocked.Increment(ref __staticIncrement) & 0x00ffffff;
+			return GenerateId (container,
+			                  document,
+			                  DateTime.UtcNow.Ticks,
+			                  increment);
+		}
 
         // public methods
         /// <summary>
@@ -86,34 +104,25 @@ namespace MongoDB.Bson.Serialization.IdGenerators
         /// MongoCollection when called from the driver). </param>
         /// <param name="document">The document.</param>
         /// <returns>An Id.</returns>
-        public object GenerateId(object container, object document)
+        public object GenerateId(object container,
+		                         object document,
+		                         long tickCount,
+		                         int increment)
         {
-            int increment = Interlocked.Increment(ref __staticIncrement) & 0x00ffffff;
-            if ((__staticMachine & 0xff000000) != 0)
-            {
-                throw new ArgumentOutOfRangeException("machine", 
-                    "The machine value must be between 0 and 16777215 (it must fit in 3 bytes).");
-            }
+			int a = (int)(tickCount >> 32);
+			short b = (short)(tickCount >> 16);
+			short c = (short)(tickCount);
 
-            byte[] bytes = new byte[16];
-            var currentTickCount = DateTime.UtcNow.Ticks;
-            bytes[0] = (byte)(currentTickCount >> 56);
-            bytes[1] = (byte)(currentTickCount >> 48);
-            bytes[2] = (byte)(currentTickCount >> 40);
-            bytes[3] = (byte)(currentTickCount >> 32);
-            bytes[4] = (byte)(currentTickCount >> 24);
-            bytes[5] = (byte)(currentTickCount >> 16);
-            bytes[6] = (byte)(currentTickCount >> 8);
-            bytes[7] = (byte)(currentTickCount);
-            bytes[8] = (byte)(__staticMachine >> 16);
-            bytes[9] = (byte)(__staticMachine >> 8);
-            bytes[10] = (byte)(__staticMachine);
-            bytes[11] = (byte)(__staticPid >> 8);
-            bytes[12] = (byte)(__staticPid);
-            bytes[13] = (byte)(increment >> 16);
-            bytes[14] = (byte)(increment >> 8);
-            bytes[15] = (byte)(increment);
-            return new Guid(bytes);
+			byte[] d = new byte[8];
+            d[0] = (byte)(__staticMachine >> 16);
+            d[1] = (byte)(__staticMachine >> 8);
+            d[2] = (byte)(__staticMachine);
+            d[3] = (byte)(__staticPid >> 8);
+            d[4] = (byte)(__staticPid);
+            d[5] = (byte)(increment >> 16);
+            d[6] = (byte)(increment >> 8);
+            d[7] = (byte)(increment);
+			return new Guid (a, b, c, d);
         }
 
         /// <summary>

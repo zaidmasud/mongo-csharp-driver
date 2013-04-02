@@ -37,27 +37,40 @@ namespace MongoDB.BsonUnitTests.Serialization
         }
 
         [Test]
-        public void TestAscending()
+        public void TestGuid()
         {
-            var startTime = DateTime.UtcNow.Ticks;
-            var guid1 = (Guid) _generator.GenerateId(null, null);
-            var guid2 = (Guid) _generator.GenerateId(null, null);
-            var endTime = DateTime.UtcNow.Ticks;
-            var ts1 = GetTicks(guid1);
-            var ts2 = GetTicks(guid2);
-            Assert.IsTrue(startTime <= ts1);
-            Assert.IsTrue(ts1 <= ts2);
-            Assert.IsTrue(ts2 <= endTime);
+            var expectedTicks = DateTime.UtcNow.Ticks;
+            var expectedIncrement = 1000;
+            var guid = (Guid)((AscendingGuidGenerator)_generator).
+                             GenerateId (null,
+                                         null, 
+                                         expectedTicks, 
+                                         expectedIncrement);
+            var actualTicks = GetTicks(guid);
+            var actualIncrement = GetIncrement(guid);
+            Assert.AreEqual (expectedTicks, actualTicks);
+            Assert.AreEqual (expectedIncrement, actualIncrement);
         }
 
         private long GetTicks(Guid guid)
         {
             var bytes = guid.ToByteArray();
-            long tick = ((long)bytes[0] << 56) + ((long) bytes[1] << 48)
-                + ((long) bytes[2] << 40) + ((long)bytes[3] << 32)
-                + ((long) bytes[4] << 24) + ((long)bytes[5] << 16)
-                + ((long) bytes[6] << 8) + (long)bytes[7];
+            var a = BitConverter.ToInt32(bytes, 0);
+            var b = BitConverter.ToInt16(bytes, 4);
+            var c = BitConverter.ToInt16(bytes, 6);
+            long tick = ((long)a << 32) + 
+                ((long)b << 16) + 
+                (long)c;
             return tick;
+        }
+
+        private int GetIncrement(Guid guid)
+        {
+            var bytes = guid.ToByteArray();
+            int increment = ((int)bytes[13] << 16) + 
+                ((int) bytes[14] << 8) +
+                (int)bytes[15];
+            return increment;
         }
 
     }
