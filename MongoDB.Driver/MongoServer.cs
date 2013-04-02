@@ -544,7 +544,7 @@ namespace MongoDB.Driver
         /// <param name="selector">The node selector.</param>
         /// <returns>A binding to a connection.</returns>
         /// <exception cref="System.ArgumentNullException">selector</exception>
-        public IConnectionBinding NarrowToConnection(INodeSelector selector)
+        public ConnectionBinding GetConnectionBinding(INodeSelector selector)
         {
             if (selector == null)
             {
@@ -635,10 +635,10 @@ namespace MongoDB.Driver
         }
 
         /// <summary>
-        /// Gets a binding to a node in this cluster.
+        /// Gets a node in this cluster.
         /// </summary>
         /// <param name="selector">The selector.</param>
-        /// <returns>A node binding.</returns>
+        /// <returns>A node.</returns>
         /// <exception cref="System.ArgumentNullException">selector</exception>
         public MongoNode GetNode(INodeSelector selector)
         {
@@ -647,6 +647,19 @@ namespace MongoDB.Driver
                 throw new ArgumentNullException("selector");
             }
             return selector.SelectNode(this);
+        }
+
+        /// <summary>
+        /// Gets a new binding to a node.
+        /// </summary>
+        /// 
+        /// <param name="selector">The node selector.</param>
+        /// <returns>
+        /// A node binding.
+        /// </returns>
+        public INodeBinding GetNodeBinding(INodeSelector selector)
+        {
+            return GetNode(selector);
         }
 
         /// <summary>
@@ -755,14 +768,9 @@ namespace MongoDB.Driver
         }
 
         // explicit interface implementations
-        MongoServer IClusterBinding.Cluster
+        MongoServer IMongoBinding.Cluster
         {
             get { return this; }
-        }
-
-        INodeBinding IMongoBinding.NarrowToNode(INodeSelector selector)
-        {
-            return GetNode(selector);
         }
     }
 }

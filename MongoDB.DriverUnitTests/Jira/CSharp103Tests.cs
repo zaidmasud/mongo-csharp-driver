@@ -25,7 +25,7 @@ namespace MongoDB.DriverUnitTests.Jira.CSharp103
         [Test]
         public void TestNullReferenceException()
         {
-            using (var connectionBinding = Configuration.TestServer.NarrowToConnection(new PrimaryNodeSelector()))
+            using (var connectionBinding = Configuration.TestServer.GetConnectionBinding(new PrimaryNodeSelector()))
             {
                 var database = connectionBinding.GetDatabase(Configuration.TestDatabaseName);
                 var collection = database.GetCollection<BsonDocument>(Configuration.TestCollectionName);

@@ -20,6 +20,15 @@ namespace MongoDB.Driver
     /// </summary>
     public interface IMongoBinding
     {
+        // properties
+        /// <summary>
+        /// Gets the cluster.
+        /// </summary>
+        /// <value>
+        /// The cluster.
+        /// </value>
+        MongoServer Cluster { get; }
+
         // methods
         /// <summary>
         /// Gets a database with this binding.
@@ -37,17 +46,6 @@ namespace MongoDB.Driver
         MongoDatabase GetDatabase(string databaseName, MongoDatabaseSettings settings);
 
         /// <summary>
-        /// Gets a new binding that is at least bound to a node but may be more narrowly bound.
-        /// </summary>
-        /// <param name="selector">The node selector.</param>
-        /// <returns>A node binding.</returns>
-        /// <remarks>
-        /// If the current binding is to a cluster, the selector is used to select a node.
-        /// If the current binding is to a node or connection, the selector is used to verify that the selected node is still acceptable.
-        /// </remarks>
-        INodeBinding NarrowToNode(INodeSelector selector);
-
-        /// <summary>
         /// Gets a binding to a connection.
         /// </summary>
         /// <param name="selector">The node selector.</param>
@@ -58,10 +56,10 @@ namespace MongoDB.Driver
         /// The first connection binding returned for a connection owns the connection and will release the connection
         /// back to the connection pool when Dispose is called.
         /// 
-        /// If you call NarrowToConnection on a connection binding, you will get a new connection binding that does
+        /// If you call GetConnectionBinding on a connection binding, you will get a new connection binding that does
         /// not own the connection and will not release it when Dispose is called. Not until Dispose is called for
         /// the outermost connection binding is the connection itself released.
         /// </remarks>
-        IConnectionBinding NarrowToConnection(INodeSelector selector);
+        ConnectionBinding GetConnectionBinding(INodeSelector selector);
     }
 }

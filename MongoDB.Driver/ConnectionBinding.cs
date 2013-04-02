@@ -21,7 +21,7 @@ namespace MongoDB.Driver
     /// <summary>
     /// Represents a binding to a connection.
     /// </summary>
-    public class ConnectionBinding : IConnectionBinding
+    public class ConnectionBinding : IMongoBinding, IDisposable
     {
         // private fields
         private readonly MongoServer _cluster;
@@ -79,22 +79,6 @@ namespace MongoDB.Driver
         }
 
         /// <summary>
-        /// Gets the connection.
-        /// </summary>
-        /// <value>
-        /// The connection.
-        /// </value>
-        /// <exception cref="System.ObjectDisposedException">ConnectionBinding</exception>
-        public MongoConnection Connection
-        {
-            get
-            {
-                if (_disposed) { throw new ObjectDisposedException("ConnectionBinding"); }
-                return _connection ?? _wrappedBinding.Connection;
-            }
-        }
-
-        /// <summary>
         /// Gets the node.
         /// </summary>
         /// <value>
@@ -108,6 +92,24 @@ namespace MongoDB.Driver
                 return _node;
             }
         }
+
+        // internal properties
+        /// <summary>
+        /// Gets the connection.
+        /// </summary>
+        /// <value>
+        /// The connection.
+        /// </value>
+        /// <exception cref="System.ObjectDisposedException">ConnectionBinding</exception>
+        internal MongoConnection Connection
+        {
+            get
+            {
+                if (_disposed) { throw new ObjectDisposedException("ConnectionBinding"); }
+                return _connection ?? _wrappedBinding.Connection;
+            }
+        }
+
 
         // public methods
         /// <summary>
@@ -128,15 +130,15 @@ namespace MongoDB.Driver
         /// </returns>
         /// <exception cref="System.ArgumentNullException">selector</exception>
         /// <exception cref="System.ObjectDisposedException">ConnectionBinding</exception>
-        public IConnectionBinding NarrowToConnection(INodeSelector selector)
+        public ConnectionBinding GetConnectionBinding(INodeSelector selector)
         {
             if (selector == null)
             {
                 throw new ArgumentNullException("selector");
             }
             if (_disposed) { throw new ObjectDisposedException("ConnectionBinding"); }
-            selector.EnsureCurrentNodeIsAcceptable(_node);
 
+            selector.EnsureCurrentNodeIsAcceptable(_node);
             return new ConnectionBinding(this); // wrap this binding
         }
 
@@ -216,19 +218,6 @@ namespace MongoDB.Driver
             var databaseSettings = new MongoDatabaseSettings();
             var database = GetDatabase(databaseName, databaseSettings);
             return database.RunCommandAs<GetLastErrorResult>("getlasterror"); // use all lowercase for backward compatibility
-        }
-
-        /// <summary>
-        /// Gets a binding to a node.
-        /// </summary>
-        /// <param name="selector">The node selector.</param>
-        /// <returns>
-        /// A node binding.
-        /// </returns>
-        public INodeBinding NarrowToNode(INodeSelector selector)
-        {
-            // keep binding focused on the connection
-            return NarrowToConnection(selector);
         }
 
         // private methods

@@ -39,7 +39,7 @@ namespace MongoDB.DriverUnitTests.Jira.CSharp130
             var client = new MongoClient(clientSettings); // WriteConcern disabled
             var server = client.GetServer();
 
-            using (var connectionBinding = server.NarrowToConnection(new PrimaryNodeSelector()))
+            using (var connectionBinding = server.GetConnectionBinding(new PrimaryNodeSelector()))
             {
                 var database = connectionBinding.GetDatabase(Configuration.TestDatabaseName);
                 var collection = database.GetCollection<C>(Configuration.TestCollectionName);

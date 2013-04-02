@@ -18,8 +18,9 @@ namespace MongoDB.Driver
     /// <summary>
     /// Represents a binding to a node.
     /// </summary>
-    public interface INodeBinding : IClusterBinding
+    public interface INodeBinding : IMongoBinding
     {
+        // properties
         /// <summary>
         /// Gets the node.
         /// </summary>

@@ -1151,7 +1151,7 @@ namespace MongoDB.Driver
                 throw new ArgumentNullException("options");
             }
 
-            using (var connectionBinding = _database.Binding.NarrowToConnection(new PrimaryNodeSelector()))
+            using (var connectionBinding = _database.Binding.GetConnectionBinding(new PrimaryNodeSelector()))
             {
                 var writeConcern = options.WriteConcern ?? _settings.WriteConcern;
 
@@ -1353,7 +1353,7 @@ namespace MongoDB.Driver
         /// <returns>A WriteConcernResult (or null if WriteConcern is disabled).</returns>
         public virtual WriteConcernResult Remove(IMongoQuery query, RemoveFlags flags, WriteConcern writeConcern)
         {
-            using (var connectionBinding = _database.Binding.NarrowToConnection(new PrimaryNodeSelector()))
+            using (var connectionBinding = _database.Binding.GetConnectionBinding(new PrimaryNodeSelector()))
             {
                 var writerSettings = GetWriterSettings(connectionBinding.Node);
                 var message = new MongoDeleteMessage(writerSettings, FullName, flags, query);
@@ -1576,7 +1576,7 @@ namespace MongoDB.Driver
                 throw new ArgumentNullException("options");
             }
 
-            using (var connectionBinding = _database.Binding.NarrowToConnection(new PrimaryNodeSelector()))
+            using (var connectionBinding = _database.Binding.GetConnectionBinding(new PrimaryNodeSelector()))
             {
                 var writerSettings = GetWriterSettings(connectionBinding.Node);
                 var message = new MongoUpdateMessage(writerSettings, FullName, options.CheckElementNames, options.Flags, query, update);

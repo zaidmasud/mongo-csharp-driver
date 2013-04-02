@@ -134,7 +134,7 @@ namespace MongoDB.Driver
         /// A connection binding.
         /// </returns>
         /// <exception cref="System.ArgumentNullException">selector</exception>
-        public IConnectionBinding NarrowToConnection(INodeSelector selector)
+        public ConnectionBinding GetConnectionBinding(INodeSelector selector)
         {
             if (selector == null)
             {
@@ -185,25 +185,6 @@ namespace MongoDB.Driver
                 throw new ArgumentNullException("databaseSettings");
             }
             return new MongoDatabase(this, _cluster, databaseName, databaseSettings);
-        }
-
-        /// <summary>
-        /// Gets a binding to a node.
-        /// </summary>
-        /// <param name="selector">The node selector.</param>
-        /// <returns>
-        /// A node binding.
-        /// </returns>
-        /// <exception cref="System.ArgumentNullException">selector</exception>
-        public INodeBinding NarrowToNode(INodeSelector selector)
-        {
-            if (selector == null)
-            {
-                throw new ArgumentNullException("selector");
-            }
-
-            selector.EnsureCurrentNodeIsAcceptable(this);
-            return this;
         }
 
         // explicit interface implementations

@@ -20,13 +20,12 @@ namespace MongoDB.Driver
     /// </summary>
     public interface IClusterBinding : IMongoBinding
     {
-        // properties
+        // methods
         /// <summary>
-        /// Gets the cluster.
+        /// Gets a new binding to a cluster.
         /// </summary>
-        /// <value>
-        /// The cluster.
-        /// </value>
-        MongoServer Cluster { get; }
+        /// <param name="selector">The node selector.</param>
+        /// <returns>A node binding.</returns>
+        INodeBinding GetNodeBinding(INodeSelector selector);
     }
 }
