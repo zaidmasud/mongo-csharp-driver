@@ -40,36 +40,31 @@ namespace MongoDB.Bson.Serialization.IdGenerators
     public class AscendingGuidGenerator : IIdGenerator
     {
         // private static fields
-        private static AscendingGuidGenerator __instance = new AscendingGuidGenerator();
-        private static int __staticMachine;
-        private static short __staticPid;
+        private static AscendingGuidGenerator __instance = 
+            new AscendingGuidGenerator();
+        private static int __staticMachineId;
+        private static short __staticProcessId;
         private static int __staticIncrement; 
 
         // static constructor
         static AscendingGuidGenerator()
         {
-            __staticMachine = GetMachineHash();
+            __staticMachineId = GetMachineHash();
             __staticIncrement = (new Random()).Next();
 
             try
             {
-                __staticPid = (short) GetCurrentProcessId(); // use low order two bytes only
+                // use low order two bytes only
+                __staticProcessId = (short) GetCurrentProcessId(); 
             }
             catch (SecurityException)
             {
-                __staticPid = 0;
+                __staticProcessId = 0;
             }
         }
 
-        // constructors
-        /// <summary>
-        /// Initializes a new instance of the AscendingGuidGenerator class.
-        /// </summary>
-        public AscendingGuidGenerator()
-        {
-        }
-
         // public static properties
+
         /// <summary>
         /// Gets an instance of AscendingGuidGenerator.
         /// </summary>
@@ -79,46 +74,62 @@ namespace MongoDB.Bson.Serialization.IdGenerators
         }
 		
 		// public methods
+
 		/// <summary>
-		/// Generates an Id for a document.
+		/// Generates an ascending Guid for a document. Consecutive invocations
+        /// should generate Guids that are ascending from a MongoDB perspective
 		/// </summary>
 		/// <param name="container">The container of the document (will be a 
 		/// MongoCollection when called from the driver). </param>
-		/// <param name="document">The document.</param>
-		/// <returns>An Id.</returns>
+		/// <param name="document">The document it was generated for.</param>
+		/// <returns>A Guid.</returns>
 		public object GenerateId(object container,
 		                         object document)
 		{
-			int increment = Interlocked.Increment(ref __staticIncrement) & 0x00ffffff;
+			int increment = Interlocked.Increment(ref __staticIncrement) & 
+                0x00ffffff;
 			return GenerateId (container,
 			                  document,
 			                  DateTime.UtcNow.Ticks,
-			                  increment);
+                              __staticMachineId,
+                              __staticProcessId,
+                              increment);
 		}
 
-        // public methods
         /// <summary>
-        /// Generates an Id for a document.
+        /// Generates a Guid for a document. Note - this is purely used for
+        /// unit testing
         /// </summary>
         /// <param name="container">The container of the document (will be a 
         /// MongoCollection when called from the driver). </param>
-        /// <param name="document">The document.</param>
-        /// <returns>An Id.</returns>
-        public object GenerateId(object container,
-		                         object document,
-		                         long tickCount,
-		                         int increment)
+        /// <param name="document">The document it was generated for.</param>
+        /// <param name="tickCount">The time portion of the Guid</param>
+        /// <param name="machineId">The machine id portion of the Guid. Only
+        /// the least significant 3 bytes are used.</param>
+        /// <param name="processId">The process id portion of the Guid</param>
+        /// <param name="increment">The increment portion of the Guid. Used
+        /// to distinguish between 2 Guids that have the timestamp. Note
+        /// only the least significant 3 bytes are used.</param>
+        /// <returns>A Guid.</returns>
+        public object GenerateId(
+            object container,
+		    object document,
+		    long tickCount,
+            int machineId,
+            short processId,
+            int increment
+            )
         {
 			int a = (int)(tickCount >> 32);
 			short b = (short)(tickCount >> 16);
 			short c = (short)(tickCount);
 
 			byte[] d = new byte[8];
-            d[0] = (byte)(__staticMachine >> 16);
-            d[1] = (byte)(__staticMachine >> 8);
-            d[2] = (byte)(__staticMachine);
-            d[3] = (byte)(__staticPid >> 8);
-            d[4] = (byte)(__staticPid);
+            d[0] = (byte)(machineId >> 16);
+            d[1] = (byte)(machineId >> 8);
+            d[2] = (byte)(machineId);
+            d[3] = (byte)(processId >> 8);
+            d[4] = (byte)(processId);
             d[5] = (byte)(increment >> 16);
             d[6] = (byte)(increment >> 8);
             d[7] = (byte)(increment);
@@ -151,10 +162,12 @@ namespace MongoDB.Bson.Serialization.IdGenerators
 
         private static int GetMachineHash()
         {
-            var hostName = Environment.MachineName; // use instead of Dns.HostName so it will work offline
+            // use instead of Dns.HostName so it will work offline
+            var hostName = Environment.MachineName; 
             var sha1 = SHA1.Create();
             var hash = sha1.ComputeHash(Encoding.UTF8.GetBytes(hostName));
-            return (hash[0] << 16) + (hash[1] << 8) + hash[2]; // use first 3 bytes of hash
+            // use first 3 bytes of hash
+            return (hash[0] << 16) + (hash[1] << 8) + hash[2]; 
         }
 
     }
