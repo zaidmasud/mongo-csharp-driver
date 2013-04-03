@@ -14,6 +14,7 @@
 */
 
 using System;
+using System.Linq;
 using MongoDB.Bson.Serialization;
 using MongoDB.Bson.Serialization.IdGenerators;
 using NUnit.Framework;
@@ -23,7 +24,7 @@ namespace MongoDB.BsonUnitTests.Serialization
     [TestFixture]
     public class AscendingGuidGeneratorTests
     {
-        private IIdGenerator _generator = new AscendingGuidGenerator();
+        private AscendingGuidGenerator _generator = new AscendingGuidGenerator();
 
         [Test]
         public void TestIsEmpty()
@@ -39,48 +40,35 @@ namespace MongoDB.BsonUnitTests.Serialization
         {
             long expectedTicks = DateTime.Now.Ticks;
             var expectedIncrement = 1000;
-            var expectedMachineId = 1234;
-            short expectedProcessId = 4321;
-            var guid = (Guid)((AscendingGuidGenerator)_generator).
-                             GenerateId (null,
-                                         null, 
+            var expectedMachineProcessId = new byte[] { 1, 32, 64, 128, 255 };
+            var guid = (Guid)_generator.GenerateId (
                                          expectedTicks,
-                                         expectedMachineId,
-                                         expectedProcessId,
+                                         expectedMachineProcessId,
                                          expectedIncrement);
             var bytes = guid.ToByteArray();
             var actualTicks = GetTicks(bytes);
-            var actualMachineId = GetMachineId(bytes);
-            var actualProcessId = GetProcessId(bytes);
+            var actualMachineProcessId = GetMachineProcessId(bytes);
             var actualIncrement = GetIncrement(bytes);
             Assert.AreEqual(expectedTicks, actualTicks);
-            Assert.AreEqual(expectedMachineId, actualMachineId);
-            Assert.AreEqual(expectedProcessId, actualProcessId);
+            Assert.IsTrue(expectedMachineProcessId.SequenceEqual(actualMachineProcessId));
             Assert.AreEqual(expectedIncrement, actualIncrement);
         }
 
         private long GetTicks(byte[] bytes)
-        {   
-            var a = (long) BitConverter.ToInt32(bytes, 0);
-            var b = (long) BitConverter.ToInt16(bytes, 4);
-            var c = (long) BitConverter.ToInt16(bytes, 6);
+        {
+            var a = (long)BitConverter.ToInt32(bytes, 0);
+            var b = (long)BitConverter.ToInt16(bytes, 4);
+            var c = (long)BitConverter.ToInt16(bytes, 6);
             long tick = (a << 32) | ((b << 16) & 0xFFFF0000) |
                 (c & 0xFFFF);
             return tick;
         }
 
-        private int GetMachineId(byte[] bytes)
+        private byte[] GetMachineProcessId(byte[] bytes)
         {
-            int machineId = ((int)bytes[8] << 16) +
-                ((int)bytes[9] << 8) +
-                (int)bytes[10];
-            return machineId;
-        }
-
-        private short GetProcessId(byte[] bytes)
-        {
-            short processId = (short) ((bytes[11] << 8) + (bytes[12]));
-            return processId;
+            byte[] result = new byte[5];
+            Array.Copy(bytes, 8, result, 0, 5);
+            return result;
         }
 
         private int GetIncrement(byte[] bytes)

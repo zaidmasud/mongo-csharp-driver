@@ -34,33 +34,35 @@ namespace MongoDB.Bson.Serialization.IdGenerators
     /// 2 bytes: low order bytes of process Id
     /// 3 bytes: increment
     /// </summary>
-    /// <seealso cref="CombGuidGenerator"/>
-    /// <seealso cref="GuidGenerator"/>
-    /// <seealso cref="ObjectIdGenerator"/>
     public class AscendingGuidGenerator : IIdGenerator
     {
         // private static fields
-        private static AscendingGuidGenerator __instance = 
-            new AscendingGuidGenerator();
-        private static int __staticMachineId;
-        private static short __staticProcessId;
-        private static int __staticIncrement; 
+        private static AscendingGuidGenerator __instance = new AscendingGuidGenerator();
+        private static byte[] __machineProcessId;
+        private static int __increment; 
 
         // static constructor
         static AscendingGuidGenerator()
         {
-            __staticMachineId = GetMachineHash();
-            __staticIncrement = (new Random()).Next();
+            int machineId = GetMachineHash();
+            short processId;
 
             try
             {
                 // use low order two bytes only
-                __staticProcessId = (short) GetCurrentProcessId(); 
+                processId = (short)GetCurrentProcessId(); 
             }
             catch (SecurityException)
             {
-                __staticProcessId = 0;
+                processId = 0;
             }
+
+            __machineProcessId = new byte[5];
+            __machineProcessId[0] = (byte)(machineId >> 16);
+            __machineProcessId[1] = (byte)(machineId >> 8);
+            __machineProcessId[2] = (byte)(machineId);
+            __machineProcessId[3] = (byte)(processId >> 8);
+            __machineProcessId[4] = (byte)(processId);
         }
 
         // public static properties
@@ -75,48 +77,38 @@ namespace MongoDB.Bson.Serialization.IdGenerators
 		
 		// public methods
 
-		/// <summary>
-		/// Generates an ascending Guid for a document. Consecutive invocations
+        /// <summary>
+        /// Generates an ascending Guid for a document. Consecutive invocations
         /// should generate Guids that are ascending from a MongoDB perspective
-		/// </summary>
-		/// <param name="container">The container of the document (will be a 
-		/// MongoCollection when called from the driver). </param>
-		/// <param name="document">The document it was generated for.</param>
-		/// <returns>A Guid.</returns>
-		public object GenerateId(object container,
-		                         object document)
-		{
-			int increment = Interlocked.Increment(ref __staticIncrement) & 
+        /// </summary>
+        /// <param name="container">The container of the document (will be a 
+        /// MongoCollection when called from the driver). </param>
+        /// <param name="document">The document it was generated for.</param>
+        /// <returns>A Guid.</returns>
+        public object GenerateId(object container, object document)
+        {
+            int increment = Interlocked.Increment(ref __increment) &
                 0x00ffffff;
-			return GenerateId (container,
-			                  document,
-			                  DateTime.UtcNow.Ticks,
-                              __staticMachineId,
-                              __staticProcessId,
+            return GenerateId(DateTime.UtcNow.Ticks,
+                              __machineProcessId,
                               increment);
-		}
+        }
 
         /// <summary>
         /// Generates a Guid for a document. Note - this is purely used for
         /// unit testing
         /// </summary>
-        /// <param name="container">The container of the document (will be a 
-        /// MongoCollection when called from the driver). </param>
-        /// <param name="document">The document it was generated for.</param>
         /// <param name="tickCount">The time portion of the Guid</param>
-        /// <param name="machineId">The machine id portion of the Guid. Only
-        /// the least significant 3 bytes are used.</param>
-        /// <param name="processId">The process id portion of the Guid</param>
+        /// <param name="machineProcess">A 5 byte array with the first 3 bytes
+        /// representing a machine id and the next 2 representing a process
+        /// id</param>
         /// <param name="increment">The increment portion of the Guid. Used
         /// to distinguish between 2 Guids that have the timestamp. Note
         /// only the least significant 3 bytes are used.</param>
         /// <returns>A Guid.</returns>
         public object GenerateId(
-            object container,
-		    object document,
 		    long tickCount,
-            int machineId,
-            short processId,
+            byte[] machineProcessId,
             int increment
             )
         {
@@ -125,11 +117,7 @@ namespace MongoDB.Bson.Serialization.IdGenerators
 			short c = (short)(tickCount);
 
 			byte[] d = new byte[8];
-            d[0] = (byte)(machineId >> 16);
-            d[1] = (byte)(machineId >> 8);
-            d[2] = (byte)(machineId);
-            d[3] = (byte)(processId >> 8);
-            d[4] = (byte)(processId);
+            Array.Copy(d, machineProcessId, 5);
             d[5] = (byte)(increment >> 16);
             d[6] = (byte)(increment >> 8);
             d[7] = (byte)(increment);

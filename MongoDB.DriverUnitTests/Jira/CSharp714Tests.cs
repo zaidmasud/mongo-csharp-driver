@@ -29,8 +29,7 @@ namespace MongoDB.DriverUnitTests.Jira.CSharp714
         
         public class C
         {
-            public ObjectId Id { get; set; }
-            public int I { get; set; }
+            public int Id { get; set; }
             public Guid Guid { get; set; }
         }
 
@@ -60,10 +59,10 @@ namespace MongoDB.DriverUnitTests.Jira.CSharp714
             CreateTestData();
             var cursor = _collection.FindAll().SetSortOrder(
                 SortBy.Descending("Guid"));
-            var initId = __maxNoOfDocuments-1;
+            var id = __maxNoOfDocuments-1;
             foreach (var c in cursor) 
             {
-                Assert.AreEqual(initId--, c.I);
+                Assert.AreEqual(id--, c.Id);
             }
         }
 
@@ -74,7 +73,7 @@ namespace MongoDB.DriverUnitTests.Jira.CSharp714
                 _collection.Insert(
                     new C()
                     {
-                        I = i,
+                        Id = i,
                         Guid = (Guid) _generator.GenerateId(null, null)
                     }
                 );
