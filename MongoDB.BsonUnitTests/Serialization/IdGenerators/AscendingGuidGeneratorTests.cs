@@ -15,7 +15,6 @@
 
 using System;
 using System.Linq;
-using MongoDB.Bson.Serialization;
 using MongoDB.Bson.Serialization.IdGenerators;
 using NUnit.Framework;
 
@@ -38,17 +37,16 @@ namespace MongoDB.BsonUnitTests.Serialization
         [Test]
         public void TestGuid()
         {
-            long expectedTicks = DateTime.Now.Ticks;
+            var expectedTicks = DateTime.Now.Ticks;
             var expectedIncrement = 1000;
             var expectedMachineProcessId = new byte[] { 1, 32, 64, 128, 255 };
-            var guid = (Guid)_generator.GenerateId (
-                                         expectedTicks,
-                                         expectedMachineProcessId,
-                                         expectedIncrement);
+            var guid = (Guid)_generator.GenerateId(expectedTicks, expectedMachineProcessId, expectedIncrement);
+
             var bytes = guid.ToByteArray();
             var actualTicks = GetTicks(bytes);
             var actualMachineProcessId = GetMachineProcessId(bytes);
             var actualIncrement = GetIncrement(bytes);
+
             Assert.AreEqual(expectedTicks, actualTicks);
             Assert.IsTrue(expectedMachineProcessId.SequenceEqual(actualMachineProcessId));
             Assert.AreEqual(expectedIncrement, actualIncrement);
@@ -56,26 +54,22 @@ namespace MongoDB.BsonUnitTests.Serialization
 
         private long GetTicks(byte[] bytes)
         {
-            var a = (long)BitConverter.ToInt32(bytes, 0);
-            var b = (long)BitConverter.ToInt16(bytes, 4);
-            var c = (long)BitConverter.ToInt16(bytes, 6);
-            long tick = (a << 32) | ((b << 16) & 0xFFFF0000) |
-                (c & 0xFFFF);
-            return tick;
+            var a = (ulong)BitConverter.ToUInt32(bytes, 0);
+            var b = (ulong)BitConverter.ToUInt16(bytes, 4);
+            var c = (ulong)BitConverter.ToUInt16(bytes, 6);
+            return (long)((a << 32) | (b << 16) | c);
         }
 
         private byte[] GetMachineProcessId(byte[] bytes)
         {
-            byte[] result = new byte[5];
+            var result = new byte[5];
             Array.Copy(bytes, 8, result, 0, 5);
             return result;
         }
 
         private int GetIncrement(byte[] bytes)
         {
-            int increment = ((int)bytes[13] << 16) +
-                ((int)bytes[14] << 8) +
-                (int)bytes[15];
+            var increment = (bytes[13] << 16) + (bytes[14] << 8) + bytes[15];
             return increment;
         }
     }

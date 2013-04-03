@@ -37,16 +37,16 @@ namespace MongoDB.Bson.Serialization.IdGenerators
     public class AscendingGuidGenerator : IIdGenerator
     {
         // private static fields
-        private static AscendingGuidGenerator __instance = new AscendingGuidGenerator();
-        private static byte[] __machineProcessId;
+        private static readonly AscendingGuidGenerator __instance = new AscendingGuidGenerator();
+        private static readonly byte[] __machineProcessId;
         private static int __increment; 
 
         // static constructor
         static AscendingGuidGenerator()
         {
-            int machineId = GetMachineHash();
-            short processId;
+            var machineHash = GetMachineHash();
 
+            short processId;
             try
             {
                 // use low order two bytes only
@@ -57,12 +57,14 @@ namespace MongoDB.Bson.Serialization.IdGenerators
                 processId = 0;
             }
 
-            __machineProcessId = new byte[5];
-            __machineProcessId[0] = (byte)(machineId >> 16);
-            __machineProcessId[1] = (byte)(machineId >> 8);
-            __machineProcessId[2] = (byte)(machineId);
-            __machineProcessId[3] = (byte)(processId >> 8);
-            __machineProcessId[4] = (byte)(processId);
+            __machineProcessId = new byte[]
+            {
+                machineHash[0],
+                machineHash[1],
+                machineHash[2],
+                (byte)(processId >> 8),
+                (byte)(processId)
+            };
         }
 
         // public static properties
@@ -74,8 +76,8 @@ namespace MongoDB.Bson.Serialization.IdGenerators
         {
             get { return __instance; }
         }
-		
-		// public methods
+        
+        // public methods
 
         /// <summary>
         /// Generates an ascending Guid for a document. Consecutive invocations
@@ -87,11 +89,8 @@ namespace MongoDB.Bson.Serialization.IdGenerators
         /// <returns>A Guid.</returns>
         public object GenerateId(object container, object document)
         {
-            int increment = Interlocked.Increment(ref __increment) &
-                0x00ffffff;
-            return GenerateId(DateTime.UtcNow.Ticks,
-                              __machineProcessId,
-                              increment);
+            int increment = Interlocked.Increment(ref __increment) & 0x00ffffff;
+            return GenerateId(DateTime.UtcNow.Ticks, __machineProcessId, increment);
         }
 
         /// <summary>
@@ -99,7 +98,7 @@ namespace MongoDB.Bson.Serialization.IdGenerators
         /// unit testing
         /// </summary>
         /// <param name="tickCount">The time portion of the Guid</param>
-        /// <param name="machineProcess">A 5 byte array with the first 3 bytes
+        /// <param name="machineProcessId">A 5 byte array with the first 3 bytes
         /// representing a machine id and the next 2 representing a process
         /// id</param>
         /// <param name="increment">The increment portion of the Guid. Used
@@ -107,21 +106,21 @@ namespace MongoDB.Bson.Serialization.IdGenerators
         /// only the least significant 3 bytes are used.</param>
         /// <returns>A Guid.</returns>
         public object GenerateId(
-		    long tickCount,
+            long tickCount,
             byte[] machineProcessId,
-            int increment
-            )
+            int increment)
         {
-			int a = (int)(tickCount >> 32);
-			short b = (short)(tickCount >> 16);
-			short c = (short)(tickCount);
+            var a = (int)(tickCount >> 32);
+            var b = (short)(tickCount >> 16);
+            var c = (short)(tickCount);
+            var d = new byte[8];
 
-			byte[] d = new byte[8];
-            Array.Copy(d, machineProcessId, 5);
+            Array.Copy(machineProcessId, d, 5);
             d[5] = (byte)(increment >> 16);
             d[6] = (byte)(increment >> 8);
             d[7] = (byte)(increment);
-			return new Guid (a, b, c, d);
+
+            return new Guid (a, b, c, d);
         }
 
         /// <summary>
@@ -148,15 +147,12 @@ namespace MongoDB.Bson.Serialization.IdGenerators
             return Process.GetCurrentProcess().Id;
         }
 
-        private static int GetMachineHash()
+        private static byte[] GetMachineHash()
         {
             // use instead of Dns.HostName so it will work offline
             var hostName = Environment.MachineName; 
             var sha1 = SHA1.Create();
-            var hash = sha1.ComputeHash(Encoding.UTF8.GetBytes(hostName));
-            // use first 3 bytes of hash
-            return (hash[0] << 16) + (hash[1] << 8) + hash[2]; 
+            return sha1.ComputeHash(Encoding.UTF8.GetBytes(hostName));
         }
-
     }
 }

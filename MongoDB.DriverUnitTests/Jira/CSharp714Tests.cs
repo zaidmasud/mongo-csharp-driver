@@ -25,8 +25,7 @@ namespace MongoDB.DriverUnitTests.Jira.CSharp714
 {
     [TestFixture]
     public class CSharp714Tests
-    {
-        
+    {        
         public class C
         {
             public int Id { get; set; }
@@ -44,22 +43,19 @@ namespace MongoDB.DriverUnitTests.Jira.CSharp714
         {
             _server = Configuration.TestServer;
             _database = Configuration.TestDatabase;
-            var collSettings = new MongoCollectionSettings();
-            collSettings.GuidRepresentation = GuidRepresentation.Standard;
-            _collection = _database.GetCollection<C> (
-                "csharp714",
-                collSettings);
+            var collectionSettings = new MongoCollectionSettings() { GuidRepresentation = GuidRepresentation.Standard };
+            _collection = _database.GetCollection<C>(Configuration.TestCollection.Name, collectionSettings);
             _collection.Drop();
         }
         
         [Test]
-        public void TestGuid()
+        public void TestGuidsAreAscending()
         {
-            _collection.RemoveAll();
             CreateTestData();
-            var cursor = _collection.FindAll().SetSortOrder(
-                SortBy.Descending("Guid"));
-            var id = __maxNoOfDocuments-1;
+
+            // sort descending instead of ascending so that result order is not the same as insertion order
+            var cursor = _collection.FindAll().SetSortOrder(SortBy.Descending("Guid"));
+            var id = __maxNoOfDocuments - 1;
             foreach (var c in cursor) 
             {
                 Assert.AreEqual(id--, c.Id);
@@ -68,16 +64,13 @@ namespace MongoDB.DriverUnitTests.Jira.CSharp714
 
         private void CreateTestData()
         {
-            for (var i=0; i<__maxNoOfDocuments; i++) 
+            _collection.RemoveAll();
+
+            for (var i = 0; i < __maxNoOfDocuments; i++) 
             {
-                _collection.Insert(
-                    new C()
-                    {
-                        Id = i,
-                        Guid = (Guid) _generator.GenerateId(null, null)
-                    }
-                );
+                _collection.Insert(new C { Id = i, Guid = (Guid)_generator.GenerateId(null, null) });
             }
+
             _collection.CreateIndex("Guid");
         }
     }
