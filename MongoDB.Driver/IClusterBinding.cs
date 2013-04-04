@@ -22,14 +22,14 @@ namespace MongoDB.Driver
     {
         // methods
         /// <summary>
-        /// Gets a connection binding.
+        /// Gets a binding to a connection (to a node in this cluster).
         /// </summary>
         /// <param name="selector">The node selector.</param>
         /// <returns>A connection binding.</returns>
         ConnectionBinding GetConnectionBinding(INodeSelector selector);
 
         /// <summary>
-        /// Gets a new binding to a cluster.
+        /// Gets a binding to a node in this cluster.
         /// </summary>
         /// <param name="selector">The node selector.</param>
         /// <returns>A node binding.</returns>

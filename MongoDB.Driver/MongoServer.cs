@@ -613,9 +613,7 @@ namespace MongoDB.Driver
                 throw new ArgumentNullException("selector");
             }
             var node = selector.SelectNode(this);
-            var connection = node.Instance.AcquireConnection();
-            var connectionWrapper = new ConnectionWrapper(this, node, connection);
-            return new ConnectionBinding(this, node, connectionWrapper);
+            return node.GetConnectionBinding();
         }
 
         /// <summary>
@@ -724,7 +722,7 @@ namespace MongoDB.Driver
         }
 
         /// <summary>
-        /// Gets a new binding to a node.
+        /// Gets a binding to a node in this cluster.
         /// </summary>
         /// 
         /// <param name="selector">The node selector.</param>

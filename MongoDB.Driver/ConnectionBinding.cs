@@ -27,7 +27,7 @@ namespace MongoDB.Driver
         private readonly MongoServer _cluster;
         private readonly MongoNode _node;
         private readonly ConnectionWrapper _connection;
-        private readonly ConnectionBinding _wrappedConnectionBinding;
+        private readonly ConnectionBinding _wrappedBinding;
         private bool _disposed;
 
         // constructors
@@ -51,15 +51,15 @@ namespace MongoDB.Driver
             _connection = connection;
         }
 
-        private ConnectionBinding(ConnectionBinding wrappedConnectionBinding)
+        private ConnectionBinding(ConnectionBinding wrappedBinding)
         {
-            if (wrappedConnectionBinding == null)
+            if (wrappedBinding == null)
             {
-                throw new ArgumentNullException("wrappedConnectionBinding");
+                throw new ArgumentNullException("wrappedBinding");
             }
-            _cluster = wrappedConnectionBinding.Cluster;
-            _node = wrappedConnectionBinding.Node;
-            _wrappedConnectionBinding = wrappedConnectionBinding;
+            _cluster = wrappedBinding.Cluster;
+            _node = wrappedBinding.Node;
+            _wrappedBinding = wrappedBinding;
         }
 
         // public properties
@@ -90,7 +90,7 @@ namespace MongoDB.Driver
             get
             {
                 if (_disposed) { throw new ObjectDisposedException("ConnectionBinding"); }
-                return _connection ?? _wrappedConnectionBinding.Connection;
+                return _connection ?? _wrappedBinding.Connection;
             }
         }
 
@@ -152,8 +152,7 @@ namespace MongoDB.Driver
         /// </returns>
         public ConnectionBinding GetConnectionBinding()
         {
-            var connection = GetConnection();
-            return new ConnectionBinding(_cluster, _node, connection);
+            return new ConnectionBinding(this); // rewrap the binding so we retain ownership of teh connection
         }
 
         /// <summary>

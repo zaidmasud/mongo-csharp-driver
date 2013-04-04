@@ -249,6 +249,7 @@
     <Compile Include="MongoUrlBuilder.cs" />
     <Compile Include="MongoUser.cs" />
     <Compile Include="MongoNode.cs" />
+    <Compile Include="MonotonicReadsBinding.cs" />
     <Compile Include="PasswordEvidence.cs" />
     <Compile Include="PrimaryNodeSelector.cs" />
     <Compile Include="ProfilingLevel.cs" />
