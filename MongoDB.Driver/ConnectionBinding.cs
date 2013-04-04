@@ -21,17 +21,17 @@ namespace MongoDB.Driver
     /// <summary>
     /// Represents a binding to a connection.
     /// </summary>
-    public class ConnectionBinding : IMongoBinding, IDisposable
+    public class ConnectionBinding : INodeOrConnectionBinding, IDisposable
     {
         // private fields
         private readonly MongoServer _cluster;
         private readonly MongoNode _node;
-        private readonly MongoConnection _connection;
-        private readonly ConnectionBinding _wrappedBinding;
+        private readonly ConnectionWrapper _connection;
+        private readonly ConnectionBinding _wrappedConnectionBinding;
         private bool _disposed;
 
         // constructors
-        internal ConnectionBinding(MongoServer cluster, MongoNode node, MongoConnection connection)
+        internal ConnectionBinding(MongoServer cluster, MongoNode node, ConnectionWrapper connection)
         {
             if (cluster == null)
             {
@@ -51,15 +51,15 @@ namespace MongoDB.Driver
             _connection = connection;
         }
 
-        private ConnectionBinding(ConnectionBinding wrappedBinding)
+        private ConnectionBinding(ConnectionBinding wrappedConnectionBinding)
         {
-            if (wrappedBinding == null)
+            if (wrappedConnectionBinding == null)
             {
-                throw new ArgumentNullException("wrappedBinding");
+                throw new ArgumentNullException("wrappedConnectionBinding");
             }
-            _cluster = wrappedBinding.Cluster;
-            _node = wrappedBinding.Node;
-            _wrappedBinding = wrappedBinding;
+            _cluster = wrappedConnectionBinding.Cluster;
+            _node = wrappedConnectionBinding.Node;
+            _wrappedConnectionBinding = wrappedConnectionBinding;
         }
 
         // public properties
@@ -79,6 +79,22 @@ namespace MongoDB.Driver
         }
 
         /// <summary>
+        /// Gets the connection.
+        /// </summary>
+        /// <value>
+        /// The connection.
+        /// </value>
+        /// <exception cref="System.ObjectDisposedException">ConnectionBinding</exception>
+        public ConnectionWrapper Connection
+        {
+            get
+            {
+                if (_disposed) { throw new ObjectDisposedException("ConnectionBinding"); }
+                return _connection ?? _wrappedConnectionBinding.Connection;
+            }
+        }
+
+        /// <summary>
         /// Gets the node.
         /// </summary>
         /// <value>
@@ -93,25 +109,21 @@ namespace MongoDB.Driver
             }
         }
 
-        // internal properties
+        // public methods
         /// <summary>
-        /// Gets the connection.
+        /// Applies the read preference to this binding, returning either the same binding or a new binding as necessary.
         /// </summary>
-        /// <value>
-        /// The connection.
-        /// </value>
-        /// <exception cref="System.ObjectDisposedException">ConnectionBinding</exception>
-        internal MongoConnection Connection
+        /// <param name="readPreference">The read preference.</param>
+        /// <returns>
+        /// A binding matching the read preference. Either the same binding or a new one.
+        /// </returns>
+        public INodeOrConnectionBinding ApplyReadPreference(ReadPreference readPreference)
         {
-            get
-            {
-                if (_disposed) { throw new ObjectDisposedException("ConnectionBinding"); }
-                return _connection ?? _wrappedBinding.Connection;
-            }
+            var nodeSelector = new ReadPreferenceNodeSelector(readPreference);
+            nodeSelector.EnsureCurrentNodeIsAcceptable(_node);
+            return this;
         }
 
-
-        // public methods
         /// <summary>
         /// Performs application-defined tasks associated with freeing, releasing, or resetting unmanaged resources.
         /// </summary>
@@ -122,24 +134,26 @@ namespace MongoDB.Driver
         }
 
         /// <summary>
-        /// Gets a binding to a connection.
+        /// Gets a connection.
         /// </summary>
-        /// <param name="selector">The node selector.</param>
+        /// <returns>
+        /// A connection.
+        /// </returns>
+        public ConnectionWrapper GetConnection()
+        {
+            return _connection.Rewrap();
+        }
+
+        /// <summary>
+        /// Gets a connection binding.
+        /// </summary>
         /// <returns>
         /// A connection binding.
         /// </returns>
-        /// <exception cref="System.ArgumentNullException">selector</exception>
-        /// <exception cref="System.ObjectDisposedException">ConnectionBinding</exception>
-        public ConnectionBinding GetConnectionBinding(INodeSelector selector)
+        public ConnectionBinding GetConnectionBinding()
         {
-            if (selector == null)
-            {
-                throw new ArgumentNullException("selector");
-            }
-            if (_disposed) { throw new ObjectDisposedException("ConnectionBinding"); }
-
-            selector.EnsureCurrentNodeIsAcceptable(_node);
-            return new ConnectionBinding(this); // wrap this binding
+            var connection = GetConnection();
+            return new ConnectionBinding(_cluster, _node, connection);
         }
 
         /// <summary>
@@ -227,7 +241,7 @@ namespace MongoDB.Driver
             {
                 if (_connection != null)
                 {
-                    _connection.Release();
+                    _connection.Dispose();
                 }
                 _disposed = true;
             }

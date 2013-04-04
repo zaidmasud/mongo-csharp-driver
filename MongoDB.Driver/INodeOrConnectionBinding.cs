@@ -16,23 +16,30 @@
 namespace MongoDB.Driver
 {
     /// <summary>
-    /// Represents a binding to a cluster.
+    /// Represents a binding to a node or a connection.
+    /// Defines the properties and methods that node and connection bindings have in common.
     /// </summary>
-    public interface IClusterBinding : IMongoBinding
+    public interface INodeOrConnectionBinding : IMongoBinding
     {
+        /// <summary>
+        /// Gets the node.
+        /// </summary>
+        /// <value>
+        /// The node.
+        /// </value>
+        MongoNode Node { get; }
+
         // methods
+        /// <summary>
+        /// Gets a connection.
+        /// </summary>
+        /// <returns>A connection.</returns>
+        ConnectionWrapper GetConnection();
+
         /// <summary>
         /// Gets a connection binding.
         /// </summary>
-        /// <param name="selector">The node selector.</param>
         /// <returns>A connection binding.</returns>
-        ConnectionBinding GetConnectionBinding(INodeSelector selector);
-
-        /// <summary>
-        /// Gets a new binding to a cluster.
-        /// </summary>
-        /// <param name="selector">The node selector.</param>
-        /// <returns>A node binding.</returns>
-        INodeBinding GetNodeBinding(INodeSelector selector);
+        ConnectionBinding GetConnectionBinding();
     }
 }

@@ -105,8 +105,7 @@ namespace MongoDB.Driver
         private bool _disposed = false;
         private bool _started = false;
         private bool _done = false;
-        private IMongoBinding _enumeratorBinding; // set by GetFirst to ensure GetMore goes to same node
-        private MongoNode _node;
+        private INodeOrConnectionBinding _enumeratorBinding; // set by GetFirst to ensure GetMore goes to same node
         private int _count;
         private int _positiveLimit;
         private MongoReplyMessage<TDocument> _reply;
@@ -285,45 +284,19 @@ namespace MongoDB.Driver
         }
 
         // private methods
-        private ConnectionBinding GetConnectionBinding()
+        private ConnectionWrapper GetConnection()
         {
-            var nodeSelector = new ReadPreferenceNodeSelector(_readPreference);
-
             if (_enumeratorBinding == null)
             {
-                var databaseBinding = _cursor.Database.Binding;
-                MongoServer server;
-                MongoNode node;
-                ConnectionBinding connectionBinding;
-                if ((server = databaseBinding as MongoServer) != null)
-                {
-                    _node = server.GetNode(nodeSelector);
-                    _enumeratorBinding = _node;
-                }
-                else if ((node = databaseBinding as MongoNode) != null)
-                {
-                    nodeSelector.EnsureCurrentNodeIsAcceptable(node);
-                    _node = node;
-                    _enumeratorBinding = node;
-                }
-                else if ((connectionBinding = databaseBinding as ConnectionBinding) != null)
-                {
-                    nodeSelector.EnsureCurrentNodeIsAcceptable(connectionBinding.Node);
-                    _node = connectionBinding.Node;
-                    _enumeratorBinding = connectionBinding;
-                }
-                else
-                {
-                    throw new MongoInternalException("Unexpected binding type.");
-                }
+                _enumeratorBinding = _cursor.Database.Binding.ApplyReadPreference(_readPreference);
             }
 
-            return _enumeratorBinding.GetConnectionBinding(nodeSelector);
+            return _enumeratorBinding.GetConnection();
         }
 
         private MongoReplyMessage<TDocument> GetFirst()
         {
-            using (var connectionBinding = GetConnectionBinding())
+            using (var connection = GetConnection())
             {
                 // some of these weird conditions are necessary to get commands to run correctly
                 // specifically numberToReturn has to be 1 or -1 for commands
@@ -349,15 +322,15 @@ namespace MongoDB.Driver
                     numberToReturn = _cursor.BatchSize;
                 }
 
-                var writerSettings = _cursor.Collection.GetWriterSettings(connectionBinding.Node);
+                var writerSettings = _cursor.Collection.GetWriterSettings(connection.Node);
                 var queryMessage = new MongoQueryMessage(writerSettings, _cursor.Collection.FullName, _queryFlags, _cursor.Skip, numberToReturn, WrapQuery(), _cursor.Fields);
-                return GetReply(connectionBinding.Connection, queryMessage);
+                return GetReply(connection.Inner, queryMessage);
             }
         }
 
         private MongoReplyMessage<TDocument> GetMore()
         {
-            using (var connectionBinding = GetConnectionBinding())
+            using (var connection = GetConnection())
             {
                 int numberToReturn;
                 if (_positiveLimit != 0)
@@ -374,7 +347,7 @@ namespace MongoDB.Driver
                 }
 
                 var getMoreMessage = new MongoGetMoreMessage(_cursor.Collection.FullName, numberToReturn, _openCursorId);
-                return GetReply(connectionBinding.Connection, getMoreMessage);
+                return GetReply(connection.Inner, getMoreMessage);
             }
         }
 
@@ -394,12 +367,12 @@ namespace MongoDB.Driver
             {
                 try
                 {
-                    if (_node != null && _node.State == MongoServerState.Connected)
+                    if (_enumeratorBinding != null && _enumeratorBinding.Node.State == MongoServerState.Connected)
                     {
-                        using (var connectionBinding = _enumeratorBinding.GetConnectionBinding(new CurrentNodeSelector()))
+                        using (var connection = _enumeratorBinding.GetConnection())
                         {
                             var killCursorsMessage = new MongoKillCursorsMessage(_openCursorId);
-                            connectionBinding.Connection.SendMessage(killCursorsMessage, WriteConcern.Unacknowledged, _cursor.Database.Name);
+                            connection.Inner.SendMessage(killCursorsMessage, WriteConcern.Unacknowledged, _cursor.Database.Name);
                         }
                     }
                 }
@@ -413,7 +386,7 @@ namespace MongoDB.Driver
         private IMongoQuery WrapQuery()
         {
             BsonDocument formattedReadPreference = null;
-            if (_node.InstanceType == MongoServerInstanceType.ShardRouter &&
+            if (_enumeratorBinding.Node.InstanceType == MongoServerInstanceType.ShardRouter &&
                 _readPreference.ReadPreferenceMode != ReadPreferenceMode.Primary)
             {
                 BsonArray tagSetsArray = null;

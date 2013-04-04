@@ -218,8 +218,7 @@ namespace MongoDB.Driver
                 var request = _server.GetRequest();
                 if (request != null)
                 {
-                    // make sure to return a wrapped binding so Request retains ownership of its binding
-                    return request.ConnectionBinding.GetConnectionBinding(new CurrentNodeSelector());
+                    return request.ConnectionBinding;
                 }
 
                 return _binding;

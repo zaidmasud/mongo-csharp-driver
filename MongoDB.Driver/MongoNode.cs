@@ -127,22 +127,40 @@ namespace MongoDB.Driver
 
         // public methods
         /// <summary>
-        /// Gets a binding to a connection.
+        /// Applies the read preference to this binding, returning either the same binding or a new binding as necessary.
         /// </summary>
-        /// <param name="selector">The node selector.</param>
+        /// <param name="readPreference">The read preference.</param>
+        /// <returns>
+        /// A binding matching the read preference. Either the same binding or a new one.
+        /// </returns>
+        public INodeOrConnectionBinding ApplyReadPreference(ReadPreference readPreference)
+        {
+            var nodeSelector = new ReadPreferenceNodeSelector(readPreference);
+            nodeSelector.EnsureCurrentNodeIsAcceptable(this);
+            return this;
+        }
+
+        /// <summary>
+        /// Gets a connection.
+        /// </summary>
+        /// <returns>
+        /// A connection.
+        /// </returns>
+        public ConnectionWrapper GetConnection()
+        {
+            var connection = _instance.AcquireConnection();
+            return new ConnectionWrapper(_cluster, this, connection);
+        }
+
+        /// <summary>
+        /// Gets a connection binding.
+        /// </summary>
         /// <returns>
         /// A connection binding.
         /// </returns>
-        /// <exception cref="System.ArgumentNullException">selector</exception>
-        public ConnectionBinding GetConnectionBinding(INodeSelector selector)
+        public ConnectionBinding GetConnectionBinding()
         {
-            if (selector == null)
-            {
-                throw new ArgumentNullException("selector");
-            }
-
-            selector.EnsureCurrentNodeIsAcceptable(this);
-            var connection = _instance.AcquireConnection();
+            var connection = GetConnection();
             return new ConnectionBinding(_cluster, this, connection);
         }
 
@@ -188,7 +206,7 @@ namespace MongoDB.Driver
         }
 
         // explicit interface implementations
-        MongoNode INodeBinding.Node
+        MongoNode INodeOrConnectionBinding.Node
         {
             get { return this; }
         }

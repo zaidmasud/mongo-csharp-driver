@@ -16,7 +16,10 @@
 namespace MongoDB.Driver
 {
     /// <summary>
-    /// Represents a binding to a cluster, node or connection.
+    /// Represents a binding to a cluster, node or connection. A binding determines
+    /// where database operations are sent. A binding is ultimately combined with
+    /// a ReadPreference to either determine which node to use or to verify that
+    /// the node currently bound to is acceptable.
     /// </summary>
     public interface IMongoBinding
     {
@@ -31,6 +34,13 @@ namespace MongoDB.Driver
 
         // methods
         /// <summary>
+        /// Applies the read preference to this binding, returning either the same binding or a new binding as necessary.
+        /// </summary>
+        /// <param name="readPreference">The read preference.</param>
+        /// <returns>A binding matching the read preference. Either the same binding or a new one.</returns>
+        INodeOrConnectionBinding ApplyReadPreference(ReadPreference readPreference);
+
+        /// <summary>
         /// Gets a database with this binding.
         /// </summary>
         /// <param name="databaseName">The name of the database.</param>
@@ -44,22 +54,5 @@ namespace MongoDB.Driver
         /// <param name="settings">The settings.</param>
         /// <returns>A database.</returns>
         MongoDatabase GetDatabase(string databaseName, MongoDatabaseSettings settings);
-
-        /// <summary>
-        /// Gets a binding to a connection.
-        /// </summary>
-        /// <param name="selector">The node selector.</param>
-        /// <returns>A connection binding.</returns>
-        /// <remarks>
-        /// Since IConnectionBinding is IDisposable, be sure to call Dispose when you are done with the binding.
-        /// 
-        /// The first connection binding returned for a connection owns the connection and will release the connection
-        /// back to the connection pool when Dispose is called.
-        /// 
-        /// If you call GetConnectionBinding on a connection binding, you will get a new connection binding that does
-        /// not own the connection and will not release it when Dispose is called. Not until Dispose is called for
-        /// the outermost connection binding is the connection itself released.
-        /// </remarks>
-        ConnectionBinding GetConnectionBinding(INodeSelector selector);
     }
 }

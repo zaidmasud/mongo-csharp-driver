@@ -319,7 +319,7 @@ namespace MongoDB.Driver
                     Request request;
                     if (_requests.TryGetValue(threadId, out request))
                     {
-                        return request.ConnectionBinding.Connection;
+                        return request.ConnectionBinding.Connection.Inner;
                     }
                     else
                     {
@@ -470,6 +470,19 @@ namespace MongoDB.Driver
 
         // public methods
         /// <summary>
+        /// Applies the read preference to this binding, returning either the same binding or a new binding as necessary.
+        /// </summary>
+        /// <param name="readPreference">The read preference.</param>
+        /// <returns>
+        /// A binding matching the read preference. Either the same binding or a new one.
+        /// </returns>
+        public INodeOrConnectionBinding ApplyReadPreference(ReadPreference readPreference)
+        {
+            var nodeSelector = new ReadPreferenceNodeSelector(readPreference);
+            return GetNodeBinding(nodeSelector);
+        }
+
+        /// <summary>
         /// Connects to the server. Normally there is no need to call this method as
         /// the driver will connect to the server automatically when needed.
         /// </summary>
@@ -601,7 +614,8 @@ namespace MongoDB.Driver
             }
             var node = selector.SelectNode(this);
             var connection = node.Instance.AcquireConnection();
-            return new ConnectionBinding(this, node, connection);
+            var connectionWrapper = new ConnectionWrapper(this, node, connection);
+            return new ConnectionBinding(this, node, connectionWrapper);
         }
 
         /// <summary>
@@ -873,7 +887,8 @@ namespace MongoDB.Driver
 
             var node = GetNode(nodeSelector);
             var connection = node.Instance.AcquireConnection();
-            var connectionBinding = new ConnectionBinding(this, node, connection);
+            var connectionWrapper = new ConnectionWrapper(this, node, connection);
+            var connectionBinding = new ConnectionBinding(this, node, connectionWrapper);
 
             lock (_serverLock)
             {
@@ -913,7 +928,8 @@ namespace MongoDB.Driver
             }
 
             var connection = node.Instance.AcquireConnection();
-            var connectionBinding = new ConnectionBinding(this, node, connection);
+            var connectionWrapper = new ConnectionWrapper(this, node, connection);
+            var connectionBinding = new ConnectionBinding(this, node, connectionWrapper);
 
             lock (_serverLock)
             {
