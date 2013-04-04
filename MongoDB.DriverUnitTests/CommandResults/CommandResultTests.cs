@@ -156,7 +156,7 @@ namespace MongoDB.DriverUnitTests.CommandResults
         [Test]
         public void TestInvalidCommand()
         {
-            var node = _server.GetNode(new PrimaryNodeSelector());
+            var node = _server.GetNode(ReadPreference.Primary);
             var database = node.GetDatabase(Configuration.TestDatabaseName);
 
             try

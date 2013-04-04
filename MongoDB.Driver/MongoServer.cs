@@ -27,7 +27,7 @@ namespace MongoDB.Driver
     /// <summary>
     /// Represents a MongoDB server (either a single instance or a replica set) and the settings used to access it. This class is thread-safe.
     /// </summary>
-    public class MongoServer : IClusterBinding
+    public class MongoServer : IMongoBinding
     {
         // private static fields
         private readonly static object __staticLock = new object();
@@ -319,7 +319,7 @@ namespace MongoDB.Driver
                     Request request;
                     if (_requests.TryGetValue(threadId, out request))
                     {
-                        return request.ConnectionBinding.Connection.Inner;
+                        return request.ConnectionBinding.Connection;
                     }
                     else
                     {
@@ -470,19 +470,6 @@ namespace MongoDB.Driver
 
         // public methods
         /// <summary>
-        /// Applies the read preference to this binding, returning either the same binding or a new binding as necessary.
-        /// </summary>
-        /// <param name="readPreference">The read preference.</param>
-        /// <returns>
-        /// A binding matching the read preference. Either the same binding or a new one.
-        /// </returns>
-        public INodeOrConnectionBinding ApplyReadPreference(ReadPreference readPreference)
-        {
-            var nodeSelector = new ReadPreferenceNodeSelector(readPreference);
-            return GetNodeBinding(nodeSelector);
-        }
-
-        /// <summary>
         /// Connects to the server. Normally there is no need to call this method as
         /// the driver will connect to the server automatically when needed.
         /// </summary>
@@ -603,17 +590,17 @@ namespace MongoDB.Driver
         /// <summary>
         /// Gets a binding to a connection (to a node in this cluster).
         /// </summary>
-        /// <param name="selector">The node selector.</param>
+        /// <param name="readPreference">The read preference.</param>
         /// <returns>A binding to a connection.</returns>
         /// <exception cref="System.ArgumentNullException">selector</exception>
-        public ConnectionBinding GetConnectionBinding(INodeSelector selector)
+        public ConnectionBinding GetConnectionBinding(ReadPreference readPreference)
         {
-            if (selector == null)
+            if (readPreference == null)
             {
-                throw new ArgumentNullException("selector");
+                throw new ArgumentNullException("readPreference");
             }
-            var node = selector.SelectNode(this);
-            return node.GetConnectionBinding();
+            var node = GetNode(readPreference);
+            return node.GetConnectionBinding(readPreference);
         }
 
         /// <summary>
@@ -709,29 +696,31 @@ namespace MongoDB.Driver
         /// <summary>
         /// Gets a node in this cluster.
         /// </summary>
-        /// <param name="selector">The selector.</param>
+        /// <param name="readPreference">The read preference.</param>
         /// <returns>A node.</returns>
         /// <exception cref="System.ArgumentNullException">selector</exception>
-        public MongoNode GetNode(INodeSelector selector)
+        public MongoNode GetNode(ReadPreference readPreference)
         {
-            if (selector == null)
+            if (readPreference == null)
             {
-                throw new ArgumentNullException("selector");
+                throw new ArgumentNullException("readPreference");
             }
-            return selector.SelectNode(this);
+
+            var instance = _serverProxy.ChooseServerInstance(readPreference);
+            return new MongoNode(this, instance);
         }
 
         /// <summary>
         /// Gets a binding to a node in this cluster.
         /// </summary>
         /// 
-        /// <param name="selector">The node selector.</param>
+        /// <param name="readPreference">The node read preference.</param>
         /// <returns>
         /// A node binding.
         /// </returns>
-        public INodeBinding GetNodeBinding(INodeSelector selector)
+        public IMongoBinding GetNodeBinding(ReadPreference readPreference)
         {
-            return GetNode(selector);
+            return GetNode(readPreference);
         }
 
         /// <summary>
@@ -868,7 +857,6 @@ namespace MongoDB.Driver
         [Obsolete("Use connection bindings instead.")]
         public virtual IDisposable RequestStart(MongoDatabase initialDatabase, ReadPreference readPreference)
         {
-            var nodeSelector = new ReadPreferenceNodeSelector(readPreference);
             int threadId = Thread.CurrentThread.ManagedThreadId;
 
             lock (_serverLock)
@@ -876,17 +864,16 @@ namespace MongoDB.Driver
                 Request request;
                 if (_requests.TryGetValue(threadId, out request))
                 {
-                    nodeSelector.EnsureCurrentNodeIsAcceptable(request.ConnectionBinding.Node);
+                    request.ConnectionBinding.Node.ThrowIfNodeDoesNotMatchReadPreference(readPreference);
                     request.NestingLevel++;
                     return new RequestStartResult(this);
                 }
 
             }
 
-            var node = GetNode(nodeSelector);
+            var node = GetNode(readPreference);
             var connection = node.Instance.AcquireConnection();
-            var connectionWrapper = new ConnectionWrapper(this, node, connection);
-            var connectionBinding = new ConnectionBinding(this, node, connectionWrapper);
+            var connectionBinding = new ConnectionBinding(this, node, connection);
 
             lock (_serverLock)
             {
@@ -926,8 +913,7 @@ namespace MongoDB.Driver
             }
 
             var connection = node.Instance.AcquireConnection();
-            var connectionWrapper = new ConnectionWrapper(this, node, connection);
-            var connectionBinding = new ConnectionBinding(this, node, connectionWrapper);
+            var connectionBinding = new ConnectionBinding(this, node, connection);
 
             lock (_serverLock)
             {
@@ -1002,6 +988,11 @@ namespace MongoDB.Driver
         MongoServer IMongoBinding.Cluster
         {
             get { return this; }
+        }
+
+        MongoNode IMongoBinding.Node
+        {
+            get { return null; }
         }
 
         // private nested classes

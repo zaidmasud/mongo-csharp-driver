@@ -105,7 +105,7 @@ namespace MongoDB.Driver
         private bool _disposed = false;
         private bool _started = false;
         private bool _done = false;
-        private INodeOrConnectionBinding _enumeratorBinding; // set by GetFirst to ensure GetMore goes to same node
+        private IMongoBinding _binding; // constructor ensures that binding is at least to a node so GetMore goes to same node as GetFirst
         private int _count;
         private int _positiveLimit;
         private MongoReplyMessage<TDocument> _reply;
@@ -137,6 +137,12 @@ namespace MongoDB.Driver
                     // remove the slaveOk bit from the flags
                     _queryFlags &= ~QueryFlags.SlaveOk;
                 }
+            }
+
+            _binding = cursor.Database.Binding; // wow!!!
+            if (_binding is MongoServer)
+            {
+                _binding = _binding.GetNodeBinding(_readPreference);
             }
         }
 
@@ -284,19 +290,9 @@ namespace MongoDB.Driver
         }
 
         // private methods
-        private ConnectionWrapper GetConnection()
-        {
-            if (_enumeratorBinding == null)
-            {
-                _enumeratorBinding = _cursor.Database.Binding.ApplyReadPreference(_readPreference);
-            }
-
-            return _enumeratorBinding.GetConnection();
-        }
-
         private MongoReplyMessage<TDocument> GetFirst()
         {
-            using (var connection = GetConnection())
+            using (var connectionBinding = _binding.GetConnectionBinding(_readPreference))
             {
                 // some of these weird conditions are necessary to get commands to run correctly
                 // specifically numberToReturn has to be 1 or -1 for commands
@@ -322,15 +318,15 @@ namespace MongoDB.Driver
                     numberToReturn = _cursor.BatchSize;
                 }
 
-                var writerSettings = _cursor.Collection.GetWriterSettings(connection.Node);
+                var writerSettings = _cursor.Collection.GetWriterSettings(connectionBinding.Node);
                 var queryMessage = new MongoQueryMessage(writerSettings, _cursor.Collection.FullName, _queryFlags, _cursor.Skip, numberToReturn, WrapQuery(), _cursor.Fields);
-                return GetReply(connection.Inner, queryMessage);
+                return GetReply(connectionBinding.Connection, queryMessage);
             }
         }
 
         private MongoReplyMessage<TDocument> GetMore()
         {
-            using (var connection = GetConnection())
+            using (var connectionBinding = _binding.GetConnectionBinding(_readPreference))
             {
                 int numberToReturn;
                 if (_positiveLimit != 0)
@@ -347,7 +343,7 @@ namespace MongoDB.Driver
                 }
 
                 var getMoreMessage = new MongoGetMoreMessage(_cursor.Collection.FullName, numberToReturn, _openCursorId);
-                return GetReply(connection.Inner, getMoreMessage);
+                return GetReply(connectionBinding.Connection, getMoreMessage);
             }
         }
 
@@ -367,12 +363,12 @@ namespace MongoDB.Driver
             {
                 try
                 {
-                    if (_enumeratorBinding != null && _enumeratorBinding.Node.State == MongoServerState.Connected)
+                    if (_binding.Node.State == MongoServerState.Connected)
                     {
-                        using (var connection = _enumeratorBinding.GetConnection())
+                        using (var connectionBinding = _binding.GetConnectionBinding(_readPreference))
                         {
                             var killCursorsMessage = new MongoKillCursorsMessage(_openCursorId);
-                            connection.Inner.SendMessage(killCursorsMessage, WriteConcern.Unacknowledged, _cursor.Database.Name);
+                            connectionBinding.Connection.SendMessage(killCursorsMessage, WriteConcern.Unacknowledged, _cursor.Database.Name);
                         }
                     }
                 }
@@ -386,7 +382,7 @@ namespace MongoDB.Driver
         private IMongoQuery WrapQuery()
         {
             BsonDocument formattedReadPreference = null;
-            if (_enumeratorBinding.Node.InstanceType == MongoServerInstanceType.ShardRouter &&
+            if (_binding.Node.InstanceType == MongoServerInstanceType.ShardRouter &&
                 _readPreference.ReadPreferenceMode != ReadPreferenceMode.Primary)
             {
                 BsonArray tagSetsArray = null;

@@ -25,7 +25,7 @@ namespace MongoDB.DriverUnitTests.CommandResults
         [Test]
         public void Test()
         {
-            var node = Configuration.TestServer.GetNode(new PrimaryNodeSelector());
+            var node = Configuration.TestServer.GetNode(ReadPreference.Primary);
             if (node.InstanceType != MongoServerInstanceType.ShardRouter)
             {
                 var database = node.GetDatabase(Configuration.TestDatabaseName);

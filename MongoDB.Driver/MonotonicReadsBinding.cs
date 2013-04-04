@@ -21,7 +21,7 @@ namespace MongoDB.Driver
     /// <summary>
     /// Represents a binding that can start reading from a secondary but moves to the primary as soon as a write occurs.
     /// </summary>
-    public class MonotonicReadsBinding : INodeBinding
+    public class MonotonicReadsBinding : IMongoBinding
     {
         // private fields
         private readonly MongoServer _cluster;
@@ -67,82 +67,27 @@ namespace MongoDB.Driver
         /// </value>
         public MongoNode Node
         {
-            get
-            {
-                if (_node == null)
-                {
-                    throw new InvalidOperationException("You must call ApplyReadPreference first to select a node.");
-                }
-                return _node;
-            }
+            get { return _node; }
         }
 
         // public methods
-        /// <summary>
-        /// Applies the read preference to this binding, returning either the same binding or a new binding as necessary.
-        /// </summary>
-        /// <param name="readPreference">The read preference.</param>
-        /// <returns>
-        /// A binding matching the read preference. Either the same binding or a new one.
-        /// </returns>
-        public INodeOrConnectionBinding ApplyReadPreference(ReadPreference readPreference)
-        {
-            if (_node == null)
-            {
-                // initial binding will be to either a secondary or the primary depending on the read preference
-                _node = _cluster.GetNode(new ReadPreferenceNodeSelector(readPreference));
-            }
-            else
-            {
-                // check if we need to rebind to the primary
-                if (readPreference.ReadPreferenceMode == ReadPreferenceMode.Primary && !_boundToPrimary)
-                {
-                    _node = _cluster.GetNode(new PrimaryNodeSelector());
-                    _boundToPrimary = true; // locks in the binding to the primary
-                }
-
-                var selector = new ReadPreferenceNodeSelector(readPreference);
-                selector.EnsureCurrentNodeIsAcceptable(_node);
-            }
-
-            return _node;
-        }
-
-        /// <summary>
-        /// Gets a connection.
-        /// </summary>
-        /// <returns>
-        /// A connection.
-        /// </returns>
-        public ConnectionWrapper GetConnection()
-        {
-            if (_node == null)
-            {
-                throw new InvalidOperationException("You must call ApplyReadPreference before calling GetConnection.");
-            }
-            return _node.GetConnection();
-        }
-
         /// <summary>
         /// Gets a connection binding.
         /// </summary>
         /// <returns>
         /// A connection binding.
         /// </returns>
-        public ConnectionBinding GetConnectionBinding()
+        public ConnectionBinding GetConnectionBinding(ReadPreference readPreference)
         {
-            if (_node == null)
-            {
-                throw new InvalidOperationException("You must call ApplyReadPreference before calling GetConnectionBinding.");
-            }
-            return _node.GetConnectionBinding();
+            var node = GetNodeBinding(readPreference);
+            return node.GetConnectionBinding(readPreference);
         }
 
         /// <summary>
         /// Gets a database bound to this connection.
         /// </summary>
         /// <param name="databaseName">Name of the database.</param>
-        /// <returns></returns>
+        /// <returns>A database.</returns>
         /// <exception cref="System.ArgumentNullException">
         /// databaseName
         /// </exception>
@@ -162,7 +107,7 @@ namespace MongoDB.Driver
         /// </summary>
         /// <param name="databaseName">Name of the database.</param>
         /// <param name="databaseSettings">The database settings.</param>
-        /// <returns></returns>
+        /// <returns>A database.</returns>
         /// <exception cref="System.ArgumentNullException">
         /// databaseName
         /// or
@@ -181,6 +126,35 @@ namespace MongoDB.Driver
             }
 
             return new MongoDatabase(this, _cluster, databaseName, databaseSettings);
+        }
+
+        /// <summary>
+        /// Gets a node binding compatible with the read preference.
+        /// </summary>
+        /// <param name="readPreference">The read preference.</param>
+        /// <returns>
+        /// A node binding.
+        /// </returns>
+        public IMongoBinding GetNodeBinding(ReadPreference readPreference)
+        {
+            if (_node == null)
+            {
+                // initial binding will be to either a secondary or the primary depending on the read preference
+                _node = _cluster.GetNode(readPreference);
+            }
+            else
+            {
+                // check if we need to rebind to the primary
+                if (readPreference.ReadPreferenceMode == ReadPreferenceMode.Primary && !_boundToPrimary)
+                {
+                    _node = _cluster.GetNode(ReadPreference.Primary);
+                    _boundToPrimary = true; // locks in the binding to the primary
+                }
+
+                _node.ThrowIfNodeDoesNotMatchReadPreference(readPreference);
+            }
+
+            return _node;
         }
     }
 }

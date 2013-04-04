@@ -186,7 +186,7 @@ namespace MongoDB.DriverUnitTests
         [Test]
         public void TestGetProfilingInfo()
         {
-            var node = _server.GetNode(new PrimaryNodeSelector());
+            var node = _server.GetNode(ReadPreference.Primary);
             if (node.InstanceType != MongoServerInstanceType.ShardRouter)
             {
                 var database = node.GetDatabase(Configuration.TestDatabaseName);
@@ -260,7 +260,7 @@ namespace MongoDB.DriverUnitTests
         [Test]
         public void TestSetProfilingLevel()
         {
-            var node = _server.GetNode(new PrimaryNodeSelector());
+            var node = _server.GetNode(ReadPreference.Primary);
             if (node.InstanceType != MongoServerInstanceType.ShardRouter)
             {
                 var database = node.GetDatabase(Configuration.TestDatabaseName);

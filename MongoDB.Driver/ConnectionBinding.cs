@@ -21,17 +21,17 @@ namespace MongoDB.Driver
     /// <summary>
     /// Represents a binding to a connection.
     /// </summary>
-    public class ConnectionBinding : INodeOrConnectionBinding, IDisposable
+    public class ConnectionBinding : IMongoBinding, IDisposable
     {
         // private fields
         private readonly MongoServer _cluster;
         private readonly MongoNode _node;
-        private readonly ConnectionWrapper _connection;
+        private readonly MongoConnection _connection;
         private readonly ConnectionBinding _wrappedBinding;
         private bool _disposed;
 
         // constructors
-        internal ConnectionBinding(MongoServer cluster, MongoNode node, ConnectionWrapper connection)
+        internal ConnectionBinding(MongoServer cluster, MongoNode node, MongoConnection connection)
         {
             if (cluster == null)
             {
@@ -57,6 +57,7 @@ namespace MongoDB.Driver
             {
                 throw new ArgumentNullException("wrappedBinding");
             }
+
             _cluster = wrappedBinding.Cluster;
             _node = wrappedBinding.Node;
             _wrappedBinding = wrappedBinding;
@@ -85,7 +86,7 @@ namespace MongoDB.Driver
         /// The connection.
         /// </value>
         /// <exception cref="System.ObjectDisposedException">ConnectionBinding</exception>
-        public ConnectionWrapper Connection
+        public MongoConnection Connection
         {
             get
             {
@@ -111,20 +112,6 @@ namespace MongoDB.Driver
 
         // public methods
         /// <summary>
-        /// Applies the read preference to this binding, returning either the same binding or a new binding as necessary.
-        /// </summary>
-        /// <param name="readPreference">The read preference.</param>
-        /// <returns>
-        /// A binding matching the read preference. Either the same binding or a new one.
-        /// </returns>
-        public INodeOrConnectionBinding ApplyReadPreference(ReadPreference readPreference)
-        {
-            var nodeSelector = new ReadPreferenceNodeSelector(readPreference);
-            nodeSelector.EnsureCurrentNodeIsAcceptable(_node);
-            return this;
-        }
-
-        /// <summary>
         /// Performs application-defined tasks associated with freeing, releasing, or resetting unmanaged resources.
         /// </summary>
         public void Dispose()
@@ -134,32 +121,22 @@ namespace MongoDB.Driver
         }
 
         /// <summary>
-        /// Gets a connection.
-        /// </summary>
-        /// <returns>
-        /// A connection.
-        /// </returns>
-        public ConnectionWrapper GetConnection()
-        {
-            return _connection.Rewrap();
-        }
-
-        /// <summary>
         /// Gets a connection binding.
         /// </summary>
         /// <returns>
         /// A connection binding.
         /// </returns>
-        public ConnectionBinding GetConnectionBinding()
+        public ConnectionBinding GetConnectionBinding(ReadPreference readPreference)
         {
-            return new ConnectionBinding(this); // rewrap the binding so we retain ownership of teh connection
+            _node.ThrowIfNodeDoesNotMatchReadPreference(readPreference);
+            return new ConnectionBinding(this); // rewrap the binding so we retain ownership of the connection
         }
 
         /// <summary>
         /// Gets a database bound to this connection.
         /// </summary>
         /// <param name="databaseName">Name of the database.</param>
-        /// <returns></returns>
+        /// <returns>A database.</returns>
         /// <exception cref="System.ArgumentNullException">
         /// databaseName
         /// </exception>
@@ -180,7 +157,7 @@ namespace MongoDB.Driver
         /// </summary>
         /// <param name="databaseName">Name of the database.</param>
         /// <param name="databaseSettings">The database settings.</param>
-        /// <returns></returns>
+        /// <returns>A database.</returns>
         /// <exception cref="System.ArgumentNullException">
         /// databaseName
         /// or
@@ -217,7 +194,7 @@ namespace MongoDB.Driver
         /// Gets the last error.
         /// </summary>
         /// <param name="databaseName">The name of the database to send the getLastError command to.</param>
-        /// <returns></returns>
+        /// <returns>The last error.</returns>
         /// <exception cref="System.ArgumentNullException">databaseName</exception>
         /// <exception cref="System.ObjectDisposedException">ConnectionBinding</exception>
         public GetLastErrorResult GetLastError(string databaseName)
@@ -233,6 +210,19 @@ namespace MongoDB.Driver
             return database.RunCommandAs<GetLastErrorResult>("getlasterror"); // use all lowercase for backward compatibility
         }
 
+        /// <summary>
+        /// Gets a node binding compatible with the read preference.
+        /// </summary>
+        /// <param name="readPreference">The read preference.</param>
+        /// <returns>
+        /// A node binding.
+        /// </returns>
+        public IMongoBinding GetNodeBinding(ReadPreference readPreference)
+        {
+            _node.ThrowIfNodeDoesNotMatchReadPreference(readPreference);
+            return new ConnectionBinding(this); // rewrap the binding so we retain ownership of the connection
+        }
+
         // private methods
         private void Dispose(bool disposing)
         {
@@ -240,7 +230,7 @@ namespace MongoDB.Driver
             {
                 if (_connection != null)
                 {
-                    _connection.Dispose();
+                    _connection.Release();
                 }
                 _disposed = true;
             }

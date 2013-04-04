@@ -20,7 +20,7 @@ namespace MongoDB.Driver
     /// <summary>
     /// Represents a node in a cluster.
     /// </summary>
-    public class MongoNode : INodeBinding
+    public class MongoNode : IMongoBinding
     {
         // private fields
         private readonly MongoServer _cluster;
@@ -127,40 +127,15 @@ namespace MongoDB.Driver
 
         // public methods
         /// <summary>
-        /// Applies the read preference to this binding, returning either the same binding or a new binding as necessary.
-        /// </summary>
-        /// <param name="readPreference">The read preference.</param>
-        /// <returns>
-        /// A binding matching the read preference. Either the same binding or a new one.
-        /// </returns>
-        public INodeOrConnectionBinding ApplyReadPreference(ReadPreference readPreference)
-        {
-            var nodeSelector = new ReadPreferenceNodeSelector(readPreference);
-            nodeSelector.EnsureCurrentNodeIsAcceptable(this);
-            return this;
-        }
-
-        /// <summary>
-        /// Gets a connection.
-        /// </summary>
-        /// <returns>
-        /// A connection.
-        /// </returns>
-        public ConnectionWrapper GetConnection()
-        {
-            var connection = _instance.AcquireConnection();
-            return new ConnectionWrapper(_cluster, this, connection);
-        }
-
-        /// <summary>
         /// Gets a connection binding.
         /// </summary>
         /// <returns>
         /// A connection binding.
         /// </returns>
-        public ConnectionBinding GetConnectionBinding()
+        public ConnectionBinding GetConnectionBinding(ReadPreference readPreference)
         {
-            var connection = GetConnection();
+            ThrowIfNodeDoesNotMatchReadPreference(readPreference);
+            var connection = _instance.AcquireConnection();
             return new ConnectionBinding(_cluster, this, connection);
         }
 
@@ -205,8 +180,35 @@ namespace MongoDB.Driver
             return new MongoDatabase(this, _cluster, databaseName, databaseSettings);
         }
 
+        /// <summary>
+        /// Gets a node binding compatible with the read preference.
+        /// </summary>
+        /// <param name="readPreference">The read preference.</param>
+        /// <returns>
+        /// A node binding.
+        /// </returns>
+        public IMongoBinding GetNodeBinding(ReadPreference readPreference)
+        {
+            ThrowIfNodeDoesNotMatchReadPreference(readPreference);
+            return this;
+        }
+
+        /// <summary>
+        /// Throws if node does not match read preference.
+        /// </summary>
+        /// <param name="readPreference">The read preference.</param>
+        /// <exception cref="MongoConnectionException"></exception>
+        public void ThrowIfNodeDoesNotMatchReadPreference(ReadPreference readPreference)
+        {
+            if (!readPreference.MatchesInstance(_instance))
+            {
+                var message = string.Format("Node {0} does not match ReadPreference: {1}.", _instance.Address, readPreference);
+                throw new MongoConnectionException(message);
+            }
+        }
+
         // explicit interface implementations
-        MongoNode INodeOrConnectionBinding.Node
+        MongoNode IMongoBinding.Node
         {
             get { return this; }
         }

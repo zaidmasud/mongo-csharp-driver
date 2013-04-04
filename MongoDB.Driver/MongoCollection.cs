@@ -87,7 +87,7 @@ namespace MongoDB.Driver
                     WriteConcern = _settings.WriteConcern,
                     WriteEncoding = _settings.WriteEncoding
                 };
-                _commandCollection = new MongoCollection<BsonDocument>(_database, "$cmd", commandCollectionSettings);
+                _commandCollection = _database.GetCollection("$cmd", commandCollectionSettings);
             }
         }
 
@@ -1151,14 +1151,13 @@ namespace MongoDB.Driver
                 throw new ArgumentNullException("options");
             }
 
-            var binding = _database.Binding.ApplyReadPreference(ReadPreference.Primary);
-            using (var connection = binding.GetConnection())
+            using (var connectionBinding = _database.Binding.GetConnectionBinding(ReadPreference.Primary))
             {
                 var writeConcern = options.WriteConcern ?? _settings.WriteConcern;
 
                 List<WriteConcernResult> results = (writeConcern.Enabled) ? new List<WriteConcernResult>() : null;
 
-                var writerSettings = GetWriterSettings(connection.Node);
+                var writerSettings = GetWriterSettings(connectionBinding.Node);
                 using (var bsonBuffer = new BsonBuffer(new MultiChunkBuffer(BsonChunkPool.Default), true))
                 {
                     var message = new MongoInsertMessage(writerSettings, FullName, options.CheckElementNames, options.Flags);
@@ -1192,13 +1191,13 @@ namespace MongoDB.Driver
                         }
                         message.AddDocument(bsonBuffer, nominalType, document);
 
-                        if (message.MessageLength > connection.Node.MaxMessageLength)
+                        if (message.MessageLength > connectionBinding.Node.MaxMessageLength)
                         {
                             byte[] lastDocument = message.RemoveLastDocument(bsonBuffer);
 
                             if (writeConcern.Enabled || (options.Flags & InsertFlags.ContinueOnError) != 0)
                             {
-                                var intermediateResult = connection.Inner.SendMessage(bsonBuffer, message, writeConcern, _database.Name);
+                                var intermediateResult = connectionBinding.Connection.SendMessage(bsonBuffer, message, writeConcern, _database.Name);
                                 if (writeConcern.Enabled) { results.Add(intermediateResult); }
                             }
                             else
@@ -1206,7 +1205,7 @@ namespace MongoDB.Driver
                                 // if WriteConcern is disabled and ContinueOnError is false we have to check for errors and stop if sub-batch has error
                                 try
                                 {
-                                    connection.Inner.SendMessage(bsonBuffer, message, WriteConcern.Acknowledged, _database.Name);
+                                    connectionBinding.Connection.SendMessage(bsonBuffer, message, WriteConcern.Acknowledged, _database.Name);
                                 }
                                 catch (WriteConcernException)
                                 {
@@ -1218,7 +1217,7 @@ namespace MongoDB.Driver
                         }
                     }
 
-                    var finalResult = connection.Inner.SendMessage(bsonBuffer, message, writeConcern, _database.Name);
+                    var finalResult = connectionBinding.Connection.SendMessage(bsonBuffer, message, writeConcern, _database.Name);
                     if (writeConcern.Enabled) { results.Add(finalResult); }
 
                     return results;
@@ -1354,12 +1353,11 @@ namespace MongoDB.Driver
         /// <returns>A WriteConcernResult (or null if WriteConcern is disabled).</returns>
         public virtual WriteConcernResult Remove(IMongoQuery query, RemoveFlags flags, WriteConcern writeConcern)
         {
-            var binding = _database.Binding.ApplyReadPreference(ReadPreference.Primary);
-            using (var connection = binding.GetConnection())
+            using (var connectionBinding = _database.Binding.GetConnectionBinding(ReadPreference.Primary))
             {
-                var writerSettings = GetWriterSettings(connection.Node);
+                var writerSettings = GetWriterSettings(connectionBinding.Node);
                 var message = new MongoDeleteMessage(writerSettings, FullName, flags, query);
-                return connection.Inner.SendMessage(message, writeConcern ?? _settings.WriteConcern, _database.Name);
+                return connectionBinding.Connection.SendMessage(message, writeConcern ?? _settings.WriteConcern, _database.Name);
             }
         }
 
@@ -1578,13 +1576,12 @@ namespace MongoDB.Driver
                 throw new ArgumentNullException("options");
             }
 
-            var binding = _database.Binding.ApplyReadPreference(ReadPreference.Primary);
-            using (var connection = binding.GetConnection())
+            using (var connectionBinding = _database.Binding.GetConnectionBinding(ReadPreference.Primary))
             {
-                var writerSettings = GetWriterSettings(connection.Node);
+                var writerSettings = GetWriterSettings(connectionBinding.Node);
                 var message = new MongoUpdateMessage(writerSettings, FullName, options.CheckElementNames, options.Flags, query, update);
                 var writeConcern = options.WriteConcern ?? _settings.WriteConcern;
-                return connection.Inner.SendMessage(message, writeConcern, _database.Name);
+                return connectionBinding.Connection.SendMessage(message, writeConcern, _database.Name);
             }
         }
 

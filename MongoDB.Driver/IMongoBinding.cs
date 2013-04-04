@@ -32,13 +32,21 @@ namespace MongoDB.Driver
         /// </value>
         MongoServer Cluster { get; }
 
+        /// <summary>
+        /// Gets the node.
+        /// </summary>
+        /// <value>
+        /// The node.
+        /// </value>
+        MongoNode Node { get; }
+
         // methods
         /// <summary>
-        /// Applies the read preference to this binding, returning either the same binding or a new binding as necessary.
+        /// Gets a connection binding compatible with this binding and the read preference.
         /// </summary>
         /// <param name="readPreference">The read preference.</param>
-        /// <returns>A binding matching the read preference. Either the same binding or a new one.</returns>
-        INodeOrConnectionBinding ApplyReadPreference(ReadPreference readPreference);
+        /// <returns>A connection binding.</returns>
+        ConnectionBinding GetConnectionBinding(ReadPreference readPreference);
 
         /// <summary>
         /// Gets a database with this binding.
@@ -54,5 +62,12 @@ namespace MongoDB.Driver
         /// <param name="settings">The settings.</param>
         /// <returns>A database.</returns>
         MongoDatabase GetDatabase(string databaseName, MongoDatabaseSettings settings);
+
+        /// <summary>
+        /// Gets a binding compatible with this binding and the read preference.
+        /// </summary>
+        /// <param name="readPreference">The read preference.</param>
+        /// <returns>A node binding.</returns>
+        IMongoBinding GetNodeBinding(ReadPreference readPreference);
     }
 }

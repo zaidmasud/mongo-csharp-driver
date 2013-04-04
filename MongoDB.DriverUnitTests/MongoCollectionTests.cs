@@ -688,7 +688,7 @@ namespace MongoDB.DriverUnitTests
         [Test]
         public void TestGeoHaystackSearch()
         {
-            var node = _server.GetNode(new PrimaryNodeSelector());
+            var node = _server.GetNode(ReadPreference.Primary);
             if (node.InstanceType != MongoServerInstanceType.ShardRouter)
             {
                 var database = node.GetDatabase(Configuration.TestDatabaseName);
@@ -722,7 +722,7 @@ namespace MongoDB.DriverUnitTests
         [Test]
         public void TestGeoHaystackSearch_Typed()
         {
-            var node = _server.GetNode(new PrimaryNodeSelector());
+            var node = _server.GetNode(ReadPreference.Primary);
             if (node.InstanceType != MongoServerInstanceType.ShardRouter)
             {
                 var database = node.GetDatabase(Configuration.TestDatabaseName);
@@ -979,7 +979,7 @@ namespace MongoDB.DriverUnitTests
         [Test]
         public void TestGetMore()
         {
-            var node = _server.GetNode(new PrimaryNodeSelector());
+            var node = _server.GetNode(ReadPreference.Primary);
             var database = node.GetDatabase(Configuration.TestDatabaseName);
             var collection = database.GetCollection<BsonDocument>(Configuration.TestCollectionName);
 
@@ -1123,7 +1123,7 @@ namespace MongoDB.DriverUnitTests
         [Test]
         public void TestInsertBatchMultipleBatchesWriteConcernDisabledContinueOnErrorFalse()
         {
-            var node = Configuration.TestServer.GetNode(new PrimaryNodeSelector());
+            var node = Configuration.TestServer.GetNode(ReadPreference.Primary);
             var database = node.GetDatabase(Configuration.TestDatabaseName);
             var collectionSettings = new MongoCollectionSettings { WriteConcern = WriteConcern.Unacknowledged };
             var collection = database.GetCollection<BsonDocument>(Configuration.TestCollectionName, collectionSettings);
@@ -1158,7 +1158,7 @@ namespace MongoDB.DriverUnitTests
         [Test]
         public void TestInsertBatchMultipleBatchesWriteConcernDisabledContinueOnErrorTrue()
         {
-            var node = Configuration.TestServer.GetNode(new PrimaryNodeSelector());
+            var node = Configuration.TestServer.GetNode(ReadPreference.Primary);
             var database = node.GetDatabase(Configuration.TestDatabaseName);
             var collectionSettings = new MongoCollectionSettings { WriteConcern = WriteConcern.Unacknowledged };
             var collection = database.GetCollection<BsonDocument>(Configuration.TestCollectionName, collectionSettings);
@@ -1193,7 +1193,7 @@ namespace MongoDB.DriverUnitTests
         [Test]
         public void TestInsertBatchSmallFinalSubbatch()
         {
-            var node = Configuration.TestServer.GetNode(new PrimaryNodeSelector());
+            var node = Configuration.TestServer.GetNode(ReadPreference.Primary);
             var database = node.GetDatabase(Configuration.TestDatabaseName);
             var collection = database.GetCollection<BsonDocument>(Configuration.TestCollectionName);
             if (collection.Exists()) { collection.Drop(); }
@@ -1515,7 +1515,7 @@ namespace MongoDB.DriverUnitTests
         [Test]
         public void TestReIndex()
         {
-            var node = _server.GetNode(new PrimaryNodeSelector());
+            var node = _server.GetNode(ReadPreference.Primary);
             if (node.InstanceType != MongoServerInstanceType.ShardRouter)
             {
                 var database = node.GetDatabase(Configuration.TestDatabaseName);
@@ -1728,7 +1728,7 @@ namespace MongoDB.DriverUnitTests
         [Test]
         public void TestValidate()
         {
-            var node = _server.GetNode(new PrimaryNodeSelector());
+            var node = _server.GetNode(ReadPreference.Primary);
             if (node.InstanceType != MongoServerInstanceType.ShardRouter)
             {
                 var database = node.GetDatabase(Configuration.TestDatabaseName);

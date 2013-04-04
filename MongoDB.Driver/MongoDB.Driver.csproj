@@ -150,7 +150,6 @@
     <Compile Include="Communication\Security\Mechanisms\Sspi\Win32.cs" />
     <Compile Include="Communication\Security\Mechanisms\Sspi\Win32Exception.cs" />
     <Compile Include="ConnectionBinding.cs" />
-    <Compile Include="ConnectionWrapper.cs" />
     <Compile Include="EvalFlags.cs" />
     <Compile Include="GeoJsonObjectModel\GeoJson.cs" />
     <Compile Include="GeoJsonObjectModel\GeoJsonBoundingBox.cs" />
@@ -212,11 +211,7 @@
     <Compile Include="GeoJsonObjectModel\Serializers\GeoJsonPolygonCoordinatesSerializer.cs" />
     <Compile Include="GeoJsonObjectModel\Serializers\GeoJsonPolygonSerializer.cs" />
     <Compile Include="GeoJsonObjectModel\Serializers\GeoJson2DCoordinatesSerializer.cs" />
-    <Compile Include="IClusterBinding.cs" />
     <Compile Include="IMongoBinding.cs" />
-    <Compile Include="INodeBinding.cs" />
-    <Compile Include="INodeOrConnectionBinding.cs" />
-    <Compile Include="INodeSelector.cs" />
     <Compile Include="InsertFlags.cs" />
     <Compile Include="IMongoCollectionOptions.cs" />
     <Compile Include="IMongoCommand.cs" />
@@ -251,14 +246,11 @@
     <Compile Include="MongoNode.cs" />
     <Compile Include="MonotonicReadsBinding.cs" />
     <Compile Include="PasswordEvidence.cs" />
-    <Compile Include="PrimaryNodeSelector.cs" />
     <Compile Include="ProfilingLevel.cs" />
     <Compile Include="ReadPreference.cs" />
-    <Compile Include="ReadPreferenceNodeSelector.cs" />
     <Compile Include="ReplicaSetTag.cs" />
     <Compile Include="ReplicaSetTagSet.cs" />
     <Compile Include="Setting.cs" />
-    <Compile Include="CurrentNodeSelector.cs" />
     <Compile Include="SslSettings.cs" />
     <Compile Include="SystemProfileInfo.cs" />
     <Compile Include="Wrappers\BaseWrapper.cs" />
