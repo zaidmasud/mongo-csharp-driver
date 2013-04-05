@@ -241,6 +241,10 @@
     <Compile Include="MongoUpdateOptions.cs" />
     <Compile Include="MongoUrlBuilder.cs" />
     <Compile Include="MongoUser.cs" />
+    <Compile Include="Operations\InsertOperation.cs" />
+    <Compile Include="Operations\RemoveOperation.cs" />
+    <Compile Include="Operations\UpdateOperation.cs" />
+    <Compile Include="Operations\WriteOperation.cs" />
     <Compile Include="PasswordEvidence.cs" />
     <Compile Include="ProfilingLevel.cs" />
     <Compile Include="ReadPreference.cs" />

@@ -21,10 +21,11 @@ using System.Text;
 using MongoDB.Bson;
 using MongoDB.Bson.IO;
 using MongoDB.Bson.Serialization;
+using MongoDB.Bson.Serialization.Serializers;
 using MongoDB.Driver.Builders;
 using MongoDB.Driver.Internal;
+using MongoDB.Driver.Operations;
 using MongoDB.Driver.Wrappers;
-using MongoDB.Bson.Serialization.Serializers;
 
 namespace MongoDB.Driver
 {
@@ -1154,75 +1155,18 @@ namespace MongoDB.Driver
             var connection = _server.AcquireConnection(ReadPreference.Primary);
             try
             {
-                var writeConcern = options.WriteConcern ?? _settings.WriteConcern;
+                var insertOperation = new InsertOperation(
+                    _database.Name,
+                    _name,
+                    options.WriteConcern ?? _settings.WriteConcern,
+                    GetWriterSettings(connection),
+                    _settings.AssignIdOnInsert,
+                    options.CheckElementNames,
+                    nominalType,
+                    documents,
+                    options.Flags);
 
-                List<WriteConcernResult> results = (writeConcern.Enabled) ? new List<WriteConcernResult>() : null;
-
-                var writerSettings = GetWriterSettings(connection);
-                using (var bsonBuffer = new BsonBuffer(new MultiChunkBuffer(BsonChunkPool.Default), true))
-                {
-                    var message = new MongoInsertMessage(writerSettings, FullName, options.CheckElementNames, options.Flags);
-                    message.WriteToBuffer(bsonBuffer); // must be called before AddDocument
-
-                    foreach (var document in documents)
-                    {
-                        if (document == null)
-                        {
-                            throw new ArgumentException("Batch contains one or more null documents.");
-                        }
-
-                        if (_settings.AssignIdOnInsert)
-                        {
-                            var serializer = BsonSerializer.LookupSerializer(document.GetType());
-                            var idProvider = serializer as IBsonIdProvider;
-                            if (idProvider != null)
-                            {
-                                object id;
-                                Type idNominalType;
-                                IIdGenerator idGenerator;
-                                if (idProvider.GetDocumentId(document, out id, out idNominalType, out idGenerator))
-                                {
-                                    if (idGenerator != null && idGenerator.IsEmpty(id))
-                                    {
-                                        id = idGenerator.GenerateId(this, document);
-                                        idProvider.SetDocumentId(document, id);
-                                    }
-                                }
-                            }
-                        }
-                        message.AddDocument(bsonBuffer, nominalType, document);
-
-                        if (message.MessageLength > connection.ServerInstance.MaxMessageLength)
-                        {
-                            byte[] lastDocument = message.RemoveLastDocument(bsonBuffer);
-
-                            if (writeConcern.Enabled || (options.Flags & InsertFlags.ContinueOnError) != 0)
-                            {
-                                var intermediateResult = connection.SendMessage(bsonBuffer, message, writeConcern, _database.Name);
-                                if (writeConcern.Enabled) { results.Add(intermediateResult); }
-                            }
-                            else
-                            {
-                                // if WriteConcern is disabled and ContinueOnError is false we have to check for errors and stop if sub-batch has error
-                                try
-                                {
-                                    connection.SendMessage(bsonBuffer, message, WriteConcern.Acknowledged, _database.Name);
-                                }
-                                catch (WriteConcernException)
-                                {
-                                    return null;
-                                }
-                            }
-
-                            message.ResetBatch(bsonBuffer, lastDocument);
-                        }
-                    }
-
-                    var finalResult = connection.SendMessage(bsonBuffer, message, writeConcern, _database.Name);
-                    if (writeConcern.Enabled) { results.Add(finalResult); }
-
-                    return results;
-                }
+                return insertOperation.Execute(connection);
             }
             finally
             {
@@ -1361,9 +1305,15 @@ namespace MongoDB.Driver
             var connection = _server.AcquireConnection(ReadPreference.Primary);
             try
             {
-                var writerSettings = GetWriterSettings(connection);
-                var message = new MongoDeleteMessage(writerSettings, FullName, flags, query);
-                return connection.SendMessage(message, writeConcern ?? _settings.WriteConcern, _database.Name);
+                var removeOperation = new RemoveOperation(
+                    _database.Name,
+                    _name,
+                    writeConcern,
+                    GetWriterSettings(connection),
+                    query,
+                    flags);
+
+                return removeOperation.Execute(connection);
             }
             finally
             {
@@ -1589,10 +1539,17 @@ namespace MongoDB.Driver
             var connection = _server.AcquireConnection(ReadPreference.Primary);
             try
             {
-                var writerSettings = GetWriterSettings(connection);
-                var message = new MongoUpdateMessage(writerSettings, FullName, options.CheckElementNames, options.Flags, query, update);
-                var writeConcern = options.WriteConcern ?? _settings.WriteConcern;
-                return connection.SendMessage(message, writeConcern, _database.Name);
+                var updateOperation = new UpdateOperation(
+                    _database.Name,
+                    _name,
+                    _settings.WriteConcern,
+                    GetWriterSettings(connection),
+                    query,
+                    update,
+                    options.Flags,
+                    options.CheckElementNames);
+
+                return updateOperation.Execute(connection);
             }
             finally
             {
