@@ -1152,21 +1152,33 @@ namespace MongoDB.Driver
                 throw new ArgumentNullException("options");
             }
 
+            var readerSettings = new BsonBinaryReaderSettings
+            {
+                Encoding = _settings.ReadEncoding ?? MongoDefaults.ReadEncoding,
+                GuidRepresentation = _settings.GuidRepresentation
+            };
+
+            var writerSettings = new BsonBinaryWriterSettings
+            {
+                Encoding = _settings.WriteEncoding ?? MongoDefaults.WriteEncoding,
+                GuidRepresentation = _settings.GuidRepresentation
+            };
+
+            var insertOperation = new InsertOperation(
+                _database.Name,
+                _name,
+                readerSettings,
+                writerSettings,
+                options.WriteConcern ?? _settings.WriteConcern,
+                _settings.AssignIdOnInsert,
+                options.CheckElementNames,
+                nominalType,
+                documents,
+                options.Flags);
+
             var connection = _server.AcquireConnection(ReadPreference.Primary);
             try
             {
-                var insertOperation = new InsertOperation(
-                    _database.Name,
-                    _name,
-                    GetReaderSettings(connection),
-                    options.WriteConcern ?? _settings.WriteConcern,
-                    GetWriterSettings(connection),
-                    _settings.AssignIdOnInsert,
-                    options.CheckElementNames,
-                    nominalType,
-                    documents,
-                    options.Flags);
-
                 return insertOperation.Execute(connection);
             }
             finally
@@ -1303,18 +1315,30 @@ namespace MongoDB.Driver
         /// <returns>A WriteConcernResult (or null if WriteConcern is disabled).</returns>
         public virtual WriteConcernResult Remove(IMongoQuery query, RemoveFlags flags, WriteConcern writeConcern)
         {
+            var readerSettings = new BsonBinaryReaderSettings
+            {
+                Encoding = _settings.ReadEncoding ?? MongoDefaults.ReadEncoding,
+                GuidRepresentation = _settings.GuidRepresentation
+            };
+
+            var writerSettings = new BsonBinaryWriterSettings
+            {
+                Encoding = _settings.WriteEncoding ?? MongoDefaults.WriteEncoding,
+                GuidRepresentation = _settings.GuidRepresentation
+            };
+
+            var removeOperation = new RemoveOperation(
+                _database.Name,
+                _name,
+                readerSettings,
+                writerSettings,
+                writeConcern ?? _settings.WriteConcern,
+                query,
+                flags);
+
             var connection = _server.AcquireConnection(ReadPreference.Primary);
             try
             {
-                var removeOperation = new RemoveOperation(
-                    _database.Name,
-                    _name,
-                    GetReaderSettings(connection),
-                    writeConcern ?? _settings.WriteConcern,
-                    GetWriterSettings(connection),
-                    query,
-                    flags);
-
                 return removeOperation.Execute(connection);
             }
             finally
@@ -1538,20 +1562,32 @@ namespace MongoDB.Driver
                 throw new ArgumentNullException("options");
             }
 
+            var readerSettings = new BsonBinaryReaderSettings
+            {
+                Encoding = _settings.ReadEncoding ?? MongoDefaults.ReadEncoding,
+                GuidRepresentation = _settings.GuidRepresentation
+            };
+
+            var writerSettings = new BsonBinaryWriterSettings
+            {
+                Encoding = _settings.WriteEncoding ?? MongoDefaults.WriteEncoding,
+                GuidRepresentation = _settings.GuidRepresentation
+            };
+
+            var updateOperation = new UpdateOperation(
+                _database.Name,
+                _name,
+                readerSettings,
+                writerSettings,
+                options.WriteConcern ?? _settings.WriteConcern,
+                query,
+                update,
+                options.Flags,
+                options.CheckElementNames);
+
             var connection = _server.AcquireConnection(ReadPreference.Primary);
             try
             {
-                var updateOperation = new UpdateOperation(
-                    _database.Name,
-                    _name,
-                    GetReaderSettings(connection),
-                    options.WriteConcern ?? _settings.WriteConcern,
-                    GetWriterSettings(connection),
-                    query,
-                    update,
-                    options.Flags,
-                    options.CheckElementNames);
-
                 return updateOperation.Execute(connection);
             }
             finally
@@ -1619,6 +1655,7 @@ namespace MongoDB.Driver
         }
 
         // internal methods
+        // TODO: this method can be removed when MongoCursorEnumerator is removed
         internal BsonBinaryReaderSettings GetReaderSettings(MongoConnection connection)
         {
             return new BsonBinaryReaderSettings
@@ -1629,6 +1666,7 @@ namespace MongoDB.Driver
             };
         }
 
+        // TODO: this method can be removed when MongoCursorEnumerator is removed
         internal BsonBinaryWriterSettings GetWriterSettings(MongoConnection connection)
         {
             return new BsonBinaryWriterSettings

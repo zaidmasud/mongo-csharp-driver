@@ -34,15 +34,14 @@ namespace MongoDB.Driver.Operations
             string databaseName,
             string collectionName,
             BsonBinaryReaderSettings readerSettings,
-            WriteConcern writeConcern,
             BsonBinaryWriterSettings writerSettings,
+            WriteConcern writeConcern,
             bool assignIdOnInsert,
             bool checkElementNames,
             Type documentType,
             IEnumerable documents,
-            InsertFlags flags
-            )
-            : base(databaseName, collectionName, readerSettings, writeConcern, writerSettings)
+            InsertFlags flags)
+            : base(databaseName, collectionName, readerSettings, writerSettings, writeConcern)
         {
             _assignIdOnInsert = assignIdOnInsert;
             _checkElementNames = checkElementNames;
@@ -57,7 +56,8 @@ namespace MongoDB.Driver.Operations
 
             using (var bsonBuffer = new BsonBuffer(new MultiChunkBuffer(BsonChunkPool.Default), true))
             {
-                var message = new MongoInsertMessage(WriterSettings, CollectionFullName, _checkElementNames, _flags);
+                var writerSettings = GetNodeAdjustedWriterSettings(connection.ServerInstance);
+                var message = new MongoInsertMessage(writerSettings, CollectionFullName, _checkElementNames, _flags);
                 message.WriteToBuffer(bsonBuffer); // must be called before AddDocument
 
                 foreach (var document in _documents)
@@ -94,7 +94,7 @@ namespace MongoDB.Driver.Operations
 
                         if (WriteConcern.Enabled)
                         {
-                            WriteGetLastErrorMessage(bsonBuffer, WriteConcern);
+                            WriteGetLastErrorMessage(bsonBuffer, WriteConcern, writerSettings);
                             connection.SendMessage(message.RequestId, bsonBuffer);
                             results.Add(ReadWriteConcernResult(connection));
                         }
@@ -107,7 +107,7 @@ namespace MongoDB.Driver.Operations
                             // if WriteConcern is disabled and ContinueOnError is false we have to check for errors and stop if sub-batch has error
                             try
                             {
-                                WriteGetLastErrorMessage(bsonBuffer, WriteConcern.Acknowledged);
+                                WriteGetLastErrorMessage(bsonBuffer, WriteConcern.Acknowledged, writerSettings);
                                 connection.SendMessage(message.RequestId, bsonBuffer);
                                 ReadWriteConcernResult(connection); // if there is an exception we will catch it and return null
                             }
@@ -123,7 +123,7 @@ namespace MongoDB.Driver.Operations
 
                 if (WriteConcern.Enabled)
                 {
-                    WriteGetLastErrorMessage(bsonBuffer, WriteConcern);
+                    WriteGetLastErrorMessage(bsonBuffer, WriteConcern, writerSettings);
                     connection.SendMessage(message.RequestId, bsonBuffer);
                     results.Add(ReadWriteConcernResult(connection));
                 }

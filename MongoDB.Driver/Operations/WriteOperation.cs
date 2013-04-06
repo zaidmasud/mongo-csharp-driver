@@ -20,42 +20,20 @@ using MongoDB.Driver.Internal;
 
 namespace MongoDB.Driver.Operations
 {
-    internal abstract class WriteOperation
+    internal abstract class WriteOperation : DatabaseOperation
     {
-        private readonly string _databaseName;
-        private readonly string _collectionName;
-        private readonly BsonBinaryReaderSettings _readerSettings;
         private readonly WriteConcern _writeConcern;
-        private readonly BsonBinaryWriterSettings _writerSettings;
         private CommandDocument _getLastErrorCommand;
 
         protected WriteOperation(
             string databaseName,
             string collectionName,
             BsonBinaryReaderSettings readerSettings,
-            WriteConcern writeConcern,
-            BsonBinaryWriterSettings writerSettings)
+            BsonBinaryWriterSettings writerSettings,
+            WriteConcern writeConcern)
+            : base(databaseName, collectionName, readerSettings, writerSettings)
         {
-            _databaseName = databaseName;
-            _collectionName = collectionName;
-            _readerSettings = readerSettings;
             _writeConcern = writeConcern;
-            _writerSettings = writerSettings;
-        }
-
-        protected string CollectionFullName
-        {
-            get { return _databaseName + "." + _collectionName; }
-        }
-
-        protected string CollectionName
-        {
-            get { return _collectionName; }
-        }
-
-        protected string DatabaseName
-        {
-            get { return _databaseName; }
         }
 
         protected WriteConcern WriteConcern
@@ -63,15 +41,11 @@ namespace MongoDB.Driver.Operations
             get { return _writeConcern; }
         }
 
-        protected BsonBinaryWriterSettings WriterSettings
-        {
-            get { return _writerSettings; }
-        }
-
         protected WriteConcernResult ReadWriteConcernResult(MongoConnection connection)
         {
+            var readerSettings = GetNodeAdjustedReaderSettings(connection.ServerInstance);
             var writeConcernResultSerializer = BsonSerializer.LookupSerializer(typeof(WriteConcernResult));
-            var replyMessage = connection.ReceiveMessage<WriteConcernResult>(_readerSettings, writeConcernResultSerializer, null);
+            var replyMessage = connection.ReceiveMessage<WriteConcernResult>(readerSettings, writeConcernResultSerializer, null);
 
             var writeConcernResult = replyMessage.Documents[0];
             writeConcernResult.Command = _getLastErrorCommand;
@@ -94,7 +68,7 @@ namespace MongoDB.Driver.Operations
             return writeConcernResult;
         }
 
-        protected void WriteGetLastErrorMessage(BsonBuffer buffer, WriteConcern writeConcern)
+        protected void WriteGetLastErrorMessage(BsonBuffer buffer, WriteConcern writeConcern, BsonBinaryWriterSettings writerSettings)
         {
             var fsync = (writeConcern.FSync == null) ? null : (BsonValue)writeConcern.FSync;
             var journal = (writeConcern.Journal == null) ? null : (BsonValue)writeConcern.Journal;
@@ -111,7 +85,7 @@ namespace MongoDB.Driver.Operations
                 };
 
             // piggy back on network transmission for message
-            var getLastErrorMessage = new MongoQueryMessage(_writerSettings, DatabaseName + ".$cmd", QueryFlags.None, 0, 1, _getLastErrorCommand, null);
+            var getLastErrorMessage = new MongoQueryMessage(writerSettings, DatabaseName + ".$cmd", QueryFlags.None, 0, 1, _getLastErrorCommand, null);
             getLastErrorMessage.WriteToBuffer(buffer);
         }
     }

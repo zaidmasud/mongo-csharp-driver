@@ -29,13 +29,13 @@ namespace MongoDB.Driver.Operations
             string databaseName,
             string collectionName,
             BsonBinaryReaderSettings readerSettings,
-            WriteConcern writeConcern,
             BsonBinaryWriterSettings writerSettings,
+            WriteConcern writeConcern,
             IMongoQuery query,
             IMongoUpdate update,
             UpdateFlags flags,
             bool checkElementNames)
-            : base(databaseName, collectionName, readerSettings, writeConcern, writerSettings)
+            : base(databaseName, collectionName, readerSettings, writerSettings, writeConcern)
         {
             _query = query;
             _update = update;
@@ -47,11 +47,12 @@ namespace MongoDB.Driver.Operations
         {
             using (var buffer = new BsonBuffer(new MultiChunkBuffer(BsonChunkPool.Default), true))
             {
-                var message = new MongoUpdateMessage(WriterSettings, CollectionFullName, _checkElementNames, _flags, _query, _update);
+                var writerSettings = GetNodeAdjustedWriterSettings(connection.ServerInstance);
+                var message = new MongoUpdateMessage(writerSettings, CollectionFullName, _checkElementNames, _flags, _query, _update);
                 message.WriteToBuffer(buffer);
                 if (WriteConcern.Enabled)
                 {
-                    WriteGetLastErrorMessage(buffer, WriteConcern);
+                    WriteGetLastErrorMessage(buffer, WriteConcern, writerSettings);
                     connection.SendMessage(message.RequestId, buffer);
                     return ReadWriteConcernResult(connection);
                 }

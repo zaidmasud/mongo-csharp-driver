@@ -27,12 +27,11 @@ namespace MongoDB.Driver.Operations
             string databaseName,
             string collectionName,
             BsonBinaryReaderSettings readerSettings,
-            WriteConcern writeConcern,
             BsonBinaryWriterSettings writerSettings,
+            WriteConcern writeConcern,
             IMongoQuery query,
-            RemoveFlags flags
-            )
-            : base(databaseName, collectionName, readerSettings, writeConcern, writerSettings)
+            RemoveFlags flags)
+            : base(databaseName, collectionName, readerSettings, writerSettings, writeConcern)
         {
             _query = query;
             _flags = flags;
@@ -42,11 +41,12 @@ namespace MongoDB.Driver.Operations
         {
             using (var buffer = new BsonBuffer(new MultiChunkBuffer(BsonChunkPool.Default), true))
             {
-                var message = new MongoDeleteMessage(WriterSettings, CollectionFullName, _flags, _query);
+                var writerSettings = GetNodeAdjustedWriterSettings(connection.ServerInstance);
+                var message = new MongoDeleteMessage(writerSettings, CollectionFullName, _flags, _query);
                 message.WriteToBuffer(buffer);
                 if (WriteConcern.Enabled)
                 {
-                    WriteGetLastErrorMessage(buffer, WriteConcern);
+                    WriteGetLastErrorMessage(buffer, WriteConcern, writerSettings);
                     connection.SendMessage(message.RequestId, buffer);
                     return ReadWriteConcernResult(connection);
                 }
