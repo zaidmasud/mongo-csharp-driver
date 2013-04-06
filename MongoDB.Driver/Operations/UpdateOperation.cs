@@ -1,4 +1,19 @@
-﻿using MongoDB.Bson.IO;
+﻿/* Copyright 2010-2013 10gen Inc.
+*
+* Licensed under the Apache License, Version 2.0 (the "License");
+* you may not use this file except in compliance with the License.
+* You may obtain a copy of the License at
+*
+* http://www.apache.org/licenses/LICENSE-2.0
+*
+* Unless required by applicable law or agreed to in writing, software
+* distributed under the License is distributed on an "AS IS" BASIS,
+* WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+* See the License for the specific language governing permissions and
+* limitations under the License.
+*/
+
+using MongoDB.Bson.IO;
 using MongoDB.Driver.Internal;
 
 namespace MongoDB.Driver.Operations
@@ -13,13 +28,14 @@ namespace MongoDB.Driver.Operations
         public UpdateOperation(
             string databaseName,
             string collectionName,
+            BsonBinaryReaderSettings readerSettings,
             WriteConcern writeConcern,
             BsonBinaryWriterSettings writerSettings,
             IMongoQuery query,
             IMongoUpdate update,
             UpdateFlags flags,
             bool checkElementNames)
-            : base(databaseName, collectionName, writeConcern, writerSettings)
+            : base(databaseName, collectionName, readerSettings, writeConcern, writerSettings)
         {
             _query = query;
             _update = update;
@@ -29,8 +45,22 @@ namespace MongoDB.Driver.Operations
 
         public WriteConcernResult Execute(MongoConnection connection)
         {
-            var message = new MongoUpdateMessage(WriterSettings, CollectionFullName, _checkElementNames, _flags, _query, _update);
-            return connection.SendMessage(message, WriteConcern, DatabaseName);
+            using (var buffer = new BsonBuffer(new MultiChunkBuffer(BsonChunkPool.Default), true))
+            {
+                var message = new MongoUpdateMessage(WriterSettings, CollectionFullName, _checkElementNames, _flags, _query, _update);
+                message.WriteToBuffer(buffer);
+                if (WriteConcern.Enabled)
+                {
+                    WriteGetLastErrorMessage(buffer, WriteConcern);
+                    connection.SendMessage(message.RequestId, buffer);
+                    return ReadWriteConcernResult(connection);
+                }
+                else
+                {
+                    connection.SendMessage(message.RequestId, buffer);
+                    return null;
+                }
+            }
         }
     }
 }

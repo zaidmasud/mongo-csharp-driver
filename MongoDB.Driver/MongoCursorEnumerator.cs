@@ -370,7 +370,7 @@ namespace MongoDB.Driver
         private MongoReplyMessage<TDocument> GetReply(MongoConnection connection, MongoRequestMessage message)
         {
             var readerSettings = _cursor.Collection.GetReaderSettings(connection);
-            connection.SendMessage(message, null, _cursor.Database.Name); // write concern doesn't apply to queries
+            connection.SendMessage(message);
             var reply = connection.ReceiveMessage<TDocument>(readerSettings, _cursor.Serializer, _cursor.SerializationOptions);
             _responseFlags = reply.ResponseFlags;
             _openCursorId = reply.CursorId;
@@ -389,7 +389,7 @@ namespace MongoDB.Driver
                         try
                         {
                             var killCursorsMessage = new MongoKillCursorsMessage(_openCursorId);
-                            connection.SendMessage(killCursorsMessage, WriteConcern.Unacknowledged, _cursor.Database.Name);
+                            connection.SendMessage(killCursorsMessage);
                         }
                         finally
                         {

@@ -22,7 +22,6 @@ using System.Security.Cryptography.X509Certificates;
 using MongoDB.Bson;
 using MongoDB.Bson.IO;
 using MongoDB.Bson.Serialization;
-using MongoDB.Bson.Serialization.Serializers;
 using MongoDB.Driver.Communication.Security;
 
 namespace MongoDB.Driver.Internal
@@ -273,7 +272,7 @@ namespace MongoDB.Driver.Internal
             };
 
             var queryMessage = new MongoQueryMessage(writerSettings, databaseName + ".$cmd", queryFlags, 0, 1, command, null);
-            SendMessage(queryMessage, null, databaseName); // write concern doesn't apply to queries
+            SendMessage(queryMessage);
 
             var readerSettings = new BsonBinaryReaderSettings
             {
@@ -334,35 +333,13 @@ namespace MongoDB.Driver.Internal
             }
         }
 
-        internal WriteConcernResult SendMessage(BsonBuffer buffer, MongoRequestMessage message, WriteConcern writeConcern, string databaseName)
+        internal void SendMessage(int requestId, BsonBuffer buffer)
         {
             if (_state == MongoConnectionState.Closed) { throw new InvalidOperationException("Connection is closed."); }
             lock (_connectionLock)
             {
                 _lastUsedAt = DateTime.UtcNow;
-                _requestId = message.RequestId;
-
-                CommandDocument getLastErrorCommand = null;
-                if (writeConcern != null && writeConcern.Enabled)
-                {
-                    var fsync = (writeConcern.FSync == null) ? null : (BsonValue)writeConcern.FSync;
-                    var journal = (writeConcern.Journal == null) ? null : (BsonValue)writeConcern.Journal;
-                    var w = (writeConcern.W == null) ? null : writeConcern.W.ToGetLastErrorWValue();
-                    var wTimeout = (writeConcern.WTimeout == null) ? null : (BsonValue)(int)writeConcern.WTimeout.Value.TotalMilliseconds;
-
-                    getLastErrorCommand = new CommandDocument
-                        {
-                            { "getlasterror", 1 }, // use all lowercase for backward compatibility
-                            { "fsync", fsync, fsync != null },
-                            { "j", journal, journal != null },
-                            { "w", w, w != null },
-                            { "wtimeout", wTimeout, wTimeout != null }
-                        };
-
-                    // piggy back on network transmission for message
-                    var getLastErrorMessage = new MongoQueryMessage(message.WriterSettings, databaseName + ".$cmd", QueryFlags.None, 0, 1, getLastErrorCommand, null);
-                    getLastErrorMessage.WriteToBuffer(buffer);
-                }
+                _requestId = requestId;
 
                 try
                 {
@@ -380,46 +357,15 @@ namespace MongoDB.Driver.Internal
                     HandleException(ex);
                     throw;
                 }
-
-                WriteConcernResult writeConcernResult = null;
-                if (writeConcern != null && writeConcern.Enabled)
-                {
-                    var readerSettings = new BsonBinaryReaderSettings
-                    {
-                        Encoding = _serverInstance.Settings.ReadEncoding ?? MongoDefaults.ReadEncoding,
-                        GuidRepresentation = message.WriterSettings.GuidRepresentation,
-                        MaxDocumentSize = _serverInstance.MaxDocumentSize
-                    };
-                    var writeConcernResultSerializer = BsonSerializer.LookupSerializer(typeof(WriteConcernResult));
-                    var replyMessage = ReceiveMessage<WriteConcernResult>(readerSettings, writeConcernResultSerializer, null);
-                    writeConcernResult = replyMessage.Documents[0];
-                    writeConcernResult.Command = getLastErrorCommand;
-                    if (!writeConcernResult.Ok)
-                    {
-                        var errorMessage = string.Format(
-                            "WriteConcern detected an error '{0}'. (response was {1}).",
-                            writeConcernResult.ErrorMessage, writeConcernResult.Response.ToJson());
-                        throw new WriteConcernException(errorMessage, writeConcernResult);
-                    }
-                    if (writeConcernResult.HasLastErrorMessage)
-                    {
-                        var errorMessage = string.Format(
-                            "WriteConcern detected an error '{0}'. (Response was {1}).",
-                            writeConcernResult.LastErrorMessage, writeConcernResult.Response.ToJson());
-                        throw new WriteConcernException(errorMessage, writeConcernResult);
-                    }
-                }
-
-                return writeConcernResult;
             }
         }
 
-        internal WriteConcernResult SendMessage(MongoRequestMessage message, WriteConcern writeConcern, string databaseName)
+        internal void SendMessage(MongoRequestMessage message)
         {
             using (var buffer = new BsonBuffer(new MultiChunkBuffer(BsonChunkPool.Default), true))
             {
                 message.WriteToBuffer(buffer);
-                return SendMessage(buffer, message, writeConcern, databaseName);
+                SendMessage(message.RequestId, buffer);
             }
         }
 

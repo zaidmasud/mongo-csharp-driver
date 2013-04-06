@@ -1158,6 +1158,7 @@ namespace MongoDB.Driver
                 var insertOperation = new InsertOperation(
                     _database.Name,
                     _name,
+                    GetReaderSettings(connection),
                     options.WriteConcern ?? _settings.WriteConcern,
                     GetWriterSettings(connection),
                     _settings.AssignIdOnInsert,
@@ -1308,7 +1309,8 @@ namespace MongoDB.Driver
                 var removeOperation = new RemoveOperation(
                     _database.Name,
                     _name,
-                    writeConcern,
+                    GetReaderSettings(connection),
+                    writeConcern ?? _settings.WriteConcern,
                     GetWriterSettings(connection),
                     query,
                     flags);
@@ -1542,7 +1544,8 @@ namespace MongoDB.Driver
                 var updateOperation = new UpdateOperation(
                     _database.Name,
                     _name,
-                    _settings.WriteConcern,
+                    GetReaderSettings(connection),
+                    options.WriteConcern ?? _settings.WriteConcern,
                     GetWriterSettings(connection),
                     query,
                     update,
