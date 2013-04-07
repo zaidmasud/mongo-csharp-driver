@@ -137,7 +137,8 @@ namespace MongoDB.Driver.Operations
                 var readerSettings = GetNodeAdjustedReaderSettings(connection.ServerInstance);
                 var writerSettings = GetNodeAdjustedWriterSettings(connection.ServerInstance);
                 var forShardRouter = connection.ServerInstance.InstanceType == MongoServerInstanceType.ShardRouter;
-                var queryMessage = new MongoQueryMessage(writerSettings, CollectionFullName, _flags, _skip, numberToReturn, WrapQuery(forShardRouter), _fields);
+                var wrappedQuery = QueryWrapper.WrapQuery(_query, _options, _readPreference, forShardRouter);
+                var queryMessage = new MongoQueryMessage(writerSettings, CollectionFullName, _flags, _skip, numberToReturn, wrappedQuery, _fields);
                 connection.SendMessage(queryMessage);
                 return connection.ReceiveMessage<TDocument>(readerSettings, _serializer, _serializationOptions);
             }
@@ -174,53 +175,6 @@ namespace MongoDB.Driver.Operations
             finally
             {
                 connectionProvider.ReleaseConnection(connection);
-            }
-        }
-
-        private IMongoQuery WrapQuery(bool forShardRouter)
-        {
-            BsonDocument formattedReadPreference = null;
-            if (forShardRouter && _readPreference.ReadPreferenceMode != ReadPreferenceMode.Primary)
-            {
-                BsonArray tagSetsArray = null;
-                if (_readPreference.TagSets != null)
-                {
-                    tagSetsArray = new BsonArray();
-                    foreach (var tagSet in _readPreference.TagSets)
-                    {
-                        var tagSetDocument = new BsonDocument();
-                        foreach (var tag in tagSet)
-                        {
-                            tagSetDocument.Add(tag.Name, tag.Value);
-                        }
-                        tagSetsArray.Add(tagSetDocument);
-                    }
-                }
-
-                if (tagSetsArray != null || _readPreference.ReadPreferenceMode != ReadPreferenceMode.SecondaryPreferred)
-                {
-                    formattedReadPreference = new BsonDocument
-                    {
-                        { "mode", MongoUtils.ToCamelCase(_readPreference.ReadPreferenceMode.ToString()) },
-                        { "tags", tagSetsArray, tagSetsArray != null } // optional
-                    };
-                }
-            }
-
-            if (_options == null && formattedReadPreference == null)
-            {
-                return _query;
-            }
-            else
-            {
-                var query = (_query == null) ? (BsonValue)new BsonDocument() : BsonDocumentWrapper.Create(_query);
-                var wrappedQuery = new QueryDocument
-                {
-                    { "$query", query },
-                    { "$readPreference", formattedReadPreference, formattedReadPreference != null }, // only if sending query to a mongos
-                };
-                wrappedQuery.Merge(_options);
-                return wrappedQuery;
             }
         }
     }

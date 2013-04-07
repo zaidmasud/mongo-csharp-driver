@@ -96,6 +96,7 @@
     <Compile Include="Builders\QueryBuilder.cs" />
     <Compile Include="Builders\SortByBuilder.cs" />
     <Compile Include="Builders\UpdateBuilder.cs" />
+    <Compile Include="CanCommandBeSentToSecondary.cs" />
     <Compile Include="CommandResults\AggregateResult.cs" />
     <Compile Include="CommandResults\CollectionStatsResult.cs" />
     <Compile Include="CommandResults\CommandResult.cs" />
@@ -241,9 +242,11 @@
     <Compile Include="MongoUpdateOptions.cs" />
     <Compile Include="MongoUrlBuilder.cs" />
     <Compile Include="MongoUser.cs" />
+    <Compile Include="Operations\CommandOperation.cs" />
     <Compile Include="Operations\DatabaseOperation.cs" />
     <Compile Include="Operations\IConnectionProvider.cs" />
     <Compile Include="Operations\InsertOperation.cs" />
+    <Compile Include="Operations\QueryWrapper.cs" />
     <Compile Include="Operations\ReadOperation.cs" />
     <Compile Include="Operations\RemoveOperation.cs" />
     <Compile Include="Operations\UpdateOperation.cs" />

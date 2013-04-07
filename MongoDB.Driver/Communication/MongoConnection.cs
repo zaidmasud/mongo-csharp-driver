@@ -23,6 +23,7 @@ using MongoDB.Bson;
 using MongoDB.Bson.IO;
 using MongoDB.Bson.Serialization;
 using MongoDB.Driver.Communication.Security;
+using MongoDB.Driver.Operations;
 
 namespace MongoDB.Driver.Internal
 {
@@ -262,40 +263,30 @@ namespace MongoDB.Driver.Internal
             IBsonSerializationOptions commandResultSerializationOptions,
             bool throwOnError) where TCommandResult : CommandResult
         {
-            var commandName = command.GetElement(0).Name;
-
             var writerSettings = new BsonBinaryWriterSettings
             {
                 Encoding = _serverInstance.Settings.WriteEncoding ?? MongoDefaults.WriteEncoding,
-                GuidRepresentation = GuidRepresentation.Unspecified,
-                MaxDocumentSize = _serverInstance.MaxDocumentSize
+                GuidRepresentation = _serverInstance.Settings.GuidRepresentation
             };
-
-            var queryMessage = new MongoQueryMessage(writerSettings, databaseName + ".$cmd", queryFlags, 0, 1, command, null);
-            SendMessage(queryMessage);
-
             var readerSettings = new BsonBinaryReaderSettings
             {
                 Encoding = _serverInstance.Settings.ReadEncoding ?? MongoDefaults.ReadEncoding,
-                GuidRepresentation = GuidRepresentation.Unspecified,
-                MaxDocumentSize = _serverInstance.MaxDocumentSize
+                GuidRepresentation = _serverInstance.Settings.GuidRepresentation
             };
-            var reply = ReceiveMessage<TCommandResult>(readerSettings, commandResultSerializer, commandResultSerializationOptions);
-            if (reply.NumberReturned == 0)
-            {
-                var message = string.Format("Command '{0}' failed. No response returned.", commandName);
-                throw new MongoCommandException(message);
-            }
+            var readPreference = (_serverInstance.IsSecondary) ? ReadPreference.Secondary : ReadPreference.Primary;
 
-            var commandResult = reply.Documents[0];
-            commandResult.Command = command;
+            var commandOperation = new CommandOperation<TCommandResult>(
+                databaseName,
+                readerSettings,
+                writerSettings,
+                command,
+                queryFlags,
+                null,
+                readPreference,
+                commandResultSerializationOptions,
+                commandResultSerializer);
 
-            if (throwOnError && !commandResult.Ok)
-            {
-                throw new MongoCommandException(commandResult);
-            }
-
-            return commandResult;
+            return commandOperation.Execute(this, throwOnError);
         }
 
         internal MongoReplyMessage<TDocument> ReceiveMessage<TDocument>(
