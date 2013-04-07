@@ -242,53 +242,6 @@ namespace MongoDB.Driver.Internal
                 .Authenticate();
         }
 
-        // this is a low level method that doesn't require a MongoServer
-        // so it can be used while connecting to a MongoServer
-        internal TCommandResult RunCommandAs<TCommandResult>(
-            string databaseName,
-            QueryFlags queryFlags,
-            CommandDocument command,
-            bool throwOnError) where TCommandResult : CommandResult
-        {
-            var commandResultSerializer = BsonSerializer.LookupSerializer(typeof(TCommandResult));
-            IBsonSerializationOptions commandResultSerializationOptions = null;
-            return RunCommandAs<TCommandResult>(databaseName, queryFlags, command, commandResultSerializer, commandResultSerializationOptions, throwOnError);
-        }
-
-        internal TCommandResult RunCommandAs<TCommandResult>(
-            string databaseName,
-            QueryFlags queryFlags,
-            CommandDocument command,
-            IBsonSerializer commandResultSerializer,
-            IBsonSerializationOptions commandResultSerializationOptions,
-            bool throwOnError) where TCommandResult : CommandResult
-        {
-            var writerSettings = new BsonBinaryWriterSettings
-            {
-                Encoding = _serverInstance.Settings.WriteEncoding ?? MongoDefaults.WriteEncoding,
-                GuidRepresentation = _serverInstance.Settings.GuidRepresentation
-            };
-            var readerSettings = new BsonBinaryReaderSettings
-            {
-                Encoding = _serverInstance.Settings.ReadEncoding ?? MongoDefaults.ReadEncoding,
-                GuidRepresentation = _serverInstance.Settings.GuidRepresentation
-            };
-            var readPreference = (_serverInstance.IsSecondary) ? ReadPreference.Secondary : ReadPreference.Primary;
-
-            var commandOperation = new CommandOperation<TCommandResult>(
-                databaseName,
-                readerSettings,
-                writerSettings,
-                command,
-                queryFlags,
-                null,
-                readPreference,
-                commandResultSerializationOptions,
-                commandResultSerializer);
-
-            return commandOperation.Execute(this, throwOnError);
-        }
-
         internal MongoReplyMessage<TDocument> ReceiveMessage<TDocument>(
             BsonBinaryReaderSettings readerSettings,
             IBsonSerializer serializer,

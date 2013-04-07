@@ -50,6 +50,38 @@ namespace MongoDB.Driver.Operations
             _serializer = serializer;
         }
 
+        // convenience factory method with minimal parameters which picks up additional settings from the node
+        internal static CommandOperation<TCommandResult> Create(
+            MongoServerInstance node,
+            string databaseName,
+            IMongoCommand command,
+            QueryFlags queryFlags)
+        {
+            var writerSettings = new BsonBinaryWriterSettings
+            {
+                Encoding = node.Settings.WriteEncoding ?? MongoDefaults.WriteEncoding,
+                GuidRepresentation = node.Settings.GuidRepresentation
+            };
+            var readerSettings = new BsonBinaryReaderSettings
+            {
+                Encoding = node.Settings.ReadEncoding ?? MongoDefaults.ReadEncoding,
+                GuidRepresentation = node.Settings.GuidRepresentation
+            };
+            var readPreference = (node.IsSecondary) ? ReadPreference.Secondary : ReadPreference.Primary;
+            var resultSerializer = BsonSerializer.LookupSerializer(typeof(TCommandResult));
+
+            return new CommandOperation<TCommandResult>(
+                databaseName,
+                readerSettings,
+                writerSettings,
+                command,
+                queryFlags,
+                null,
+                readPreference,
+                null,
+                resultSerializer);
+        }
+
         public TCommandResult Execute(MongoConnection connection, bool throwOnError)
         {
             var readerSettings = GetNodeAdjustedReaderSettings(connection.ServerInstance);

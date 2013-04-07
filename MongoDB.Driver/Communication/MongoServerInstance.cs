@@ -20,6 +20,7 @@ using System.Net;
 using System.Net.Sockets;
 using System.Threading;
 using MongoDB.Driver.Internal;
+using MongoDB.Driver.Operations;
 
 namespace MongoDB.Driver
 {
@@ -535,7 +536,7 @@ namespace MongoDB.Driver
             try
             {
                 var isMasterCommand = new CommandDocument("ismaster", 1);
-                isMasterResult = connection.RunCommandAs<IsMasterResult>("admin", QueryFlags.SlaveOk, isMasterCommand, false);
+                isMasterResult = CommandOperation<IsMasterResult>.Create(this, "admin", isMasterCommand, QueryFlags.SlaveOk).Execute(connection, false);
                 isMasterResult.Command = isMasterCommand;
                 if (!isMasterResult.Ok)
                 {
@@ -544,7 +545,7 @@ namespace MongoDB.Driver
 
                 MongoServerBuildInfo buildInfo;
                 var buildInfoCommand = new CommandDocument("buildinfo", 1);
-                var buildInfoResult = connection.RunCommandAs<CommandResult>("admin", QueryFlags.SlaveOk, buildInfoCommand, false);
+                var buildInfoResult = CommandOperation<CommandResult>.Create(this, "admin", buildInfoCommand, QueryFlags.SlaveOk).Execute(connection, false);
                 if (buildInfoResult.Ok)
                 {
                     buildInfo = MongoServerBuildInfo.FromCommandResult(buildInfoResult);
@@ -648,7 +649,7 @@ namespace MongoDB.Driver
             {
                 var pingCommand = new CommandDocument("ping", 1);
                 Stopwatch stopwatch = Stopwatch.StartNew();
-                connection.RunCommandAs<CommandResult>("admin", QueryFlags.SlaveOk, pingCommand, true);
+                CommandOperation<CommandResult>.Create(this, "admin", pingCommand, QueryFlags.SlaveOk).Execute(connection, true);
                 stopwatch.Stop();
                 var currentAverage = _pingTimeAggregator.Average;
                 _pingTimeAggregator.Include(stopwatch.Elapsed);

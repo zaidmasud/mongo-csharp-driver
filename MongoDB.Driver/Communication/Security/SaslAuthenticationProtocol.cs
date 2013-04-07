@@ -19,6 +19,7 @@ using System.Linq;
 using MongoDB.Driver.Internal;
 using MongoDB.Driver.Communication.Security;
 using MongoDB.Driver.Communication.Security.Mechanisms;
+using MongoDB.Driver.Operations;
 
 namespace MongoDB.Driver.Communication.Security
 {
@@ -73,7 +74,7 @@ namespace MongoDB.Driver.Communication.Security
                     CommandResult result;
                     try
                     {
-                        result = connection.RunCommandAs<CommandResult>(credential.Source, QueryFlags.SlaveOk, command, true);
+                        result = CommandOperation<CommandResult>.Create(connection.ServerInstance, credential.Source, command, QueryFlags.SlaveOk).Execute(connection, true);
                     }
                     catch (MongoCommandException ex)
                     {
