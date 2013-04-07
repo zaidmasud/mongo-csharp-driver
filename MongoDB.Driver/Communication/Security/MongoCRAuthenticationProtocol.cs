@@ -16,6 +16,8 @@
 using System;
 using MongoDB.Driver.Internal;
 using MongoDB.Driver.Operations;
+using MongoDB.Bson.IO;
+using MongoDB.Bson.Serialization;
 
 namespace MongoDB.Driver.Communication.Security
 {
@@ -39,7 +41,7 @@ namespace MongoDB.Driver.Communication.Security
         public void Authenticate(MongoConnection connection, MongoCredential credential)
         {
             var nonceCommand = new CommandDocument("getnonce", 1);
-            var commandResult = CommandOperation<CommandResult>.Create(connection.ServerInstance, credential.Source, nonceCommand, QueryFlags.None).Execute(connection, false);
+            var commandResult = RunCommand(connection, credential.Source, nonceCommand);
             if (!commandResult.Ok)
             {
                 throw new MongoAuthenticationException(
@@ -58,7 +60,7 @@ namespace MongoDB.Driver.Communication.Security
                     { "key", digest }
                 };
 
-            commandResult = CommandOperation<CommandResult>.Create(connection.ServerInstance, credential.Source, authenticateCommand, QueryFlags.None).Execute(connection, false);
+            commandResult = RunCommand(connection, credential.Source, authenticateCommand);
             if (!commandResult.Ok)
             {
                 var message = string.Format("Invalid credential for database '{0}'.", credential.Source);
@@ -79,6 +81,27 @@ namespace MongoDB.Driver.Communication.Security
         {
             return credential.Mechanism.Equals("MONGODB-CR", StringComparison.InvariantCultureIgnoreCase) &&
                 credential.Evidence is PasswordEvidence;
+        }
+
+        // private methods
+        private CommandResult RunCommand(MongoConnection connection, string databaseName, IMongoCommand command)
+        {
+            var readerSettings = new BsonBinaryReaderSettings();
+            var writerSettings = new BsonBinaryWriterSettings();
+            var resultSerializer = BsonSerializer.LookupSerializer(typeof(CommandResult));
+
+            var commandOperation = new CommandOperation<CommandResult>(
+                databaseName,
+                readerSettings,
+                writerSettings,
+                command,
+                QueryFlags.SlaveOk,
+                null,
+                null,
+                null,
+                resultSerializer);
+
+            return commandOperation.Execute(connection, false);
         }
     }
 }

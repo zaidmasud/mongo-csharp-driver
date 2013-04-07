@@ -22,7 +22,7 @@ namespace MongoDB.Driver.Operations
         internal static IMongoQuery WrapQuery(IMongoQuery query, BsonDocument options, ReadPreference readPreference, bool forShardRouter)
         {
             BsonDocument formattedReadPreference = null;
-            if (forShardRouter && readPreference.ReadPreferenceMode != ReadPreferenceMode.Primary)
+            if (forShardRouter && readPreference != null && readPreference.ReadPreferenceMode != ReadPreferenceMode.Primary)
             {
                 BsonArray tagSetsArray = null;
                 if (readPreference.TagSets != null)

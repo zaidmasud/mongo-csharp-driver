@@ -20,6 +20,8 @@ using MongoDB.Driver.Internal;
 using MongoDB.Driver.Communication.Security;
 using MongoDB.Driver.Communication.Security.Mechanisms;
 using MongoDB.Driver.Operations;
+using MongoDB.Bson.IO;
+using MongoDB.Bson.Serialization;
 
 namespace MongoDB.Driver.Communication.Security
 {
@@ -74,7 +76,7 @@ namespace MongoDB.Driver.Communication.Security
                     CommandResult result;
                     try
                     {
-                        result = CommandOperation<CommandResult>.Create(connection.ServerInstance, credential.Source, command, QueryFlags.SlaveOk).Execute(connection, true);
+                        result = RunCommand(connection, credential.Source, command);
                     }
                     catch (MongoCommandException ex)
                     {
@@ -116,6 +118,27 @@ namespace MongoDB.Driver.Communication.Security
         public bool CanUse(MongoCredential credential)
         {
             return _mechanism.CanUse(credential);
+        }
+
+        // private methods
+        private CommandResult RunCommand(MongoConnection connection, string databaseName, IMongoCommand command)
+        {
+            var readerSettings = new BsonBinaryReaderSettings();
+            var writerSettings = new BsonBinaryWriterSettings();
+            var resultSerializer = BsonSerializer.LookupSerializer(typeof(CommandResult));
+
+            var commandOperation = new CommandOperation<CommandResult>(
+                databaseName,
+                readerSettings,
+                writerSettings,
+                command,
+                QueryFlags.SlaveOk,
+                null,
+                null,
+                null,
+                resultSerializer);
+
+            return commandOperation.Execute(connection, false);
         }
     }
 }

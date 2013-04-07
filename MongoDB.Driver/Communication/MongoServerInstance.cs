@@ -21,6 +21,8 @@ using System.Net.Sockets;
 using System.Threading;
 using MongoDB.Driver.Internal;
 using MongoDB.Driver.Operations;
+using MongoDB.Bson.IO;
+using MongoDB.Bson.Serialization;
 
 namespace MongoDB.Driver
 {
@@ -536,8 +538,7 @@ namespace MongoDB.Driver
             try
             {
                 var isMasterCommand = new CommandDocument("ismaster", 1);
-                isMasterResult = CommandOperation<IsMasterResult>.Create(this, "admin", isMasterCommand, QueryFlags.SlaveOk).Execute(connection, false);
-                isMasterResult.Command = isMasterCommand;
+                isMasterResult = RunCommandAs<IsMasterResult>(connection, "admin", isMasterCommand);
                 if (!isMasterResult.Ok)
                 {
                     throw new MongoCommandException(isMasterResult);
@@ -545,7 +546,7 @@ namespace MongoDB.Driver
 
                 MongoServerBuildInfo buildInfo;
                 var buildInfoCommand = new CommandDocument("buildinfo", 1);
-                var buildInfoResult = CommandOperation<CommandResult>.Create(this, "admin", buildInfoCommand, QueryFlags.SlaveOk).Execute(connection, false);
+                var buildInfoResult = RunCommandAs<CommandResult>(connection, "admin", buildInfoCommand);
                 if (buildInfoResult.Ok)
                 {
                     buildInfo = MongoServerBuildInfo.FromCommandResult(buildInfoResult);
@@ -649,7 +650,7 @@ namespace MongoDB.Driver
             {
                 var pingCommand = new CommandDocument("ping", 1);
                 Stopwatch stopwatch = Stopwatch.StartNew();
-                CommandOperation<CommandResult>.Create(this, "admin", pingCommand, QueryFlags.SlaveOk).Execute(connection, true);
+                RunCommandAs<CommandResult>(connection, "admin", pingCommand);
                 stopwatch.Stop();
                 var currentAverage = _pingTimeAggregator.Average;
                 _pingTimeAggregator.Include(stopwatch.Elapsed);
@@ -665,6 +666,27 @@ namespace MongoDB.Driver
                 SetState(MongoServerState.Disconnected);
                 throw;
             }
+        }
+
+        private TCommandResult RunCommandAs<TCommandResult>(MongoConnection connection, string databaseName, IMongoCommand command)
+            where TCommandResult : CommandResult
+        {
+            var readerSettings = new BsonBinaryReaderSettings();
+            var writerSettings = new BsonBinaryWriterSettings();
+            var resultSerializer = BsonSerializer.LookupSerializer(typeof(TCommandResult));
+
+            var commandOperation = new CommandOperation<TCommandResult>(
+                databaseName,
+                readerSettings,
+                writerSettings,
+                command,
+                QueryFlags.SlaveOk,
+                null,
+                null,
+                null,
+                resultSerializer);
+
+            return commandOperation.Execute(connection, false);
         }
 
         private void StateVerificationTimerCallback()
