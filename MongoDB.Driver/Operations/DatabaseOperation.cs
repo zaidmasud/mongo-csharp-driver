@@ -14,7 +14,6 @@
 */
 
 using MongoDB.Bson.IO;
-using MongoDB.Driver.Internal;
 
 namespace MongoDB.Driver.Operations
 {

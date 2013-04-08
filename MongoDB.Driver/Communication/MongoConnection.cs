@@ -19,11 +19,9 @@ using System.Net.Security;
 using System.Net.Sockets;
 using System.Security.Authentication;
 using System.Security.Cryptography.X509Certificates;
-using MongoDB.Bson;
 using MongoDB.Bson.IO;
 using MongoDB.Bson.Serialization;
 using MongoDB.Driver.Communication.Security;
-using MongoDB.Driver.Operations;
 
 namespace MongoDB.Driver.Internal
 {
@@ -277,7 +275,7 @@ namespace MongoDB.Driver.Internal
             }
         }
 
-        internal void SendMessage(int requestId, BsonBuffer buffer)
+        internal void SendMessage(BsonBuffer buffer, int requestId)
         {
             if (_state == MongoConnectionState.Closed) { throw new InvalidOperationException("Connection is closed."); }
             lock (_connectionLock)
@@ -309,7 +307,7 @@ namespace MongoDB.Driver.Internal
             using (var buffer = new BsonBuffer(new MultiChunkBuffer(BsonChunkPool.Default), true))
             {
                 message.WriteToBuffer(buffer);
-                SendMessage(message.RequestId, buffer);
+                SendMessage(buffer, message.RequestId);
             }
         }
 

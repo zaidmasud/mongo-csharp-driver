@@ -246,7 +246,7 @@
     <Compile Include="Operations\DatabaseOperation.cs" />
     <Compile Include="Operations\IConnectionProvider.cs" />
     <Compile Include="Operations\InsertOperation.cs" />
-    <Compile Include="Operations\QueryWrapper.cs" />
+    <Compile Include="Operations\QueryOperation.cs" />
     <Compile Include="Operations\ReadOperation.cs" />
     <Compile Include="Operations\RemoveOperation.cs" />
     <Compile Include="Operations\UpdateOperation.cs" />

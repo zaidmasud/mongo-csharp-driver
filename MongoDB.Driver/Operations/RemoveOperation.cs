@@ -41,20 +41,11 @@ namespace MongoDB.Driver.Operations
         {
             using (var buffer = new BsonBuffer(new MultiChunkBuffer(BsonChunkPool.Default), true))
             {
+                var readerSettings = GetNodeAdjustedReaderSettings(connection.ServerInstance);
                 var writerSettings = GetNodeAdjustedWriterSettings(connection.ServerInstance);
                 var message = new MongoDeleteMessage(writerSettings, CollectionFullName, _flags, _query);
                 message.WriteToBuffer(buffer);
-                if (WriteConcern.Enabled)
-                {
-                    WriteGetLastErrorMessage(buffer, WriteConcern, writerSettings);
-                    connection.SendMessage(message.RequestId, buffer);
-                    return ReadWriteConcernResult(connection);
-                }
-                else
-                {
-                    connection.SendMessage(message.RequestId, buffer);
-                    return null;
-                }
+                return SendMessageWithWriteConcern(connection, buffer, message.RequestId, readerSettings, writerSettings, WriteConcern);
             }
         }
     }

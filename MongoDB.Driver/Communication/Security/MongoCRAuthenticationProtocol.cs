@@ -14,10 +14,10 @@
 */
 
 using System;
-using MongoDB.Driver.Internal;
-using MongoDB.Driver.Operations;
 using MongoDB.Bson.IO;
 using MongoDB.Bson.Serialization;
+using MongoDB.Driver.Internal;
+using MongoDB.Driver.Operations;
 
 namespace MongoDB.Driver.Communication.Security
 {
@@ -95,10 +95,10 @@ namespace MongoDB.Driver.Communication.Security
                 readerSettings,
                 writerSettings,
                 command,
-                QueryFlags.SlaveOk,
-                null,
-                null,
-                null,
+                QueryFlags.None,
+                null, // options
+                null, // readPreference
+                null, // serializationOptions
                 resultSerializer);
 
             return commandOperation.Execute(connection, false);

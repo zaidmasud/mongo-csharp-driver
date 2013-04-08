@@ -13,168 +13,68 @@
 * limitations under the License.
 */
 
-using System.Collections.Generic;
+using MongoDB.Bson;
 using MongoDB.Bson.IO;
 using MongoDB.Bson.Serialization;
 using MongoDB.Driver.Internal;
-using MongoDB.Bson;
 
 namespace MongoDB.Driver.Operations
 {
-    internal class ReadOperation<TDocument> : DatabaseOperation
+    internal abstract class ReadOperation : DatabaseOperation
     {
-        private readonly int _batchSize;
-        private readonly IMongoFields _fields;
-        private readonly QueryFlags _flags;
-        private readonly int _limit;
-        private readonly BsonDocument _options;
-        private readonly IMongoQuery _query;
-        private readonly ReadPreference _readPreference;
-        private readonly IBsonSerializationOptions _serializationOptions;
-        private readonly IBsonSerializer _serializer;
-        private readonly int _skip;
-
-        public ReadOperation(
+        protected ReadOperation(
             string databaseName,
             string collectionName,
             BsonBinaryReaderSettings readerSettings,
-            BsonBinaryWriterSettings writerSettings,
-            int batchSize,
-            IMongoFields fields,
-            QueryFlags flags,
-            int limit,
-            BsonDocument options,
-            IMongoQuery query,
-            ReadPreference readPreference,
-            IBsonSerializationOptions serializationOptions,
-            IBsonSerializer serializer,
-            int skip)
+            BsonBinaryWriterSettings writerSettings)
             : base(databaseName, collectionName, readerSettings, writerSettings)
         {
-            _batchSize = batchSize;
-            _fields = fields;
-            _flags = flags;
-            _limit = limit;
-            _options = options;
-            _query = query;
-            _readPreference = readPreference;
-            _serializationOptions = serializationOptions;
-            _serializer = serializer;
-            _skip = skip;
         }
 
-        public IEnumerator<TDocument> Execute(IConnectionProvider connectionProvider)
+        protected IMongoQuery WrapQuery(IMongoQuery query, BsonDocument options, ReadPreference readPreference, bool forShardRouter)
         {
-            MongoReplyMessage<TDocument> reply = null;
-            try
+            BsonDocument formattedReadPreference = null;
+            if (forShardRouter && readPreference != null && readPreference.ReadPreferenceMode != ReadPreferenceMode.Primary)
             {
-                var count = 0;
-                var limit = (_limit >= 0) ? _limit : -_limit;
-
-                reply = GetFirstBatch(connectionProvider);
-                foreach (var document in reply.Documents)
+                BsonArray tagSetsArray = null;
+                if (readPreference.TagSets != null)
                 {
-                    if (limit != 0 && count == limit)
+                    tagSetsArray = new BsonArray();
+                    foreach (var tagSet in readPreference.TagSets)
                     {
-                        yield break;
-                    }
-                    yield return document;
-                    count++;
-                }
-
-                while (reply.CursorId != 0)
-                {
-                    reply = GetNextBatch(connectionProvider, reply.CursorId);
-                    foreach (var document in reply.Documents)
-                    {
-                        if (limit != 0 && count == limit)
+                        var tagSetDocument = new BsonDocument();
+                        foreach (var tag in tagSet)
                         {
-                            yield break;
+                            tagSetDocument.Add(tag.Name, tag.Value);
                         }
-                        yield return document;
-                        count++;
+                        tagSetsArray.Add(tagSetDocument);
                     }
                 }
-            }
-            finally
-            {
-                if (reply != null && reply.CursorId != 0)
+
+                if (tagSetsArray != null || readPreference.ReadPreferenceMode != ReadPreferenceMode.SecondaryPreferred)
                 {
-                    KillCursor(connectionProvider, reply.CursorId);
+                    formattedReadPreference = new BsonDocument
+                    {
+                        { "mode", MongoUtils.ToCamelCase(readPreference.ReadPreferenceMode.ToString()) },
+                        { "tags", tagSetsArray, tagSetsArray != null } // optional
+                    };
                 }
             }
-        }
 
-        private MongoReplyMessage<TDocument> GetFirstBatch(IConnectionProvider connectionProvider)
-        {
-            // some of these weird conditions are necessary to get commands to run correctly
-            // specifically numberToReturn has to be 1 or -1 for commands
-            int numberToReturn;
-            if (_limit < 0)
+            if (options == null && formattedReadPreference == null)
             {
-                numberToReturn = _limit;
-            }
-            else if (_limit == 0)
-            {
-                numberToReturn = _batchSize;
-            }
-            else if (_batchSize == 0)
-            {
-                numberToReturn = _limit;
-            }
-            else if (_limit < _batchSize)
-            {
-                numberToReturn = _limit;
+                return query;
             }
             else
             {
-                numberToReturn = _batchSize;
-            }
-
-            var connection = connectionProvider.AcquireConnection();
-            try
-            {
-                var readerSettings = GetNodeAdjustedReaderSettings(connection.ServerInstance);
-                var writerSettings = GetNodeAdjustedWriterSettings(connection.ServerInstance);
-                var forShardRouter = connection.ServerInstance.InstanceType == MongoServerInstanceType.ShardRouter;
-                var wrappedQuery = QueryWrapper.WrapQuery(_query, _options, _readPreference, forShardRouter);
-                var queryMessage = new MongoQueryMessage(writerSettings, CollectionFullName, _flags, _skip, numberToReturn, wrappedQuery, _fields);
-                connection.SendMessage(queryMessage);
-                return connection.ReceiveMessage<TDocument>(readerSettings, _serializer, _serializationOptions);
-            }
-            finally
-            {
-                connectionProvider.ReleaseConnection(connection);
-            }
-        }
-
-        private MongoReplyMessage<TDocument> GetNextBatch(IConnectionProvider connectionProvider, long cursorId)
-        {
-            var connection = connectionProvider.AcquireConnection();
-            try
-            {
-                var readerSettings = GetNodeAdjustedReaderSettings(connection.ServerInstance);
-                var getMoreMessage = new MongoGetMoreMessage(CollectionFullName, _batchSize, cursorId);
-                connection.SendMessage(getMoreMessage);
-                return connection.ReceiveMessage<TDocument>(readerSettings, _serializer, _serializationOptions);
-            }
-            finally
-            {
-                connectionProvider.ReleaseConnection(connection);
-            }
-        }
-
-        private void KillCursor(IConnectionProvider connectionProvider, long cursorId)
-        {
-            var connection = connectionProvider.AcquireConnection();
-            try
-            {
-                var killCursorsMessage = new MongoKillCursorsMessage(cursorId);
-                connection.SendMessage(killCursorsMessage);
-            }
-            finally
-            {
-                connectionProvider.ReleaseConnection(connection);
+                var queryDocument = (query == null) ? (BsonValue)new BsonDocument() : BsonDocumentWrapper.Create(query);
+                var wrappedQuery = new QueryDocument
+                {
+                    { "$query", queryDocument },
+                    { "$readPreference", formattedReadPreference, formattedReadPreference != null }, // only if sending query to a mongos
+                };
+                wrappedQuery.Merge(options);
+                return wrappedQuery;
             }
         }
     }

@@ -13,15 +13,14 @@
 * limitations under the License.
 */
 
-using System.Collections.Generic;
+using MongoDB.Bson;
 using MongoDB.Bson.IO;
 using MongoDB.Bson.Serialization;
 using MongoDB.Driver.Internal;
-using MongoDB.Bson;
 
 namespace MongoDB.Driver.Operations
 {
-    internal class CommandOperation<TCommandResult> : DatabaseOperation where TCommandResult : CommandResult
+    internal class CommandOperation<TCommandResult> : ReadOperation where TCommandResult : CommandResult
     {
         private readonly IMongoCommand _command;
         private readonly QueryFlags _flags;
@@ -55,7 +54,7 @@ namespace MongoDB.Driver.Operations
             var readerSettings = GetNodeAdjustedReaderSettings(connection.ServerInstance);
             var writerSettings = GetNodeAdjustedWriterSettings(connection.ServerInstance);
             var forShardRouter = connection.ServerInstance.InstanceType == MongoServerInstanceType.ShardRouter;
-            var wrappedQuery = QueryWrapper.WrapQuery(_command, _options, _readPreference, forShardRouter);
+            var wrappedQuery = WrapQuery(_command, _options, _readPreference, forShardRouter);
             var queryMessage = new MongoQueryMessage(writerSettings, CollectionFullName, _flags, 0, -1, wrappedQuery, null);
             connection.SendMessage(queryMessage);
 

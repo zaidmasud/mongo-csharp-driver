@@ -744,7 +744,7 @@ namespace MongoDB.Driver
                 }
             }
 
-            var readOperation = new ReadOperation<TDocument>(
+            var readOperation = new QueryOperation<TDocument>(
                 Database.Name,
                 Collection.Name,
                 readerSettings,
@@ -761,40 +761,6 @@ namespace MongoDB.Driver
                 Skip);
 
             return readOperation.Execute(new MongoCursorConnectionProvider(Server, readPreference));
-        }
-
-        private class MongoCursorConnectionProvider : IConnectionProvider
-        {
-            private readonly MongoServer _server;
-            private readonly ReadPreference _readPreference;
-            private MongoServerInstance _serverInstance;
-
-            public MongoCursorConnectionProvider(MongoServer server, ReadPreference readPreference)
-            {
-                _server = server;
-                _readPreference = readPreference;
-            }
-
-            public MongoConnection AcquireConnection()
-            {
-                if (_serverInstance == null)
-                {
-                    // first time we need a connection let Server.AcquireConnection pick the server instance
-                    var connection = _server.AcquireConnection(_readPreference);
-                    _serverInstance = connection.ServerInstance;
-                    return connection;
-                }
-                else
-                {
-                    // all subsequent requests for the same cursor must go to the same server instance
-                    return _server.AcquireConnection(_serverInstance);
-                }
-            }
-
-            public void ReleaseConnection(MongoConnection connection)
-            {
-                _server.ReleaseConnection(connection);
-            }
         }
 
         /// <summary>
@@ -1010,6 +976,41 @@ namespace MongoDB.Driver
         protected override IEnumerator IEnumerableGetEnumerator()
         {
             return GetEnumerator();
+        }
+
+        // nested classes
+        private class MongoCursorConnectionProvider : IConnectionProvider
+        {
+            private readonly MongoServer _server;
+            private readonly ReadPreference _readPreference;
+            private MongoServerInstance _serverInstance;
+
+            public MongoCursorConnectionProvider(MongoServer server, ReadPreference readPreference)
+            {
+                _server = server;
+                _readPreference = readPreference;
+            }
+
+            public MongoConnection AcquireConnection()
+            {
+                if (_serverInstance == null)
+                {
+                    // first time we need a connection let Server.AcquireConnection pick the server instance
+                    var connection = _server.AcquireConnection(_readPreference);
+                    _serverInstance = connection.ServerInstance;
+                    return connection;
+                }
+                else
+                {
+                    // all subsequent requests for the same cursor must go to the same server instance
+                    return _server.AcquireConnection(_serverInstance);
+                }
+            }
+
+            public void ReleaseConnection(MongoConnection connection)
+            {
+                _server.ReleaseConnection(connection);
+            }
         }
     }
 }
