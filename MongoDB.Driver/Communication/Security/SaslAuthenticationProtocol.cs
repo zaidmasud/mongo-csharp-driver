@@ -133,7 +133,7 @@ namespace MongoDB.Driver.Communication.Security
                 null, // serializationOptions
                 resultSerializer);
 
-            return commandOperation.Execute(connection, true);
+            return commandOperation.Execute(connection);
         }
     }
 }

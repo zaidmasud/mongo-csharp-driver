@@ -49,7 +49,7 @@ namespace MongoDB.Driver.Operations
             _serializer = serializer;
         }
 
-        public TCommandResult Execute(MongoConnection connection, bool throwOnError)
+        public TCommandResult Execute(MongoConnection connection)
         {
             var readerSettings = GetNodeAdjustedReaderSettings(connection.ServerInstance);
             var writerSettings = GetNodeAdjustedWriterSettings(connection.ServerInstance);
@@ -62,7 +62,7 @@ namespace MongoDB.Driver.Operations
             var commandResult = reply.Documents[0];
             commandResult.Command = _command;
 
-            if (throwOnError && !commandResult.Ok)
+            if (!commandResult.Ok)
             {
                 throw new MongoCommandException(commandResult);
             }

@@ -40,19 +40,23 @@ namespace MongoDB.Driver.Communication.Security
         /// <param name="credential">The credential.</param>
         public void Authenticate(MongoConnection connection, MongoCredential credential)
         {
-            var nonceCommand = new CommandDocument("getnonce", 1);
-            var commandResult = RunCommand(connection, credential.Source, nonceCommand);
-            if (!commandResult.Ok)
+            string nonce;
+            try
             {
-                throw new MongoAuthenticationException(
-                    "Error getting nonce for authentication.",
-                    new MongoCommandException(commandResult));
+                var nonceCommand = new CommandDocument("getnonce", 1);
+                var nonceResult = RunCommand(connection, credential.Source, nonceCommand);
+                nonce = nonceResult.Response["nonce"].AsString;
+            }
+            catch (Exception ex)
+            {
+                throw new MongoAuthenticationException("Error getting nonce for authentication.", ex);
             }
 
-            var nonce = commandResult.Response["nonce"].AsString;
-            var passwordDigest = ((PasswordEvidence)credential.Evidence).ComputeMongoCRPasswordDigest(credential.Username);
-            var digest = MongoUtils.Hash(nonce + credential.Username + passwordDigest);
-            var authenticateCommand = new CommandDocument
+            try
+            {
+                var passwordDigest = ((PasswordEvidence)credential.Evidence).ComputeMongoCRPasswordDigest(credential.Username);
+                var digest = MongoUtils.Hash(nonce + credential.Username + passwordDigest);
+                var authenticateCommand = new CommandDocument
                 {
                     { "authenticate", 1 },
                     { "user", credential.Username },
@@ -60,13 +64,12 @@ namespace MongoDB.Driver.Communication.Security
                     { "key", digest }
                 };
 
-            commandResult = RunCommand(connection, credential.Source, authenticateCommand);
-            if (!commandResult.Ok)
+                RunCommand(connection, credential.Source, authenticateCommand);
+            }
+            catch (Exception ex)
             {
                 var message = string.Format("Invalid credential for database '{0}'.", credential.Source);
-                throw new MongoAuthenticationException(
-                    message,
-                    new MongoCommandException(commandResult));
+                throw new MongoAuthenticationException(message, ex);
             }
         }
 
@@ -101,7 +104,7 @@ namespace MongoDB.Driver.Communication.Security
                 null, // serializationOptions
                 resultSerializer);
 
-            return commandOperation.Execute(connection, false);
+            return commandOperation.Execute(connection);
         }
     }
 }

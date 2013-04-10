@@ -1032,7 +1032,7 @@ namespace MongoDB.Driver
             var connection = _server.AcquireConnection(readPreference);
             try
             {
-                return commandOperation.Execute(connection, true);
+                return commandOperation.Execute(connection);
             }
             finally
             {
