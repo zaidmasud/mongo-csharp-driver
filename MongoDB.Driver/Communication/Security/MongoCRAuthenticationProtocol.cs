@@ -47,7 +47,7 @@ namespace MongoDB.Driver.Communication.Security
                 var nonceResult = RunCommand(connection, credential.Source, nonceCommand);
                 nonce = nonceResult.Response["nonce"].AsString;
             }
-            catch (Exception ex)
+            catch (MongoCommandException ex)
             {
                 throw new MongoAuthenticationException("Error getting nonce for authentication.", ex);
             }
@@ -66,7 +66,7 @@ namespace MongoDB.Driver.Communication.Security
 
                 RunCommand(connection, credential.Source, authenticateCommand);
             }
-            catch (Exception ex)
+            catch (MongoCommandException ex)
             {
                 var message = string.Format("Invalid credential for database '{0}'.", credential.Source);
                 throw new MongoAuthenticationException(message, ex);

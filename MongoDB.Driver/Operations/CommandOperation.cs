@@ -59,6 +59,13 @@ namespace MongoDB.Driver.Operations
             connection.SendMessage(queryMessage);
 
             var reply = connection.ReceiveMessage<TCommandResult>(readerSettings, _serializer, _serializationOptions);
+            if (reply.NumberReturned == 0)
+            {
+                var commandDocument = _command.ToBsonDocument();
+                var commandName = (commandDocument.ElementCount == 0) ? "(no name)" : commandDocument.GetElement(0).Name;
+                var message = string.Format("Command '{0}' failed. No response returned.", commandName);
+                throw new MongoCommandException(message);
+            }
             var commandResult = reply.Documents[0];
             commandResult.Command = _command;
 
