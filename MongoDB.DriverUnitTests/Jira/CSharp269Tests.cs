@@ -13,6 +13,7 @@
 * limitations under the License.
 */
 
+using System;
 using System.IO;
 using System.Text;
 using MongoDB.Driver;
@@ -23,6 +24,7 @@ namespace MongoDB.DriverUnitTests.Jira.CSharp269
     [TestFixture]
     public class CSharp269Tests
     {
+        private MongoServer _server;
         private MongoDatabase _database;
 
         [TestFixtureSetUp]
@@ -31,8 +33,8 @@ namespace MongoDB.DriverUnitTests.Jira.CSharp269
             var clientSettings = Configuration.TestClient.Settings.Clone();
             clientSettings.ReadPreference = ReadPreference.SecondaryPreferred;
             var client = new MongoClient(clientSettings); // ReadPreference=SecondaryPreferred
-            var server = client.GetServer();
-            _database = server.GetDatabase(Configuration.TestDatabase.Name);
+            _server = client.GetServer();
+            _database = _server.GetDatabase(Configuration.TestDatabase.Name);
             _database.GridFS.Files.Drop();
             _database.GridFS.Chunks.Drop();
         }
@@ -47,12 +49,26 @@ namespace MongoDB.DriverUnitTests.Jira.CSharp269
                 _database.GridFS.Upload(stream, "HelloWorld.txt");
             }
 
-            using (var stream = new MemoryStream())
+            // use RequestStart so that if we are running this test against a replica set we will bind to a specific secondary
+            using (_server.RequestStart(_database, ReadPreference.SecondaryPreferred))
             {
-                _database.GridFS.Download(stream, "HelloWorld.txt");
-                var downloadedBytes = stream.ToArray();
-                var downloadedText = Encoding.UTF8.GetString(downloadedBytes);
-                Assert.AreEqual("HelloWorld", downloadedText);
+                // wait up to 5 seconds for the GridFS file to be replicated before trying to Download it
+                var timeoutAt = DateTime.UtcNow.AddSeconds(5);
+                while (!_database.GridFS.Exists("HelloWorld.txt"))
+                {
+                    if (DateTime.UtcNow >= timeoutAt)
+                    {
+                        throw new TimeoutException("HelloWorld.txt failed to propagate to secondary");
+                    }
+                }
+
+                using (var stream = new MemoryStream())
+                {
+                    _database.GridFS.Download(stream, "HelloWorld.txt");
+                    var downloadedBytes = stream.ToArray();
+                    var downloadedText = Encoding.UTF8.GetString(downloadedBytes);
+                    Assert.AreEqual("HelloWorld", downloadedText);
+                }
             }
         }
     }
