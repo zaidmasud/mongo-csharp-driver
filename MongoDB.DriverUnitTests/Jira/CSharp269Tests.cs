@@ -18,6 +18,7 @@ using System.IO;
 using System.Text;
 using MongoDB.Driver;
 using NUnit.Framework;
+using System.Threading;
 
 namespace MongoDB.DriverUnitTests.Jira.CSharp269
 {
@@ -52,14 +53,15 @@ namespace MongoDB.DriverUnitTests.Jira.CSharp269
             // use RequestStart so that if we are running this test against a replica set we will bind to a specific secondary
             using (_server.RequestStart(_database, ReadPreference.SecondaryPreferred))
             {
-                // wait up to 5 seconds for the GridFS file to be replicated before trying to Download it
-                var timeoutAt = DateTime.UtcNow.AddSeconds(5);
+                // wait for the GridFS file to be replicated before trying to Download it
+                var timeoutAt = DateTime.UtcNow.AddSeconds(30);
                 while (!_database.GridFS.Exists("HelloWorld.txt"))
                 {
                     if (DateTime.UtcNow >= timeoutAt)
                     {
                         throw new TimeoutException("HelloWorld.txt failed to propagate to secondary");
                     }
+                    Thread.Sleep(TimeSpan.FromMilliseconds(1));
                 }
 
                 using (var stream = new MemoryStream())
