@@ -289,6 +289,14 @@ namespace MongoDB.Driver
         }
 
         /// <summary>
+        /// Gets the type of the proxy.
+        /// </summary>
+        public MongoServerProxyType ProxyType
+        {
+            get { return _serverProxy.ProxyType; }
+        }
+
+        /// <summary>
         /// Gets the name of the replica set (null if not connected to a replica set).
         /// </summary>
         public virtual string ReplicaSetName

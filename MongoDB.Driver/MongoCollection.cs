@@ -1763,9 +1763,12 @@ namespace MongoDB.Driver
                 GuidRepresentation = _settings.GuidRepresentation
             };
             var readPreference = _settings.ReadPreference;
-            if (readPreference != ReadPreference.Primary && !CanCommandBeSentToSecondary.Delegate(command.ToBsonDocument()))
+            if (readPreference != ReadPreference.Primary)
             {
-                readPreference = ReadPreference.Primary;
+                if (_server.ProxyType == MongoServerProxyType.ReplicaSet  && !CanCommandBeSentToSecondary.Delegate(command.ToBsonDocument()))
+                {
+                    readPreference = ReadPreference.Primary;
+                }
             }
             var flags = (readPreference == ReadPreference.Primary) ? QueryFlags.None : QueryFlags.SlaveOk;
 
