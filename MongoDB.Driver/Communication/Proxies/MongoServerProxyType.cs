@@ -21,7 +21,7 @@ namespace MongoDB.Driver.Internal
     /// <summary>
     /// Represents the type of an IMongoServerProxy.
     /// </summary>
-    public enum MongoServerProxyType
+    internal enum MongoServerProxyType
     {
         /// <summary>
         /// The type of the proxy is not yet known.
