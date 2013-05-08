@@ -55,7 +55,6 @@ namespace MongoDB.Driver.Internal
         private MongoConnectionPool _connectionPool;
         private int _generationId; // the generationId of the connection pool at the time this connection was created
         private MongoConnectionState _state;
-        private TcpClient _tcpClient;
         private Stream _stream; // either a NetworkStream or an SslStream wrapping a NetworkStream
         private DateTime _createdAt;
         private DateTime _lastUsedAt; // set every time the connection is Released
@@ -155,16 +154,6 @@ namespace MongoDB.Driver.Internal
                         try { _stream.Close(); } catch { } // ignore exceptions
                         _stream = null;
                     }
-                    if (_tcpClient != null)
-                    {
-                        if (_tcpClient.Connected)
-                        {
-                            // even though MSDN says TcpClient.Close doesn't close the underlying socket
-                            // it actually does (as proven by disassembling TcpClient and by experimentation)
-                            try { _tcpClient.Close(); } catch { } // ignore exceptions
-                        }
-                        _tcpClient = null;
-                    }
                     _state = MongoConnectionState.Closed;
                 }
             }
@@ -185,13 +174,17 @@ namespace MongoDB.Driver.Internal
             }
 
             var ipEndPoint = _serverInstance.GetIPEndPoint();
-            var tcpClient = new TcpClient(ipEndPoint.AddressFamily);
-            tcpClient.NoDelay = true; // turn off Nagle
-            tcpClient.ReceiveBufferSize = MongoDefaults.TcpReceiveBufferSize;
-            tcpClient.SendBufferSize = MongoDefaults.TcpSendBufferSize;
-            tcpClient.Connect(ipEndPoint);
+            var protocolType = (ipEndPoint.AddressFamily == AddressFamily.InterNetworkV6) ? ProtocolType.IPv6 : ProtocolType.IP;
+            var socket = new Socket(ipEndPoint.AddressFamily, SocketType.Stream, protocolType);
 
-            var stream = (Stream)tcpClient.GetStream();
+            // set properties after connecting (works better on Mono)
+            socket.Connect(ipEndPoint);
+            socket.NoDelay = true; // turn off Nagle
+            socket.ReceiveBufferSize = MongoDefaults.TcpReceiveBufferSize;
+            socket.SendBufferSize = MongoDefaults.TcpSendBufferSize;
+
+            var streamOwnsSocket = true;
+            var stream = (Stream)new NetworkStream(socket, streamOwnsSocket);
             if (_serverInstance.Settings.UseSsl)
             {
                 var checkCertificateRevocation = true;
@@ -215,7 +208,8 @@ namespace MongoDB.Driver.Internal
                     serverCertificateValidationCallback = AcceptAnyCertificate;
                 }
 
-                var sslStream = new SslStream(stream, false, serverCertificateValidationCallback, clientCertificateSelectionCallback);
+                var leaveInnerStreamOpen = false;
+                var sslStream = new SslStream(stream, leaveInnerStreamOpen, serverCertificateValidationCallback, clientCertificateSelectionCallback);
                 try
                 {
                     var targetHost = _serverInstance.Address.Host;
@@ -225,14 +219,11 @@ namespace MongoDB.Driver.Internal
                 {
                     try { stream.Close(); }
                     catch { } // ignore exceptions
-                    try { tcpClient.Close(); }
-                    catch { } // ignore exceptions
                     throw;
                 }
                 stream = sslStream;
             }
 
-            _tcpClient = tcpClient;
             _stream = stream;
             _state = MongoConnectionState.Open;
 
