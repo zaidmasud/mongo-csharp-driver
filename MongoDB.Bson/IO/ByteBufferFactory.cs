@@ -85,6 +85,10 @@ namespace MongoDB.Bson.IO
                 offset += bytesRead;
                 count -= bytesRead;
             }
+            if (!BitConverter.IsLittleEndian)
+            {
+                Array.Reverse(lengthBytes);
+            }
             var length = BitConverter.ToInt32(lengthBytes, 0);
 
             var buffer = Create(BsonChunkPool.Default, length);

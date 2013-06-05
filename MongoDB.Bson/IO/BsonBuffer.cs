@@ -275,6 +275,7 @@ namespace MongoDB.Bson.IO
         {
             ThrowIfDisposed();
 
+            // TODO: research whether representation of doubles is affected by endian-ness
             var segment = _byteBuffer.ReadBackingBytes(8);
             if (segment.Count >= 8)
             {
@@ -308,6 +309,10 @@ namespace MongoDB.Bson.IO
             else
             {
                 var bytes = _byteBuffer.ReadBytes(4);
+                if (!BitConverter.IsLittleEndian)
+                {
+                    Array.Reverse(bytes);
+                }
                 return BitConverter.ToInt32(bytes, 0);
             }
         }
@@ -320,14 +325,23 @@ namespace MongoDB.Bson.IO
         {
             ThrowIfDisposed();
 
-            var segment = _byteBuffer.ReadBackingBytes(8);
-            if (segment.Count >= 8)
+            if (BitConverter.IsLittleEndian)
             {
-                return BitConverter.ToInt64(segment.Array, segment.Offset);
+                var segment = _byteBuffer.ReadBackingBytes(8);
+                if (segment.Count >= 8)
+                {
+                    return BitConverter.ToInt64(segment.Array, segment.Offset);
+                }
+                else
+                {
+                    var bytes = _byteBuffer.ReadBytes(8);
+                    return BitConverter.ToInt64(bytes, 0);
+                }
             }
             else
             {
                 var bytes = _byteBuffer.ReadBytes(8);
+                Array.Reverse(bytes);
                 return BitConverter.ToInt64(bytes, 0);
             }
         }
@@ -578,6 +592,7 @@ namespace MongoDB.Bson.IO
         public void WriteDouble(double value)
         {
             ThrowIfDisposed();
+            // TODO: research whether representation of doubles is affected by endian-ness
             _byteBuffer.WriteBytes(BitConverter.GetBytes(value));
         }
 
@@ -600,7 +615,12 @@ namespace MongoDB.Bson.IO
             }
             else
             {
-                _byteBuffer.WriteBytes(BitConverter.GetBytes(value));
+                var bytes = BitConverter.GetBytes(value);
+                if (!BitConverter.IsLittleEndian)
+                {
+                    Array.Reverse(bytes);
+                }
+                _byteBuffer.WriteBytes(bytes);
             }
         }
 
@@ -611,7 +631,12 @@ namespace MongoDB.Bson.IO
         public void WriteInt64(long value)
         {
             ThrowIfDisposed();
-            _byteBuffer.WriteBytes(BitConverter.GetBytes(value));
+            var bytes = BitConverter.GetBytes(value);
+            if (!BitConverter.IsLittleEndian)
+            {
+                Array.Reverse(bytes);
+            }
+            _byteBuffer.WriteBytes(bytes);
         }
 
         /// <summary>

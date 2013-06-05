@@ -68,6 +68,7 @@ namespace MongoDB.BsonUnitTests.Serialization
 
         private long GetTicks(byte[] bytes)
         {
+            // note: bytes in Guid already match BitConverter endianness
             var a = (ulong)BitConverter.ToUInt32(bytes, 0);
             var b = (ulong)BitConverter.ToUInt16(bytes, 4);
             var c = (ulong)BitConverter.ToUInt16(bytes, 6);
