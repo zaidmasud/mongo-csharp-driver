@@ -46,6 +46,7 @@ namespace MongoDB.Bson.Serialization
         private bool _ignoreIfDefault;
         private bool _ignoreIfNull;
         private object _defaultValue;
+        private Func<object> _defaultValueCreator;
         private bool _defaultValueSpecified;
 
         // constructors
@@ -219,7 +220,7 @@ namespace MongoDB.Bson.Serialization
         /// </summary>
         public object DefaultValue
         {
-            get { return _defaultValue; }
+            get { return _defaultValueCreator != null ? _defaultValueCreator() : _defaultValue; }
         }
 
         /// <summary>
@@ -259,7 +260,7 @@ namespace MongoDB.Bson.Serialization
         {
             if (_defaultValueSpecified)
             {
-                this.Setter(obj, _defaultValue);
+                this.Setter(obj, DefaultValue);
             }
         }
 
@@ -303,6 +304,7 @@ namespace MongoDB.Bson.Serialization
         public BsonMemberMap Reset()
         {
             _defaultValue = GetDefaultValue(_memberType);
+            _defaultValueCreator = null;
             _defaultValueSpecified = false;
             _elementName = _memberInfo.Name;
             _idGenerator = null;
@@ -318,6 +320,19 @@ namespace MongoDB.Bson.Serialization
         }
 
         /// <summary>
+        /// Sets the default value creator.
+        /// </summary>
+        /// <param name="defaultValueCreator">The default value creator.</param>
+        /// <returns>The member map.</returns>
+        public BsonMemberMap SetDefaultValue(Func<object> defaultValueCreator)
+        {
+            _defaultValue = defaultValueCreator(); // need an instance to compare against
+            _defaultValueCreator = defaultValueCreator;
+            _defaultValueSpecified = true;
+            return this;
+        }
+
+        /// <summary>
         /// Sets the default value.
         /// </summary>
         /// <param name="defaultValue">The default value.</param>
@@ -325,6 +340,7 @@ namespace MongoDB.Bson.Serialization
         public BsonMemberMap SetDefaultValue(object defaultValue)
         {
             _defaultValue = defaultValue;
+            _defaultValueCreator = null;
             _defaultValueSpecified = true;
             return this;
         }
