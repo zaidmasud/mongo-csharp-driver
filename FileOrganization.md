@@ -16,7 +16,9 @@ Our base starting point is:
 Framework Design Guidelines (2nd Edition)
 By Krzysztof Cwalina and Brad Abrams
 
-Which has the following to say:
+Which we use almost verbatim with a few minor modifications (see below).
+
+Framework Design Guidelines has the following to say:
 
 - Do not have more than one public type in a source file, unless they differ
 only in the number of generic parameters or one is nested in the other
@@ -57,10 +59,9 @@ We use the following slightly modified guidelines:
 - Group the members into the following sections in the specified order:
 -- All fields
 -- All constructors
+-- All events
 -- All properties
 -- All operators (including explicit and implicit conversions)
--- All methods
--- All events
 -- All methods
 -- All explicit interface implementations
 -- All nested types
@@ -74,7 +75,7 @@ Within each section, order members as follows:
 doubt use Visual Studio's drop down of member names and use the same 
 order Visual Studio displays them in)
 
-Exception: constructors are sorted only alphabetically, not by visibility.
+Exception: constructors are sorted only alphabetically (by parameter types and names), not by visibility.
 
 - Precede each section with a comment, e.g.:
     // private static fields
