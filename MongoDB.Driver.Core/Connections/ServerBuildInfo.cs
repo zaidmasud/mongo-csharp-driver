@@ -93,10 +93,11 @@ namespace MongoDB.Driver.Core.Connections
         /// <summary>
         /// Creates a new instance of ServerBuildInfo initialized from the result of a buildinfo command.
         /// </summary>
-        /// <param name="response">A CommandResult.</param>
+        /// <param name="commandResult">A CommandResult.</param>
         /// <returns>A ServerBuildInfo.</returns>
-        public static ServerBuildInfo FromCommandResult(BsonDocument response)
+        public static ServerBuildInfo FromCommandResult(CommandResult commandResult)
         {
+            var response = commandResult.Response;
             return new ServerBuildInfo(
                 response["bits"].ToInt32(),
                 response["gitVersion"].AsString,
