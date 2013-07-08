@@ -64,14 +64,14 @@ namespace MongoDB.Driver.Core.Connections
             return false;
         }
 
-        public static BsonDocument RunCommand(string databaseName, BsonDocument command, IConnection connection)
+        public static BsonDocument RunCommand(DatabaseNamespace databaseNamespace, BsonDocument command, IConnection connection)
         {
-            Ensure.IsNotNull("databaseName", databaseName);
+            Ensure.IsNotNull("databaseNamespace", databaseNamespace);
             Ensure.IsNotNull("command", command);
             Ensure.IsNotNull("connection", connection);
 
             var queryMessage = new QueryMessage(
-                new MongoNamespace(databaseName, MongoNamespace.CommandCollectionName),
+                databaseNamespace.CommandCollection,
                 command,
                 QueryFlags.SlaveOk,
                 0,

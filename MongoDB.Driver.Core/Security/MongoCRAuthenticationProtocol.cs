@@ -43,7 +43,7 @@ namespace MongoDB.Driver.Core.Security
         public void Authenticate(IConnection connection, MongoCredential credential)
         {
             var nonceCommand = new BsonDocument("getnonce", 1);
-            var nonceResult = CommandHelper.RunCommand(credential.Source, nonceCommand, connection);
+            var nonceResult = CommandHelper.RunCommand(new DatabaseNamespace(credential.Source), nonceCommand, connection);
             if (!CommandHelper.IsResultOk(nonceResult))
             {
                 throw new MongoAuthenticationException("Error getting nonce for authentication.", nonceResult);
@@ -60,7 +60,7 @@ namespace MongoDB.Driver.Core.Security
                 { "key", digest }
             };
 
-            var authenticateResult = CommandHelper.RunCommand(credential.Source, authenticateCommand, connection);
+            var authenticateResult = CommandHelper.RunCommand(new DatabaseNamespace(credential.Source), authenticateCommand, connection);
             if (!CommandHelper.IsResultOk(authenticateResult))
             {
                 var message = string.Format("Invalid credential for database '{0}'.", credential.Source);
