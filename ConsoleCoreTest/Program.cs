@@ -148,20 +148,16 @@ namespace MongoDB.DriverUnitTests.Jira
             while (true)
             {
                 var i = rand.Next(0, 10000);
-                BsonDocument doc;
+                BsonDocument doc = null;
                 try
                 {
                     using (var node = cluster.SelectServer(new ReadPreferenceServerSelector(ReadPreference.SecondaryPreferred), TimeSpan.FromMilliseconds(Timeout.Infinite), CancellationToken.None))
                     using (var channel = node.GetChannel(TimeSpan.FromMilliseconds(Timeout.Infinite), CancellationToken.None))
                     {
-                        var result = Query(channel, new BsonDocument("i", i));
-                        if (result.MoveNext())
+                        foreach (var result in Query(channel, new BsonDocument("i", i)))
                         {
-                            doc = result.Current;
-                        }
-                        else
-                        {
-                            doc = null;
+                            doc = result;
+                            break;
                         }
                     }
 
@@ -227,7 +223,7 @@ namespace MongoDB.DriverUnitTests.Jira
             insertOp.Execute(connection);
         }
 
-        private static IEnumerator<BsonDocument> Query(IServerChannel connection, BsonDocument query)
+        private static IEnumerable<BsonDocument> Query(IServerChannel connection, BsonDocument query)
         {
             var queryOp = new QueryOperation<BsonDocument>(
                 new MongoNamespace("foo", "bar"),

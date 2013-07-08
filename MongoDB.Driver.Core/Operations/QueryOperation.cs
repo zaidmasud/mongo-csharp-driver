@@ -102,8 +102,8 @@ namespace MongoDB.Driver.Core.Operations
         /// Executes the Query operation.
         /// </summary>
         /// <param name="channelProvider">The channel provider.</param>
-        /// <returns>An enumerator to enumerate over the results.</returns>
-        public IEnumerator<TDocument> Execute(ICursorChannelProvider channelProvider)
+        /// <returns>An sequence of results.</returns>
+        public IEnumerable<TDocument> Execute(ICursorChannelProvider channelProvider)
         {
             Ensure.IsNotNull("channelProvider", channelProvider);
 
