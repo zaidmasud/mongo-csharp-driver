@@ -103,7 +103,7 @@ namespace MongoDB.Driver.Core.Operations
         /// </summary>
         /// <param name="channelProvider">The channel provider.</param>
         /// <returns>An enumerator to enumerate over the results.</returns>
-        public IEnumerator<TDocument> Execute(ICursorChannelProvider channelProvider)
+        public IEnumerator<TDocument> Execute(IOperationChannelProvider channelProvider)
         {
             Ensure.IsNotNull("channelProvider", channelProvider);
 
@@ -122,7 +122,7 @@ namespace MongoDB.Driver.Core.Operations
         }
 
         // private methods
-        private IEnumerable<TDocument> DeserializeDocuments(ICursorChannelProvider channelProvider)
+        private IEnumerable<TDocument> DeserializeDocuments(IOperationChannelProvider channelProvider)
         {
             var readerSettings = GetServerAdjustedReaderSettings(channelProvider.Server);
 
@@ -169,7 +169,7 @@ namespace MongoDB.Driver.Core.Operations
             }
         }
 
-        private ReplyMessage GetFirstBatch(ICursorChannelProvider channelProvider)
+        private ReplyMessage GetFirstBatch(IOperationChannelProvider channelProvider)
         {
             // some of these weird conditions are necessary to get commands to run correctly
             // specifically numberToReturn has to be 1 or -1 for commands
@@ -220,7 +220,7 @@ namespace MongoDB.Driver.Core.Operations
             }
         }
 
-        private ReplyMessage GetNextBatch(ICursorChannelProvider channelProvider, long cursorId)
+        private ReplyMessage GetNextBatch(IOperationChannelProvider channelProvider, long cursorId)
         {
             using (var channel = channelProvider.GetChannel())
             {
@@ -238,7 +238,7 @@ namespace MongoDB.Driver.Core.Operations
             }
         }
 
-        private void KillCursor(ICursorChannelProvider channelProvider, long cursorId)
+        private void KillCursor(IOperationChannelProvider channelProvider, long cursorId)
         {
             using (var channel = channelProvider.GetChannel())
             {

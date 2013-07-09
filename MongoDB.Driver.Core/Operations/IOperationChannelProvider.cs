@@ -20,7 +20,7 @@ namespace MongoDB.Driver.Core.Operations
     /// <summary>
     /// Represents a source of channels.
     /// </summary>
-    public interface ICursorChannelProvider
+    public interface IOperationChannelProvider
     {
         /// <summary>
         /// Gets the server.

@@ -68,6 +68,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Connections\ConnectionBase.cs" />
+    <Compile Include="Connections\DisposalProtectedServerChannel.cs" />
     <Compile Include="Connections\IConnection.cs" />
     <Compile Include="Connections\PipelinedChannelProvider.cs" />
     <Compile Include="Connections\PipelinedChannelProviderFactory.cs" />
@@ -92,7 +93,8 @@
     <Compile Include="MongoDriverException.cs" />
     <Compile Include="Connections\MongoSocketException.cs" />
     <Compile Include="Connections\IRequestPacket.cs" />
-    <Compile Include="PrimaryServerSelector.cs" />
+    <Compile Include="Operations\IOperation.cs" />
+    <Compile Include="Operations\IOperationChannelProvider.cs" />
     <Compile Include="Protocol\BufferedRequestPacket.cs" />
     <Compile Include="Protocol\InsertMessage.cs" />
     <Compile Include="Protocol\OpCode.cs" />
@@ -140,6 +142,13 @@
     <Compile Include="Events\IEventPublisher.cs" />
     <Compile Include="Events\ConnectionMessageReceivedEvent.cs" />
     <Compile Include="Events\ConnectionPacketSendingEvent.cs" />
+    <Compile Include="Sessions\ClusterSession.cs" />
+    <Compile Include="Sessions\ISession.cs" />
+    <Compile Include="Sessions\EventuallyConsistentSession.cs" />
+    <Compile Include="Sessions\MonotonicSession.cs" />
+    <Compile Include="Sessions\ServerSession.cs" />
+    <Compile Include="Sessions\SessionBase.cs" />
+    <Compile Include="Sessions\SingleChannelSession.cs" />
     <Compile Include="Support\EnumerableExtensionMethods.cs" />
     <Compile Include="CommandResult.cs" />
     <Compile Include="CommandResultSerializer.cs" />
@@ -204,7 +213,6 @@
     <Compile Include="Support\TraceSourceExtensionMethods.cs" />
     <Compile Include="Operations\CommandOperation.cs" />
     <Compile Include="Operations\DatabaseOperation.cs" />
-    <Compile Include="Operations\ICursorChannelProvider.cs" />
     <Compile Include="Operations\InsertOperation.cs" />
     <Compile Include="Operations\QueryOperation.cs" />
     <Compile Include="Operations\ReadOperation.cs" />

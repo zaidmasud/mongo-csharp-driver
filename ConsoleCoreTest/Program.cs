@@ -247,7 +247,7 @@ namespace MongoDB.DriverUnitTests.Jira
             return queryOp.Execute(new QueryConnectionProvider(connection));
         }
 
-        private class QueryConnectionProvider : ICursorChannelProvider
+        private class QueryConnectionProvider : IOperationChannelProvider
         {
             private readonly IServerChannel _connection;
 
