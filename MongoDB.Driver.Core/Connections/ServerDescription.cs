@@ -24,6 +24,9 @@ namespace MongoDB.Driver.Core.Connections
     /// </summary>
     public sealed class ServerDescription
     {
+        // private static fields
+        private static readonly FeatureTable _featureTable;
+
         // private fields
         private readonly DnsEndPoint _dnsEndPoint;
         private readonly TimeSpan _averagePingTime;
@@ -35,6 +38,18 @@ namespace MongoDB.Driver.Core.Connections
         private readonly ServerType _type;
 
         // constructors
+        /// <summary>
+        /// Initializes the <see cref="ServerDescription" /> class.
+        /// </summary>
+        static ServerDescription()
+        {
+            _featureTable = new FeatureTable();
+
+            _featureTable.AddFeature(Feature.AggregationFramework.ToString(), new Version(2, 2, 0))
+                .AddFeature(Feature.AggregationFrameworkReturnsACursor.ToString(), new Version(2, 6, 0))
+                .AddFeature(Feature.MapReduceReturnsACursor.ToString(), new Version(2, 6, 0));
+        }
+
         /// <summary>
         /// Initializes a new instance of the <see cref="ServerDescription" /> class.
         /// </summary>
@@ -131,6 +146,17 @@ namespace MongoDB.Driver.Core.Connections
         public ServerType Type
         {
             get { return _type; }
+        }
+
+        // public methods
+        /// <summary>
+        /// Indicates if the feature is supported.
+        /// </summary>
+        /// <param name="feature">The feature.</param>
+        /// <returns><c>true</c> if the feature is supported; otherwise <c>false</c>.</returns>
+        public bool SupportsFeature(Feature feature)
+        {
+            return _featureTable.Supports(feature.ToString(), _buildInfo.Version);
         }
     }
 }

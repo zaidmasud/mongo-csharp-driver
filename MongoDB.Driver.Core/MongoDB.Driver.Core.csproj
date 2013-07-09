@@ -68,6 +68,8 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Connections\ConnectionBase.cs" />
+    <Compile Include="Connections\FeatureNotRegisteredException.cs" />
+    <Compile Include="Connections\FeatureTable.cs" />
     <Compile Include="Connections\IConnection.cs" />
     <Compile Include="Connections\PipelinedChannelProvider.cs" />
     <Compile Include="Connections\PipelinedChannelProviderFactory.cs" />
@@ -81,6 +83,7 @@
     <Compile Include="Connections\IConnectionPool.cs" />
     <Compile Include="Connections\IStreamFactory.cs" />
     <Compile Include="Connections\DefaultStreamFactory.cs" />
+    <Compile Include="Features.cs" />
     <Compile Include="Connections\IsMasterResult.cs" />
     <Compile Include="DatabaseNamespace.cs" />
     <Compile Include="MongoOperationException.cs" />

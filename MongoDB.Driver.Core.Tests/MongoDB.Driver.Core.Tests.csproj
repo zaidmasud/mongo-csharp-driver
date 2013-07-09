@@ -71,6 +71,7 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Connections\FeatureTableTests.cs" />
     <Compile Include="Connections\IsMasterResultHelperTests.cs" />
     <Compile Include="Connections\DefaultConnectionTests.cs" />
     <Compile Include="ProtocolHelper.cs" />
