@@ -30,19 +30,11 @@ namespace MongoDB.Driver.Core.Connections
         public static readonly ConnectedServerSelector Instance = new ConnectedServerSelector();
 
         /// <summary>
-        /// Gets the description of the server selector.
-        /// </summary>
-        public virtual string Description
-        {
-            get { return "connected."; }
-        }
-
-        /// <summary>
         /// Selects a server from the provided servers.
         /// </summary>
         /// <param name="servers">The servers.</param>
         /// <returns>The selected server or <c>null</c> if none match.</returns>
-        public ServerDescription SelectServer(IEnumerable<ServerDescription> servers)
+        public IEnumerable<ServerDescription> SelectServers(IEnumerable<ServerDescription> servers)
         {
             Ensure.IsNotNull("servers", servers);
 
@@ -54,9 +46,20 @@ namespace MongoDB.Driver.Core.Connections
         /// </summary>
         /// <param name="connectedServers">The connected servers.</param>
         /// <returns>The selected server or <c>null</c> if none match.</returns>
-        protected virtual ServerDescription SelectServerFromConnectedServers(IEnumerable<ServerDescription> connectedServers)
+        protected virtual IEnumerable<ServerDescription> SelectServerFromConnectedServers(IEnumerable<ServerDescription> connectedServers)
         {
-            return connectedServers.FirstOrDefault();
+            return connectedServers;
+        }
+
+        /// <summary>
+        /// Returns a <see cref="System.String" /> that represents this instance.
+        /// </summary>
+        /// <returns>
+        /// A <see cref="System.String" /> that represents this instance.
+        /// </returns>
+        public override string ToString()
+        {
+            return "Connected";
         }
     }
 }

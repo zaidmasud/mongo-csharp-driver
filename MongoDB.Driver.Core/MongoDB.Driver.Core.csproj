@@ -83,6 +83,7 @@
     <Compile Include="Connections\DefaultStreamFactory.cs" />
     <Compile Include="Connections\IsMasterResult.cs" />
     <Compile Include="DatabaseNamespace.cs" />
+    <Compile Include="LatencyMinimizingServerSelector.cs" />
     <Compile Include="MongoOperationException.cs" />
     <Compile Include="Diagnostics\TraceManager.cs" />
     <Compile Include="Events\ConnectionAuthenticatedEvent.cs" />
@@ -91,6 +92,7 @@
     <Compile Include="MongoDriverException.cs" />
     <Compile Include="Connections\MongoSocketException.cs" />
     <Compile Include="Connections\IRequestPacket.cs" />
+    <Compile Include="PrimaryServerSelector.cs" />
     <Compile Include="Protocol\BufferedRequestPacket.cs" />
     <Compile Include="Protocol\InsertMessage.cs" />
     <Compile Include="Protocol\OpCode.cs" />

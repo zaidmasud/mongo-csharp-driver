@@ -73,6 +73,7 @@
   <ItemGroup>
     <Compile Include="Connections\IsMasterResultHelperTests.cs" />
     <Compile Include="Connections\DefaultConnectionTests.cs" />
+    <Compile Include="LatencyMinimizingServerSelectorTests.cs" />
     <Compile Include="ProtocolHelper.cs" />
     <Compile Include="Connections\CommandHelperTests.cs" />
     <Compile Include="Connections\DefaultChannelProviderTests.cs" />
