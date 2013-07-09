@@ -45,9 +45,7 @@ namespace MongoDB.Driver.Core.Connections
         {
             _featureTable = new FeatureTable();
 
-            _featureTable.AddFeature(Feature.AggregationFramework.ToString(), new Version(2, 2, 0))
-                .AddFeature(Feature.AggregationFrameworkReturnsACursor.ToString(), new Version(2, 6, 0))
-                .AddFeature(Feature.MapReduceReturnsACursor.ToString(), new Version(2, 6, 0));
+            _featureTable.AddFeature(Feature.AggregationFramework.ToString(), new Version(2, 2, 0));
         }
 
         /// <summary>
