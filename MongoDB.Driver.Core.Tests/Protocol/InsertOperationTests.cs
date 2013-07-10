@@ -36,8 +36,11 @@ namespace MongoDB.Driver.Core.Protocol
             }));
             channel.Receive(null).ReturnsForAnyArgs(c => CreateWriteConcernResult(true, null));
 
+            var channelProvider = Substitute.For<IOperationChannelProvider>();
+            channelProvider.GetChannel().Returns(channel);
+
             var subject = CreateSubject(flags, writeConcern, numBatches);
-            subject.Execute(channel);
+            subject.Execute(channelProvider);
 
             channel.ReceivedWithAnyArgs(numGetLastErrors).Receive(null);
         }

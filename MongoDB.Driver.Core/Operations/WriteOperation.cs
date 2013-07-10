@@ -26,14 +26,14 @@ namespace MongoDB.Driver.Core.Operations
     /// <summary>
     /// The base class for operations that perform writes.
     /// </summary>
-    public abstract class WriteOperation : DatabaseOperation
+    public abstract class WriteOperation<T> : DatabaseOperation, IOperation<T>
     {
         // private fields
         private readonly WriteConcern _writeConcern;
 
         // constructors
         /// <summary>
-        /// Initializes a new instance of the <see cref="WriteOperation" /> class.
+        /// Initializes a new instance of the <see cref="WriteOperation{T}" /> class.
         /// </summary>
         /// <param name="collectionNamespace">The namespace.</param>
         /// <param name="readerSettings">The reader settings.</param>
@@ -51,6 +51,23 @@ namespace MongoDB.Driver.Core.Operations
             _writeConcern = writeConcern;
         }
 
+        // public properties
+        /// <summary>
+        /// Gets a value indicating whether this instance is query.
+        /// </summary>
+        public bool IsQuery
+        {
+            get { return false; } 
+        }
+
+        /// <summary>
+        /// Gets the server selector.
+        /// </summary>
+        public IServerSelector ServerSelector
+        {
+            get { return new ReadPreferenceServerSelector(ReadPreference.Primary); }
+        }
+
         // protected properties
         /// <summary>
         /// Gets the write concern.
@@ -62,6 +79,14 @@ namespace MongoDB.Driver.Core.Operations
         {
             get { return _writeConcern; }
         }
+
+        // public methods
+        /// <summary>
+        /// Executes the operation.
+        /// </summary>
+        /// <param name="channelProvider">The channel provider.</param>
+        /// <returns>The result of the operation.</returns>
+        public abstract T Execute(IOperationChannelProvider channelProvider);
 
         // protected methods
         /// <summary>

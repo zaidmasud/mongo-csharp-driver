@@ -27,7 +27,7 @@ namespace MongoDB.Driver.Core.Operations
     /// <summary>
     /// Represents a batch Insert operation.
     /// </summary>
-    public class InsertOperation : WriteOperation
+    public class InsertOperation : WriteOperation<IEnumerable<WriteConcernResult>>
     {
         // private fields
         private readonly bool _assignIdOnInsert;
@@ -79,67 +79,70 @@ namespace MongoDB.Driver.Core.Operations
         /// <summary>
         /// Executes the Insert operation.
         /// </summary>
-        /// <param name="channel">The channel.</param>
+        /// <param name="channelProvider">The channel provider.</param>
         /// <returns>A list of WriteConcernResults (or null if WriteConcern is not enabled).</returns>
-        public IEnumerable<WriteConcernResult> Execute(IServerChannel channel)
+        public override IEnumerable<WriteConcernResult> Execute(IOperationChannelProvider channelProvider)
         {
-            Ensure.IsNotNull("channel", channel);
+            Ensure.IsNotNull("channelProvider", channelProvider);
 
-            var maxMessageSize = (_maxMessageSize != 0) ? _maxMessageSize : channel.Server.MaxMessageSize;
-            var readerSettings = GetServerAdjustedReaderSettings(channel.Server);
-            var writerSettings = GetServerAdjustedWriterSettings(channel.Server);
-
-            List<WriteConcernResult> results = (WriteConcern.Enabled) ? new List<WriteConcernResult>() : null;
-
-            var continueOnError = (_flags & InsertFlags.ContinueOnError) != 0;
-            Exception finalException = null;
-            foreach (var batch in GetBatches(maxMessageSize, writerSettings))
+            using (var channel = channelProvider.GetChannel())
             {
-                // Dispose of the Request as soon as possible to release the buffer(s)
-                SendPacketWithWriteConcernResult sendBatchResult;
-                using (batch.Packet)
-                {
-                    sendBatchResult = SendBatchWithWriteConcern(channel, batch, continueOnError, writerSettings);
-                    batch.Packet = null;
-                }
+                var maxMessageSize = (_maxMessageSize != 0) ? _maxMessageSize : channel.Server.MaxMessageSize;
+                var readerSettings = GetServerAdjustedReaderSettings(channel.Server);
+                var writerSettings = GetServerAdjustedWriterSettings(channel.Server);
 
-                WriteConcernResult writeConcernResult;
-                try
+                List<WriteConcernResult> results = (WriteConcern.Enabled) ? new List<WriteConcernResult>() : null;
+
+                var continueOnError = (_flags & InsertFlags.ContinueOnError) != 0;
+                Exception finalException = null;
+                foreach (var batch in GetBatches(maxMessageSize, writerSettings))
                 {
-                    writeConcernResult = ReadWriteConcernResult(channel, sendBatchResult, readerSettings);
-                }
-                catch (MongoWriteConcernException ex)
-                {
-                    writeConcernResult = ex.Result;
-                    if (continueOnError)
+                    // Dispose of the Request as soon as possible to release the buffer(s)
+                    SendPacketWithWriteConcernResult sendBatchResult;
+                    using (batch.Packet)
                     {
-                        finalException = ex;
+                        sendBatchResult = SendBatchWithWriteConcern(channel, batch, continueOnError, writerSettings);
+                        batch.Packet = null;
                     }
-                    else if (WriteConcern.Enabled)
+
+                    WriteConcernResult writeConcernResult;
+                    try
+                    {
+                        writeConcernResult = ReadWriteConcernResult(channel, sendBatchResult, readerSettings);
+                    }
+                    catch (MongoWriteConcernException ex)
+                    {
+                        writeConcernResult = ex.Result;
+                        if (continueOnError)
+                        {
+                            finalException = ex;
+                        }
+                        else if (WriteConcern.Enabled)
+                        {
+                            results.Add(writeConcernResult);
+                            ex.Data["results"] = results;
+                            throw;
+                        }
+                        else
+                        {
+                            return null;
+                        }
+                    }
+
+                    if (WriteConcern.Enabled)
                     {
                         results.Add(writeConcernResult);
-                        ex.Data["results"] = results;
-                        throw;
-                    }
-                    else
-                    {
-                        return null;
                     }
                 }
 
-                if (WriteConcern.Enabled)
+                if (WriteConcern.Enabled && finalException != null)
                 {
-                    results.Add(writeConcernResult);
+                    finalException.Data["results"] = results;
+                    throw finalException;
                 }
-            }
 
-            if (WriteConcern.Enabled && finalException != null)
-            {
-                finalException.Data["results"] = results;
-                throw finalException;
+                return results;
             }
-
-            return results;
         }
 
         // private methods

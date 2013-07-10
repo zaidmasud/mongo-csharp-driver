@@ -24,7 +24,7 @@ namespace MongoDB.Driver.Core.Operations
         IServerSelector ServerSelector { get; }
 
         /// <summary>
-        /// Executes the specified channel provider.
+        /// Executes the operation.
         /// </summary>
         /// <param name="channelProvider">The channel provider.</param>
         /// <returns>The result of the operation.</returns>

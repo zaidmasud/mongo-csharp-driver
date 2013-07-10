@@ -144,8 +144,6 @@
     <Compile Include="Events\ConnectionPacketSendingEvent.cs" />
     <Compile Include="Sessions\ClusterSession.cs" />
     <Compile Include="Sessions\ISession.cs" />
-    <Compile Include="Sessions\EventuallyConsistentSession.cs" />
-    <Compile Include="Sessions\MonotonicSession.cs" />
     <Compile Include="Sessions\ServerSession.cs" />
     <Compile Include="Sessions\SessionBase.cs" />
     <Compile Include="Sessions\SingleChannelSession.cs" />

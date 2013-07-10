@@ -23,7 +23,7 @@ namespace MongoDB.Driver.Core.Operations
     /// <summary>
     /// Represents a Remove operation.
     /// </summary>
-    public class RemoveOperation : WriteOperation
+    public class RemoveOperation : WriteOperation<WriteConcernResult>
     {
         // private fields
         private readonly DeleteFlags _flags;
@@ -56,25 +56,28 @@ namespace MongoDB.Driver.Core.Operations
         /// <summary>
         /// Executes the Remove operation.
         /// </summary>
-        /// <param name="channel">The channel.</param>
+        /// <param name="channelProvider">The channel provider.</param>
         /// <returns>A WriteConcern result (or null if WriteConcern was not enabled).</returns>
-        public WriteConcernResult Execute(IServerChannel channel)
+        public override WriteConcernResult Execute(IOperationChannelProvider channelProvider)
         {
-            Ensure.IsNotNull("channel", channel);
+            Ensure.IsNotNull("channelProvider", channelProvider);
 
-            var readerSettings = GetServerAdjustedReaderSettings(channel.Server);
-            var writerSettings = GetServerAdjustedWriterSettings(channel.Server);
-
-            var deleteMessage = new DeleteMessage(CollectionNamespace, _query, _flags, writerSettings);
-
-            SendPacketWithWriteConcernResult sendMessageResult;
-            using (var packet = new BufferedRequestPacket())
+            using (var channel = channelProvider.GetChannel())
             {
-                packet.AddMessage(deleteMessage);
-                sendMessageResult = SendPacketWithWriteConcern(channel, packet, WriteConcern, writerSettings);
-            }
+                var readerSettings = GetServerAdjustedReaderSettings(channel.Server);
+                var writerSettings = GetServerAdjustedWriterSettings(channel.Server);
 
-            return ReadWriteConcernResult(channel, sendMessageResult, readerSettings);
+                var deleteMessage = new DeleteMessage(CollectionNamespace, _query, _flags, writerSettings);
+
+                SendPacketWithWriteConcernResult sendMessageResult;
+                using (var packet = new BufferedRequestPacket())
+                {
+                    packet.AddMessage(deleteMessage);
+                    sendMessageResult = SendPacketWithWriteConcern(channel, packet, WriteConcern, writerSettings);
+                }
+
+                return ReadWriteConcernResult(channel, sendMessageResult, readerSettings);
+            }
         }
     }
 }

@@ -23,7 +23,7 @@ namespace MongoDB.Driver.Core.Operations
     /// <summary>
     /// Represents an Update operation.
     /// </summary>
-    public class UpdateOperation : WriteOperation
+    public class UpdateOperation : WriteOperation<WriteConcernResult>
     {
         // private fields
         private readonly bool _checkUpdateDocument;
@@ -64,31 +64,34 @@ namespace MongoDB.Driver.Core.Operations
         /// <summary>
         /// Executes the Update operation.
         /// </summary>
-        /// <param name="channel">The channel.</param>
+        /// <param name="channelProvider">The channel provider.</param>
         /// <returns>A WriteConcern result (or null if WriteConcern was not enabled).</returns>
-        public WriteConcernResult Execute(IServerChannel channel)
+        public override WriteConcernResult Execute(IOperationChannelProvider channelProvider)
         {
-            Ensure.IsNotNull("channel", channel);
+            Ensure.IsNotNull("channelProvider", channelProvider);
 
-            var readerSettings = GetServerAdjustedReaderSettings(channel.Server);
-            var writerSettings = GetServerAdjustedWriterSettings(channel.Server);
-
-            var updateMessage = new UpdateMessage(
-                CollectionNamespace, 
-                _query, 
-                _update, 
-                _flags, 
-                _checkUpdateDocument,
-                writerSettings);
-
-            SendPacketWithWriteConcernResult sendMessageResult;
-            using (var packet = new BufferedRequestPacket())
+            using (var channel = channelProvider.GetChannel())
             {
-                packet.AddMessage(updateMessage);
-                sendMessageResult = SendPacketWithWriteConcern(channel, packet, WriteConcern, writerSettings);
-            }
+                var readerSettings = GetServerAdjustedReaderSettings(channel.Server);
+                var writerSettings = GetServerAdjustedWriterSettings(channel.Server);
 
-            return ReadWriteConcernResult(channel, sendMessageResult, readerSettings);
+                var updateMessage = new UpdateMessage(
+                    CollectionNamespace,
+                    _query,
+                    _update,
+                    _flags,
+                    _checkUpdateDocument,
+                    writerSettings);
+
+                SendPacketWithWriteConcernResult sendMessageResult;
+                using (var packet = new BufferedRequestPacket())
+                {
+                    packet.AddMessage(updateMessage);
+                    sendMessageResult = SendPacketWithWriteConcern(channel, packet, WriteConcern, writerSettings);
+                }
+
+                return ReadWriteConcernResult(channel, sendMessageResult, readerSettings);
+            }
         }
     }
 }

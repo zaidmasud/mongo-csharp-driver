@@ -45,11 +45,9 @@ namespace MongoDB.Driver.Core.Sessions
             Ensure.IsNotNull("operation", operation);
             ThrowIfDisposed();
 
-            using (var server = _cluster.SelectServer(operation.ServerSelector, timeout, cancellationToken))
-            {
-                var provider = new ClusterOperationChannelProvider(server, timeout, cancellationToken);
-                return operation.Execute(provider);
-            }
+            var server = _cluster.SelectServer(operation.ServerSelector, timeout, cancellationToken);
+            var provider = new ClusterOperationChannelProvider(server, timeout, cancellationToken);
+            return operation.Execute(provider);
         }
 
         // protected methods
