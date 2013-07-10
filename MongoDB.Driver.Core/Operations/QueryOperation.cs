@@ -127,14 +127,17 @@ namespace MongoDB.Driver.Core.Operations
             var count = 0;
             var limit = (_limit >= 0) ? _limit : -_limit;
 
-            foreach (var document in DeserializeDocuments(channelProvider))
+            using (channelProvider)
             {
-                if (limit != 0 && count == limit)
+                foreach (var document in DeserializeDocuments(channelProvider))
                 {
-                    yield break;
+                    if (limit != 0 && count == limit)
+                    {
+                        yield break;
+                    }
+                    yield return document;
+                    count++;
                 }
-                yield return document;
-                count++;
             }
         }
 

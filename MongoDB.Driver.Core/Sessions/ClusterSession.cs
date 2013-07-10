@@ -1,9 +1,5 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
 using System.Threading;
-using System.Threading.Tasks;
 using MongoDB.Driver.Core.Connections;
 using MongoDB.Driver.Core.Operations;
 using MongoDB.Driver.Core.Support;
@@ -70,11 +66,12 @@ namespace MongoDB.Driver.Core.Sessions
         }
 
         // nested classes
-        private class ClusterOperationChannelProvider : IOperationChannelProvider
+        private sealed class ClusterOperationChannelProvider : IOperationChannelProvider
         {
             private readonly IServer _server;
             private readonly TimeSpan _timeout;
             private readonly CancellationToken _cancellationToken;
+            private bool _disposed;
 
             public ClusterOperationChannelProvider(IServer server, TimeSpan timeout, CancellationToken cancellationToken)
             {
@@ -87,12 +84,32 @@ namespace MongoDB.Driver.Core.Sessions
 
             public ServerDescription Server
             {
-                get { return _server.Description; }
+                get 
+                {
+                    if (_disposed)
+                    {
+                        throw new ObjectDisposedException(GetType().Name);
+                    }
+                    return _server.Description; 
+                }
             }
 
             public IServerChannel GetChannel()
             {
+                if (_disposed)
+                {
+                    throw new ObjectDisposedException(GetType().Name);
+                }
                 return _server.GetChannel(_timeout, _cancellationToken);
+            }
+
+            public void Dispose()
+            {
+                if (!_disposed)
+                {
+                    _disposed = true;
+                    _server.Dispose();
+                }
             }
         }
     }

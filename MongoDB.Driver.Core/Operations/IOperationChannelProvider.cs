@@ -13,6 +13,7 @@
 * limitations under the License.
 */
 
+using System;
 using MongoDB.Driver.Core.Connections;
 
 namespace MongoDB.Driver.Core.Operations
@@ -20,7 +21,7 @@ namespace MongoDB.Driver.Core.Operations
     /// <summary>
     /// Represents a source of channels.
     /// </summary>
-    public interface IOperationChannelProvider
+    public interface IOperationChannelProvider : IDisposable
     {
         /// <summary>
         /// Gets the server.

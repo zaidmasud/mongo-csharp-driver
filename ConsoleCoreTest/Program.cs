@@ -87,6 +87,7 @@ namespace MongoDB.DriverUnitTests.Jira
 
             // 5) Create a Cluster
             var cluster = new SingleServerCluster(new DnsEndPoint("localhost", 27017), clusterableServerFactory);
+
             //var cluster = new ReplicaSetCluster(
             //    ReplicaSetClusterSettings.Defaults,
             //    new[] 
@@ -145,9 +146,10 @@ namespace MongoDB.DriverUnitTests.Jira
             {
                 var i = rand.Next(0, 10000);
                 BsonDocument doc;
+                IEnumerator<BsonDocument> result = null;
                 try
                 {
-                    var result = Query(session, new BsonDocument("i", i));
+                    result = Query(session, new BsonDocument("i", i));
                     if (result.MoveNext())
                     {
                         doc = result.Current;
@@ -163,6 +165,10 @@ namespace MongoDB.DriverUnitTests.Jira
                 {
                     Console.Write("+");
                     continue;
+                }
+                finally
+                {
+                    result.Dispose();
                 }
 
                 if (doc == null)

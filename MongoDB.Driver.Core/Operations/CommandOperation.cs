@@ -100,6 +100,7 @@ namespace MongoDB.Driver.Core.Operations
         {
             Ensure.IsNotNull("channelProvider", channelProvider);
 
+            using(channelProvider)
             using (var channel = channelProvider.GetChannel())
             {
                 var readerSettings = GetServerAdjustedReaderSettings(channel.Server);

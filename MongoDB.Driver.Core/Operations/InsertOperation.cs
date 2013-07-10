@@ -85,6 +85,7 @@ namespace MongoDB.Driver.Core.Operations
         {
             Ensure.IsNotNull("channelProvider", channelProvider);
 
+            using(channelProvider)
             using (var channel = channelProvider.GetChannel())
             {
                 var maxMessageSize = (_maxMessageSize != 0) ? _maxMessageSize : channel.Server.MaxMessageSize;

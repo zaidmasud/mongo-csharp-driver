@@ -65,6 +65,7 @@ namespace MongoDB.Driver.Core.Operations
         /// </summary>
         public IServerSelector ServerSelector
         {
+            // TODO: create a PrimaryServerSelector instead of using read preference here...
             get { return new ReadPreferenceServerSelector(ReadPreference.Primary); }
         }
 
