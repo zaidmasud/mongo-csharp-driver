@@ -84,6 +84,7 @@ namespace MongoDB.Driver.Core.Connections
                 averagePingTime: TimeSpan.MaxValue,
                 buildInfo: null,
                 dnsEndPoint: dnsEndPoint,
+                featureTable: null,
                 maxDocumentSize: _settings.MaxDocumentSizeDefault,
                 maxMessageSize: _settings.MaxMessageSizeDefault,
                 replicaSetInfo: null,
@@ -94,6 +95,7 @@ namespace MongoDB.Driver.Core.Connections
                 averagePingTime: TimeSpan.MaxValue,
                 buildInfo: null,
                 dnsEndPoint: dnsEndPoint,
+                featureTable: null,
                 maxDocumentSize: _settings.MaxDocumentSizeDefault,
                 maxMessageSize: _settings.MaxMessageSizeDefault,
                 replicaSetInfo: null,
@@ -160,6 +162,7 @@ namespace MongoDB.Driver.Core.Connections
                     averagePingTime: TimeSpan.MaxValue,
                     buildInfo: null,
                     dnsEndPoint: _dnsEndPoint,
+                    featureTable: null,
                     maxDocumentSize: _settings.MaxDocumentSizeDefault,
                     maxMessageSize: _settings.MaxMessageSizeDefault,
                     replicaSetInfo: null,
@@ -218,10 +221,15 @@ namespace MongoDB.Driver.Core.Connections
             }
             var buildInfo = ServerBuildInfo.FromCommandResult(buildInfoResult);
 
+            // ideally the server would be telling us which features it supports
+            // for now we are going to deduce it from the server version
+            var featureTable = FeatureTable.FromServerVersion(buildInfo.Version);
+
             return new ServerDescription(
                 averagePingTime: _pingTimeAggregator.Average,
                 buildInfo: buildInfo,
                 dnsEndPoint: _dnsEndPoint,
+                featureTable: featureTable,
                 maxDocumentSize: isMasterResult.GetMaxDocumentSize(_settings.MaxDocumentSizeDefault),
                 maxMessageSize: isMasterResult.GetMaxMessageSize(_settings.MaxDocumentSizeDefault, _settings.MaxMessageSizeDefault),
                 replicaSetInfo: isMasterResult.GetReplicaSetInfo(_updateDescriptionConnection.DnsEndPoint.AddressFamily),

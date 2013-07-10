@@ -24,13 +24,11 @@ namespace MongoDB.Driver.Core.Connections
     /// </summary>
     public sealed class ServerDescription
     {
-        // private static fields
-        private static readonly FeatureTable _featureTable;
-
         // private fields
         private readonly DnsEndPoint _dnsEndPoint;
         private readonly TimeSpan _averagePingTime;
         private readonly ServerBuildInfo _buildInfo;
+        private readonly FeatureTable _featureTable;
         private readonly int _maxDocumentSize;
         private readonly int _maxMessageSize;
         private readonly ReplicaSetInfo _replicaSetInfo;
@@ -39,21 +37,12 @@ namespace MongoDB.Driver.Core.Connections
 
         // constructors
         /// <summary>
-        /// Initializes the <see cref="ServerDescription" /> class.
-        /// </summary>
-        static ServerDescription()
-        {
-            _featureTable = new FeatureTable();
-
-            _featureTable.AddFeature(Feature.AggregationFramework.ToString(), new Version(2, 2, 0));
-        }
-
-        /// <summary>
         /// Initializes a new instance of the <see cref="ServerDescription" /> class.
         /// </summary>
-        /// <param name="dnsEndPoint">The DNS end point.</param>
         /// <param name="averagePingTime">The average ping time.</param>
         /// <param name="buildInfo">The build info.</param>
+        /// <param name="dnsEndPoint">The DNS end point.</param>
+        /// <param name="featureTable">The feature table (can be null if not known).</param>
         /// <param name="maxDocumentSize">The maximum document size.</param>
         /// <param name="maxMessageSize">The maximum message size.</param>
         /// <param name="replicaSetInfo">The replica set info.</param>
@@ -63,6 +52,7 @@ namespace MongoDB.Driver.Core.Connections
             TimeSpan averagePingTime,
             ServerBuildInfo buildInfo,
             DnsEndPoint dnsEndPoint,
+            FeatureTable featureTable,
             int maxDocumentSize, 
             int maxMessageSize,
             ReplicaSetInfo replicaSetInfo,
@@ -74,6 +64,7 @@ namespace MongoDB.Driver.Core.Connections
             _averagePingTime = averagePingTime;
             _buildInfo = buildInfo;
             _dnsEndPoint = dnsEndPoint;
+            _featureTable = featureTable;
             _maxDocumentSize = maxDocumentSize;
             _maxMessageSize = maxMessageSize;
             _replicaSetInfo = replicaSetInfo;
@@ -152,9 +143,9 @@ namespace MongoDB.Driver.Core.Connections
         /// </summary>
         /// <param name="feature">The feature.</param>
         /// <returns><c>true</c> if the feature is supported; otherwise <c>false</c>.</returns>
-        public bool SupportsFeature(Feature feature)
+        public bool IsFeatureSupported(Feature feature)
         {
-            return _featureTable.Supports(feature.ToString(), _buildInfo.Version);
+            return (_featureTable == null) ? false : _featureTable.IsFeatureSupported(feature.ToString());
         }
     }
 }

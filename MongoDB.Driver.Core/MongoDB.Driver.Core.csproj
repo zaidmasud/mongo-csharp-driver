@@ -68,7 +68,6 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Connections\ConnectionBase.cs" />
-    <Compile Include="Connections\FeatureNotRegisteredException.cs" />
     <Compile Include="Connections\FeatureTable.cs" />
     <Compile Include="Connections\IConnection.cs" />
     <Compile Include="Connections\PipelinedChannelProvider.cs" />

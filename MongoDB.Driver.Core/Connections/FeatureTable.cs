@@ -1,83 +1,74 @@
 ﻿using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Linq;
+using MongoDB.Driver.Core.Support;
 
 namespace MongoDB.Driver.Core.Connections
 {
-    internal class FeatureTable
+    public class FeatureTable
     {
+        // private static fields
+        private static readonly ConcurrentDictionary<Version, FeatureTable> _versionFeatureTables = new ConcurrentDictionary<Version, FeatureTable>();
+
         // private fields
-        private readonly Dictionary<string, Feature> _table;
+        private readonly Dictionary<string, bool> _features = new Dictionary<string, bool>();
 
         // constructors
-        public FeatureTable()
+        public FeatureTable(IEnumerable<Tuple<string, bool>> featureTuples)
         {
-            _table = new Dictionary<string, Feature>();
+            foreach (var featureTuple in featureTuples)
+            {
+                _features.Add(featureTuple.Item1, featureTuple.Item2);
+            }
+        }
+
+        // public static methods
+        /// <summary>
+        /// Creates a feature table for a specific server version.
+        /// </summary>
+        /// <param name="version">The server version.</param>
+        /// <returns>A feature table.</returns>
+        public static FeatureTable FromServerVersion(Version version)
+        {
+            Ensure.IsNotNull("version", version);
+            return _versionFeatureTables.GetOrAdd(version, CreateFeatureTable);
+        }
+
+        // private static methods
+        private static FeatureTable CreateFeatureTable(Version version)
+        {
+            var featureNames = Enum.GetValues(typeof(Feature)).Cast<Feature>().Select(f => f.ToString());
+            var featureTuples = featureNames.Select(featureName => Tuple.Create(featureName, IsFeatureSupported(featureName, version)));
+            return new FeatureTable(featureTuples);
+        }
+
+        private static bool IsFeatureSupported(string featureName, Version serverVersion)
+        {
+            switch (featureName)
+            {
+                case "AggregationFramework": return serverVersion >= new Version(2, 1);
+                default: return false;
+            }
         }
 
         // public methods
         /// <summary>
-        /// Adds the feature.
+        /// Indicates whether the specified feature is supported.
         /// </summary>
-        /// <param name="name">The name.</param>
-        /// <param name="from">The initial version offering the feature.</param>
-        /// <returns>The feature table for chaining.</returns>
-        public FeatureTable AddFeature(string name, Version from)
-        {
-            _table.Add(name, new Feature(name, from));
-            return this;
-        }
-
-        /// <summary>
-        /// Adds the feature.
-        /// </summary>
-        /// <param name="name">The name.</param>
-        /// <param name="from">The initial version offering the feature.</param>
-        /// <param name="to">The version no longer offering the feature.</param>
-        /// <returns>The feature table for chaining.</returns>
-        public FeatureTable AddFeature(string name, Version from, Version to)
-        {
-            _table.Add(name, new Feature(name, from, to));
-            return this;
-        }
-
-        /// <summary>
-        /// Indicates whether the specified feature is supported for the specified version.
-        /// </summary>
-        /// <param name="name">The name.</param>
-        /// <param name="serverVersion">The server version.</param>
+        /// <param name="featureName">The feature name.</param>
         /// <returns><c>true</c> if the feature is supported for the server; otherwise <c>false</c>.</returns>
-        public bool Supports(string name, Version serverVersion)
+        public bool IsFeatureSupported(string featureName)
         {
-            Feature feature;
-            if (!_table.TryGetValue(name, out feature))
+            bool isFeatureSupported;
+            if (_features.TryGetValue(featureName, out isFeatureSupported))
             {
-                throw new FeatureNotRegisteredException(name);
+                return isFeatureSupported;
             }
-
-            return feature.IsSupportedFor(serverVersion);
-        }
-
-        // nested classes...
-        private class Feature
-        {
-            private readonly string _name;
-            private readonly Version _from; // inclusive
-            private readonly Version _to;  //exclusive
-
-            public Feature(string name, Version from)
-                : this(name, from, null)
-            { }
-
-            public Feature(string name, Version from, Version to)
+            else
             {
-                _name = name;
-                _from = from;
-                _to = to;
-            }
-
-            public bool IsSupportedFor(Version serverVersion)
-            {
-                return _from <= serverVersion && (_to == null || serverVersion < _to);
+                var message = string.Format("Feature name '{0}' is not valid.", featureName);
+                throw new ArgumentException(message, "featureName");
             }
         }
     }

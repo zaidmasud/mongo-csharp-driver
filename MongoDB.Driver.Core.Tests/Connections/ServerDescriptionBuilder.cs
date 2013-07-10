@@ -11,6 +11,7 @@ namespace MongoDB.Driver.Core.Connections
         private TimeSpan _averagePingTime;
         private ServerBuildInfo _buildInfo;
         private DnsEndPoint _dnsEndPoint;
+        private FeatureTable _featureTable;
         private int _maxDocumentSize;
         private int _maxMessageSize;
         private ReplicaSetInfo _replicaSetInfo;
@@ -77,6 +78,11 @@ namespace MongoDB.Driver.Core.Connections
             _dnsEndPoint = dnsEndPont;
         }
 
+        public void FeatureTable(FeatureTable featureTable)
+        {
+            _featureTable = featureTable;
+        }
+
         public void MaxDocumentSize(int size)
         {
             _maxDocumentSize = size;
@@ -113,6 +119,7 @@ namespace MongoDB.Driver.Core.Connections
                 _averagePingTime,
                 _buildInfo,
                 _dnsEndPoint,
+                _featureTable,
                 _maxDocumentSize,
                 _maxMessageSize,
                 _replicaSetInfo,
