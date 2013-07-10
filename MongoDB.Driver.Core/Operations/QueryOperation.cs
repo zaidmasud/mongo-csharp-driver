@@ -29,7 +29,7 @@ namespace MongoDB.Driver.Core.Operations
     /// Represents a Query operation.
     /// </summary>
     /// <typeparam name="TDocument">The type of the document.</typeparam>
-    public class QueryOperation<TDocument> : ReadOperation
+    public class QueryOperation<TDocument> : ReadOperation, IOperation<IEnumerator<TDocument>>
     {
         // private fields
         private readonly int _batchSize;
@@ -95,6 +95,23 @@ namespace MongoDB.Driver.Core.Operations
             {
                 _flags |= QueryFlags.AwaitData;
             }
+        }
+
+        // public properties
+        /// <summary>
+        /// Gets a value indicating whether this instance is query.
+        /// </summary>
+        public bool IsQuery
+        {
+            get { return true; }
+        }
+
+        /// <summary>
+        /// Gets the server selector.
+        /// </summary>
+        public IServerSelector ServerSelector
+        {
+            get { return new ReadPreferenceServerSelector(_readPreference); }
         }
 
         // public methods

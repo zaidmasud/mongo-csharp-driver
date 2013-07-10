@@ -27,7 +27,7 @@ namespace MongoDB.Driver.Core.Operations
     /// Represents a Command operation.
     /// </summary>
     /// <typeparam name="TCommandResult">The type of the command result.</typeparam>
-    public class CommandOperation<TCommandResult> : ReadOperation where TCommandResult : CommandResult
+    public class CommandOperation<TCommandResult> : ReadOperation, IOperation<TCommandResult> where TCommandResult : CommandResult
     {
         // private fields
         private readonly object _command;
@@ -73,58 +73,78 @@ namespace MongoDB.Driver.Core.Operations
             _serializer = serializer;
         }
 
+        // public properties
+        /// <summary>
+        /// Gets a value indicating whether this instance is query.
+        /// </summary>
+        public bool IsQuery
+        {
+            get { return true; } // TODO: this is obviously not correct :)
+        }
+
+        /// <summary>
+        /// Gets the server selector.
+        /// </summary>
+        public IServerSelector ServerSelector
+        {
+            get { return new ReadPreferenceServerSelector(_readPreference); }
+        }
+
         // public methods
         /// <summary>
         /// Executes the Command operation.
         /// </summary>
-        /// <param name="channel">The channel.</param>
+        /// <param name="channelProvider">The channel provider.</param>
         /// <returns>The command result.</returns>
-        public TCommandResult Execute(IServerChannel channel)
+        public TCommandResult Execute(IOperationChannelProvider channelProvider)
         {
-            Ensure.IsNotNull("connection", channel);
+            Ensure.IsNotNull("channelProvider", channelProvider);
 
-            var readerSettings = GetServerAdjustedReaderSettings(channel.Server);
-            var writerSettings = GetServerAdjustedWriterSettings(channel.Server);
-            var wrappedQuery = WrapQuery(channel.Server, _command, _options, _readPreference);
-
-            var queryMessage = new QueryMessage(
-                CollectionNamespace,
-                wrappedQuery,
-                _flags,
-                0,
-                -1,
-                null,
-                writerSettings);
-
-            using (var packet = new BufferedRequestPacket())
+            using (var channel = channelProvider.GetChannel())
             {
-                packet.AddMessage(queryMessage);
-                channel.Send(packet);
-            }
+                var readerSettings = GetServerAdjustedReaderSettings(channel.Server);
+                var writerSettings = GetServerAdjustedWriterSettings(channel.Server);
+                var wrappedQuery = WrapQuery(channel.Server, _command, _options, _readPreference);
 
-            var receiveArgs = new ChannelReceiveArgs(queryMessage.RequestId);
-            using (var reply = channel.Receive(receiveArgs))
-            {
-                if (reply.NumberReturned == 0)
+                var queryMessage = new QueryMessage(
+                    CollectionNamespace,
+                    wrappedQuery,
+                    _flags,
+                    0,
+                    -1,
+                    null,
+                    writerSettings);
+
+                using (var packet = new BufferedRequestPacket())
                 {
-                    var commandDocument = _command.ToBsonDocument();
-                    var commandName = commandDocument.ElementCount == 0 ? "(no name)" : commandDocument.GetElement(0).Name;
-                    var message = string.Format("Command '{0}' failed. No response returned.", commandName);
-                    throw new MongoOperationException(message);
+                    packet.AddMessage(queryMessage);
+                    channel.Send(packet);
                 }
 
-                var commandResult = reply.DeserializeDocuments<TCommandResult>(_serializer, _serializationOptions, readerSettings).Single();
-                commandResult.Command = _command;
-
-                if (!commandResult.Ok)
+                var receiveArgs = new ChannelReceiveArgs(queryMessage.RequestId);
+                using (var reply = channel.Receive(receiveArgs))
                 {
-                    var commandDocument = _command.ToBsonDocument();
-                    var commandName = commandDocument.ElementCount == 0 ? "(no name)" : commandDocument.GetElement(0).Name;
-                    var message = string.Format("Command '{0}' failed.", commandName);
-                    throw new MongoOperationException(message, commandResult.ToBsonDocument());
-                }
+                    if (reply.NumberReturned == 0)
+                    {
+                        var commandDocument = _command.ToBsonDocument();
+                        var commandName = commandDocument.ElementCount == 0 ? "(no name)" : commandDocument.GetElement(0).Name;
+                        var message = string.Format("Command '{0}' failed. No response returned.", commandName);
+                        throw new MongoOperationException(message);
+                    }
 
-                return commandResult;
+                    var commandResult = reply.DeserializeDocuments<TCommandResult>(_serializer, _serializationOptions, readerSettings).Single();
+                    commandResult.Command = _command;
+
+                    if (!commandResult.Ok)
+                    {
+                        var commandDocument = _command.ToBsonDocument();
+                        var commandName = commandDocument.ElementCount == 0 ? "(no name)" : commandDocument.GetElement(0).Name;
+                        var message = string.Format("Command '{0}' failed.", commandName);
+                        throw new MongoOperationException(message, commandResult.ToBsonDocument());
+                    }
+
+                    return commandResult;
+                }
             }
         }
     }
