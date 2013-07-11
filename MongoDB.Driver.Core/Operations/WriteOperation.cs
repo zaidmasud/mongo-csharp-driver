@@ -19,6 +19,7 @@ using MongoDB.Bson.IO;
 using MongoDB.Bson.Serialization;
 using MongoDB.Driver.Core.Connections;
 using MongoDB.Driver.Core.Protocol;
+using MongoDB.Driver.Core.Sessions;
 using MongoDB.Driver.Core.Support;
 
 namespace MongoDB.Driver.Core.Operations
@@ -26,68 +27,39 @@ namespace MongoDB.Driver.Core.Operations
     /// <summary>
     /// The base class for operations that perform writes.
     /// </summary>
-    public abstract class WriteOperation<T> : DatabaseOperation, IOperation<T>
+    public abstract class WriteOperation<T> : DatabaseOperation<T>
     {
         // private fields
-        private readonly WriteConcern _writeConcern;
+        private CollectionNamespace _collection;
+        private WriteConcern _writeConcern;
 
         // constructors
         /// <summary>
         /// Initializes a new instance of the <see cref="WriteOperation{T}" /> class.
         /// </summary>
-        /// <param name="collectionNamespace">The namespace.</param>
-        /// <param name="readerSettings">The reader settings.</param>
-        /// <param name="writerSettings">The writer settings.</param>
-        /// <param name="writeConcern">The write concern.</param>
-        protected WriteOperation(
-            CollectionNamespace collectionNamespace,
-            BsonBinaryReaderSettings readerSettings,
-            BsonBinaryWriterSettings writerSettings,
-            WriteConcern writeConcern)
-            : base(collectionNamespace, readerSettings, writerSettings)
+        protected WriteOperation()
         {
-            Ensure.IsNotNull("writeConcern", writeConcern);
-
-            _writeConcern = writeConcern;
+            _writeConcern = MongoDB.Driver.Core.WriteConcern.Acknowledged;
         }
 
         // public properties
         /// <summary>
-        /// Gets a value indicating whether this instance is query.
+        /// Gets or sets the collection.
         /// </summary>
-        public bool IsQuery
+        public CollectionNamespace Collection
         {
-            get { return false; } 
+            get { return _collection; }
+            set { _collection = value; }
         }
 
         /// <summary>
-        /// Gets the server selector.
+        /// Gets or sets the write concern.
         /// </summary>
-        public IServerSelector ServerSelector
-        {
-            // TODO: create a PrimaryServerSelector instead of using read preference here...
-            get { return new ReadPreferenceServerSelector(ReadPreference.Primary); }
-        }
-
-        // protected properties
-        /// <summary>
-        /// Gets the write concern.
-        /// </summary>
-        /// <value>
-        /// The write concern.
-        /// </value>
-        protected WriteConcern WriteConcern
+        public WriteConcern WriteConcern
         {
             get { return _writeConcern; }
+            set { _writeConcern = value; }
         }
-
-        // public methods
-        /// <summary>
-        /// Executes the operation.
-        /// </summary>
-        /// <param name="channelProvider">The channel provider.</param>
-        /// <returns>The result of the operation.</returns>
-        public abstract T Execute(IOperationChannelProvider channelProvider);
 
         // protected methods
         /// <summary>
@@ -184,7 +156,7 @@ namespace MongoDB.Driver.Core.Operations
 
                 // piggy back on network transmission for message
                 var getLastErrorMessage = new QueryMessage(
-                    new DatabaseNamespace(CollectionNamespace.DatabaseName).CommandCollection,
+                    new DatabaseNamespace(Collection.DatabaseName).CommandCollection,
                     getLastErrorCommand,
                     QueryFlags.None,
                     0,
@@ -201,6 +173,16 @@ namespace MongoDB.Driver.Core.Operations
             channel.Send(packet);
 
             return result;
+        }
+
+        /// <summary>
+        /// Validates the required properties.
+        /// </summary>
+        protected override void ValidateRequiredProperties()
+        {
+            base.ValidateRequiredProperties();
+            Ensure.IsNotNull("Collection", _collection);
+            Ensure.IsNotNull("WriteConcern", _writeConcern);
         }
 
         // nested classes

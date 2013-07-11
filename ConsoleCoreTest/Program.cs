@@ -23,6 +23,8 @@ namespace MongoDB.DriverUnitTests.Jira
     public static class Program
     {
         private static object _consoleLock = new object();
+        private static DatabaseNamespace _database = new DatabaseNamespace("foo");
+        private static CollectionNamespace _collection = new CollectionNamespace("foo", "bar");
 
         public static void Main()
         {
@@ -117,18 +119,14 @@ namespace MongoDB.DriverUnitTests.Jira
 
         private static void ClearData(ISession session)
         {
-            var commandOp = new CommandOperation<CommandResult>(
-                new DatabaseNamespace("foo"),
-                new BsonBinaryReaderSettings(),
-                new BsonBinaryWriterSettings(),
-                new BsonDocument("dropDatabase", 1),
-                QueryFlags.None,
-                null,
-                ReadPreference.Primary,
-                null,
-                BsonSerializer.LookupSerializer(typeof(CommandResult)));
+            var commandOp = new CommandOperation<CommandResult>(session)
+            {
+                Command = new BsonDocument("dropDatabase", 1),
+                Database = _database,
+                Serializer = BsonSerializer.LookupSerializer(typeof(CommandResult))
+            };
 
-            session.Execute(commandOp, Timeout.InfiniteTimeSpan, CancellationToken.None);
+            commandOp.Execute();
         }
 
         private static void InsertData(ISession session)
@@ -202,54 +200,41 @@ namespace MongoDB.DriverUnitTests.Jira
 
         private static void Insert(ISession session, BsonDocument document)
         {
-            var insertOp = new InsertOperation(
-                new CollectionNamespace("foo", "bar"),
-                new BsonBinaryReaderSettings(),
-                new BsonBinaryWriterSettings(),
-                WriteConcern.Acknowledged,
-                true,
-                false,
-                typeof(BsonDocument),
-                new[] { document },
-                InsertFlags.None,
-                0);
+            var insertOp = new InsertOperation(session)
+            {
+                Collection = _collection,
+                Documents = new [] { document },
+                DocumentType = typeof(BsonDocument),
+            };
 
-            session.Execute(insertOp, Timeout.InfiniteTimeSpan, CancellationToken.None);
+            insertOp.Execute();
         }
 
         private static IEnumerator<BsonDocument> Query(ISession session, BsonDocument query)
         {
-            var queryOp = new QueryOperation<BsonDocument>(
-                new CollectionNamespace("foo", "bar"),
-                new BsonBinaryReaderSettings(),
-                new BsonBinaryWriterSettings(),
-                1,
-                null,
-                QueryFlags.SlaveOk,
-                0,
-                null,
-                query,
-                ReadPreference.Nearest,
-                null,
-                new BsonDocumentSerializer(),
-                0);
+            var queryOp = new QueryOperation<BsonDocument>(session)
+            {
+                Collection = _collection,
+                Limit = 1,
+                Query = query,
+                ReadPreference = ReadPreference.Nearest,
+                Serializer = BsonDocumentSerializer.Instance
+            };
 
-            return session.Execute(queryOp, Timeout.InfiniteTimeSpan, CancellationToken.None);
+            return queryOp.Execute();
         }
 
         private static void Update(ISession session, BsonDocument query, BsonDocument update)
         {
-            var updateOp = new UpdateOperation(
-                new CollectionNamespace("foo", "bar"),
-                new BsonBinaryReaderSettings(),
-                new BsonBinaryWriterSettings(),
-                WriteConcern.Acknowledged,
-                query,
-                update,
-                UpdateFlags.Multi,
-                false);
+            var updateOp = new UpdateOperation(session)
+            {
+                Collection = _collection,
+                Flags = UpdateFlags.Multi,
+                Query = query,
+                Update = update,
+            };
 
-            session.Execute(updateOp, Timeout.InfiniteTimeSpan, CancellationToken.None);
+            updateOp.Execute();
         }
     }
 }

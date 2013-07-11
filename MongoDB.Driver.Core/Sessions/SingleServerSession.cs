@@ -8,23 +8,22 @@ using MongoDB.Driver.Core.Support;
 namespace MongoDB.Driver.Core.Sessions
 {
     /// <summary>
-    /// Session that uses a single channel.
+    /// A session bound to a particular server.
     /// </summary>
-    public sealed class SingleChannelSession : SessionBase
+    public sealed class SingleServerSession : SessionBase
     {
         // private fields
-        private readonly object _selectServerLock = new object();
+        private object _selectServerLock = new object();
         private readonly ICluster _cluster;
         private volatile IServer _server;
-        private volatile IServerChannel _channel;
         private int _disposed;
 
         // constructors
         /// <summary>
-        /// Initializes a new instance of the <see cref="SingleChannelSession" /> class.
+        /// Initializes a new instance of the <see cref="SingleServerSession" /> class.
         /// </summary>
         /// <param name="cluster">The cluster.</param>
-        public SingleChannelSession(ICluster cluster)
+        public SingleServerSession(ICluster cluster)
         {
             Ensure.IsNotNull("cluster", cluster);
 
@@ -49,7 +48,6 @@ namespace MongoDB.Driver.Core.Sessions
                     if (_server == null)
                     {
                         _server = _cluster.SelectServer(options.ServerSelector, options.SelectServerTimeout, options.SelectServerCancellationToken);
-                        _channel = _server.GetChannel(options.GetChannelTimeout, options.GetChannelCancellationToken);
                     }
                 }
             }
@@ -57,10 +55,10 @@ namespace MongoDB.Driver.Core.Sessions
             var selected = options.ServerSelector.SelectServers(new[] { _server.Description });
             if (selected.Any())
             {
-                throw new Exception("The current operation does not match the selected channel.");
+                throw new Exception("The current operation does not match the selected server.");
             }
 
-            return new SingleChannelOperationChannelProvider(this, _channel, options.CloseSession);
+            return new SingleServerOperationChannelProvider(this, _server, options.GetChannelTimeout, options.GetChannelCancellationToken, options.CloseSession);
         }
 
         // protected methods
@@ -74,7 +72,6 @@ namespace MongoDB.Driver.Core.Sessions
             {
                 if (_server != null)
                 {
-                    _channel.Dispose();
                     _server.Dispose();
                 }
             }
@@ -90,17 +87,21 @@ namespace MongoDB.Driver.Core.Sessions
         }
 
         // nested classes
-        private sealed class SingleChannelOperationChannelProvider : IOperationChannelProvider
+        private sealed class SingleServerOperationChannelProvider : IOperationChannelProvider
         {
-            private readonly SingleChannelSession _session;
-            private readonly IServerChannel _channel;
-            private bool _disposeSession;
+            private readonly SingleServerSession _session;
+            private readonly IServer _server;
+            private readonly TimeSpan _timeout;
+            private readonly CancellationToken _cancellationToken;
+            private readonly bool _disposeSession;
             private bool _disposed;
 
-            public SingleChannelOperationChannelProvider(SingleChannelSession session, IServerChannel channel, bool disposeSession)
+            public SingleServerOperationChannelProvider(SingleServerSession session, IServer server, TimeSpan timeout, CancellationToken cancellationToken, bool disposeSession)
             {
                 _session = session;
-                _channel = channel;
+                _server = server;
+                _timeout = timeout;
+                _cancellationToken = cancellationToken;
                 _disposeSession = disposeSession;
             }
 
@@ -109,14 +110,14 @@ namespace MongoDB.Driver.Core.Sessions
                 get 
                 {
                     ThrowIfDisposed();
-                    return _channel.Server; 
+                    return _server.Description; 
                 }
             }
 
             public IServerChannel GetChannel()
             {
                 ThrowIfDisposed();
-                return new DisposalProtectedServerChannel(_channel);
+                return _server.GetChannel(_timeout, _cancellationToken);
             }
 
             public void Dispose()

@@ -23,22 +23,9 @@ namespace MongoDB.Driver.Core.Operations
     /// <summary>
     /// Base class for operations that issue a query against the database.
     /// </summary>
-    public abstract class ReadOperation : DatabaseOperation
+    public abstract class ReadOperation<T> : DatabaseOperation<T>
     {
-        /// <summary>
-        /// Initializes a new instance of the <see cref="ReadOperation" /> class.
-        /// </summary>
-        /// <param name="collectionNamespace">The namespace.</param>
-        /// <param name="readerSettings">The reader settings.</param>
-        /// <param name="writerSettings">The writer settings.</param>
-        protected ReadOperation(
-            CollectionNamespace collectionNamespace,
-            BsonBinaryReaderSettings readerSettings,
-            BsonBinaryWriterSettings writerSettings)
-            : base(collectionNamespace, readerSettings, writerSettings)
-        {
-        }
-
+        // protected methods
         /// <summary>
         /// Wraps the query.
         /// </summary>

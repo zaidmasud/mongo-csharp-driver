@@ -8,6 +8,7 @@ using MongoDB.Bson.IO;
 using MongoDB.Driver.Core.Connections;
 using MongoDB.Driver.Core.Mocks;
 using MongoDB.Driver.Core.Operations;
+using MongoDB.Driver.Core.Sessions;
 using NSubstitute;
 using NUnit.Framework;
 
@@ -27,8 +28,11 @@ namespace MongoDB.Driver.Core.Protocol
             var channelProvider = Substitute.For<IOperationChannelProvider>();
             channelProvider.GetChannel().Returns(channel);
 
-            var subject = CreateSubject(WriteConcern.Unacknowledged);
-            subject.Execute(channelProvider);
+            var session = Substitute.For<ISession>();
+            session.CreateOperationChannelProvider(null).ReturnsForAnyArgs(channelProvider);
+
+            var subject = CreateSubject(session, WriteConcern.Unacknowledged);
+            subject.Execute();
 
             Assert.AreEqual(subject.BufferLengthWithoutWriteConcern, sentBufferLength);
         }
@@ -45,9 +49,11 @@ namespace MongoDB.Driver.Core.Protocol
             var channelProvider = Substitute.For<IOperationChannelProvider>();
             channelProvider.GetChannel().Returns(channel);
 
+            var session = Substitute.For<ISession>();
+            session.CreateOperationChannelProvider(null).ReturnsForAnyArgs(channelProvider);
 
-            var subject = CreateSubject(WriteConcern.Acknowledged);
-            subject.Execute(channelProvider);
+            var subject = CreateSubject(session, WriteConcern.Acknowledged);
+            subject.Execute();
 
             Assert.Greater(sentBufferLength, subject.BufferLengthWithoutWriteConcern);
         }
@@ -64,8 +70,11 @@ namespace MongoDB.Driver.Core.Protocol
             var channelProvider = Substitute.For<IOperationChannelProvider>();
             channelProvider.GetChannel().Returns(channel);
 
-            var subject = CreateSubject(WriteConcern.Acknowledged);
-            Assert.Throws<MongoWriteConcernException>(() => subject.Execute(channelProvider));
+            var session = Substitute.For<ISession>();
+            session.CreateOperationChannelProvider(null).ReturnsForAnyArgs(channelProvider);
+
+            var subject = CreateSubject(session, WriteConcern.Acknowledged);
+            Assert.Throws<MongoWriteConcernException>(() => subject.Execute());
         }
 
         [Test]
@@ -80,17 +89,16 @@ namespace MongoDB.Driver.Core.Protocol
             var channelProvider = Substitute.For<IOperationChannelProvider>();
             channelProvider.GetChannel().Returns(channel);
 
-            var subject = CreateSubject(WriteConcern.Acknowledged);
-            Assert.Throws<MongoWriteConcernException>(() => subject.Execute(channelProvider));
+            var session = Substitute.For<ISession>();
+            session.CreateOperationChannelProvider(null).ReturnsForAnyArgs(channelProvider);
+
+            var subject = CreateSubject(session, WriteConcern.Acknowledged);
+            Assert.Throws<MongoWriteConcernException>(() => subject.Execute());
         }
 
-        private TestWriteOperation CreateSubject(WriteConcern writeConcern)
+        private TestWriteOperation CreateSubject(ISession session, WriteConcern writeConcern)
         {
-            return new TestWriteOperation(
-                new CollectionNamespace("admin", "YAY"),
-                new BsonBinaryReaderSettings(),
-                new BsonBinaryWriterSettings(),
-                writeConcern);
+            return new TestWriteOperation(session, new CollectionNamespace("admin", "YAY"), writeConcern);
         }
 
         private ReplyMessage CreateWriteConcernResult(bool ok, string err)
@@ -110,21 +118,25 @@ namespace MongoDB.Driver.Core.Protocol
 
         private class TestWriteOperation : WriteOperation<WriteConcernResult>
         {
-            public TestWriteOperation(CollectionNamespace collectionNamespace, BsonBinaryReaderSettings readerSettings, BsonBinaryWriterSettings writerSettings, WriteConcern writeConcern)
-                : base(collectionNamespace, readerSettings, writerSettings, writeConcern)
-            { }
+            public TestWriteOperation(ISession session, CollectionNamespace collection, WriteConcern writeConcern)
+            {
+                Session = session;
+                Collection = collection;
+                WriteConcern = writeConcern;
+            }
 
             public int BufferLengthWithoutWriteConcern { get; set; }
 
-            public override WriteConcernResult Execute(IOperationChannelProvider channelProvider)
+            public override WriteConcernResult Execute(OperationBehavior operationBehavior)
             {
+                using (var channelProvider = Session.CreateOperationChannelProvider(null))
                 using (var channel = channelProvider.GetChannel())
                 {
                     var readerSettings = GetServerAdjustedReaderSettings(channel.Server);
                     var writerSettings = GetServerAdjustedWriterSettings(channel.Server);
 
                     var deleteMessage = new DeleteMessage(
-                        CollectionNamespace,
+                        Collection,
                         new BsonDocument(),
                         DeleteFlags.Single,
                         writerSettings);

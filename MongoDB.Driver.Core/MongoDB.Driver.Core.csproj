@@ -95,6 +95,7 @@
     <Compile Include="Connections\IRequestPacket.cs" />
     <Compile Include="Operations\IOperation.cs" />
     <Compile Include="Operations\IOperationChannelProvider.cs" />
+    <Compile Include="Operations\OperationBehavior.cs" />
     <Compile Include="Protocol\BufferedRequestPacket.cs" />
     <Compile Include="Protocol\InsertMessage.cs" />
     <Compile Include="Protocol\OpCode.cs" />
@@ -143,8 +144,9 @@
     <Compile Include="Events\ConnectionMessageReceivedEvent.cs" />
     <Compile Include="Events\ConnectionPacketSendingEvent.cs" />
     <Compile Include="Sessions\ClusterSession.cs" />
+    <Compile Include="Sessions\CreateOperationChannelProviderOptions.cs" />
     <Compile Include="Sessions\ISession.cs" />
-    <Compile Include="Sessions\ServerSession.cs" />
+    <Compile Include="Sessions\SingleServerSession.cs" />
     <Compile Include="Sessions\SessionBase.cs" />
     <Compile Include="Sessions\SingleChannelSession.cs" />
     <Compile Include="Support\EnumerableExtensionMethods.cs" />

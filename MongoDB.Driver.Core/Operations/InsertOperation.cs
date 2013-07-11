@@ -20,6 +20,7 @@ using MongoDB.Bson.IO;
 using MongoDB.Bson.Serialization;
 using MongoDB.Driver.Core.Connections;
 using MongoDB.Driver.Core.Protocol;
+using MongoDB.Driver.Core.Sessions;
 using MongoDB.Driver.Core.Support;
 
 namespace MongoDB.Driver.Core.Operations
@@ -30,62 +31,106 @@ namespace MongoDB.Driver.Core.Operations
     public class InsertOperation : WriteOperation<IEnumerable<WriteConcernResult>>
     {
         // private fields
-        private readonly bool _assignIdOnInsert;
-        private readonly bool _checkInsertDocuments;
-        private readonly Type _documentType;
-        private readonly IEnumerable _documents;
-        private readonly InsertFlags _flags;
-        private readonly int _maxMessageSize;
+        private bool _assignIdOnInsert;
+        private bool _checkInsertDocuments;
+        private Type _documentType;
+        private IEnumerable _documents;
+        private InsertFlags _flags;
+        private int _maxMessageSize;
 
         // constructors
         /// <summary>
         /// Initializes a new instance of the <see cref="InsertOperation" /> class.
         /// </summary>
-        /// <param name="collectionNamespace">The collection namespace.</param>
-        /// <param name="readerSettings">The reader settings.</param>
-        /// <param name="writerSettings">The writer settings.</param>
-        /// <param name="writeConcern">The write concern.</param>
-        /// <param name="assignIdOnInsert">if set to <c>true</c> [assign id on insert].</param>
-        /// <param name="checkInsertDocuments">if set to <c>true</c> [check element names].</param>
-        /// <param name="documentType">Type of the document.</param>
-        /// <param name="documents">The documents.</param>
-        /// <param name="flags">The flags.</param>
-        /// <param name="maxMessageSize">The max message size for each batch.</param>
-        public InsertOperation(
-            CollectionNamespace collectionNamespace,
-            BsonBinaryReaderSettings readerSettings,
-            BsonBinaryWriterSettings writerSettings,
-            WriteConcern writeConcern,
-            bool assignIdOnInsert,
-            bool checkInsertDocuments,
-            Type documentType,
-            IEnumerable documents,
-            InsertFlags flags,
-            int maxMessageSize)
-            : base(collectionNamespace, readerSettings, writerSettings, writeConcern)
+        public InsertOperation()
         {
-            Ensure.IsNotNull("documentType", documentType);
-            Ensure.IsNotNull("documents", documents);
+            _assignIdOnInsert = true;
+            _checkInsertDocuments = true;
+        }
 
-            _assignIdOnInsert = assignIdOnInsert;
-            _checkInsertDocuments = checkInsertDocuments;
-            _documentType = documentType;
-            _documents = documents;
-            _flags = flags;
-            _maxMessageSize = maxMessageSize;
+        /// <summary>
+        /// Initializes a new instance of the <see cref="InsertOperation" /> class.
+        /// </summary>
+        /// <param name="session">The session.</param>
+        public InsertOperation(ISession session)
+            : this()
+        {
+            Session = session;
+        }
+
+        // public properties
+        /// <summary>
+        /// Gets or sets a value indicating whether to assign an id to documents missing them.
+        /// </summary>
+        public bool AssignIdOnInsert
+        {
+            get { return _assignIdOnInsert; }
+            set { _assignIdOnInsert = value; }
+        }
+
+        /// <summary>
+        /// Gets or sets a value indicating whether to check the documents.  What does this mean?
+        /// </summary>
+        public bool CheckInsertDocuments
+        {
+            get { return _checkInsertDocuments; }
+            set { _checkInsertDocuments = value; }
+        }
+
+        /// <summary>
+        /// Gets or sets the document type.
+        /// </summary>
+        public Type DocumentType
+        {
+            get { return _documentType; }
+            set { _documentType = value; }
+        }
+
+        /// <summary>
+        /// Gets or sets the documents.
+        /// </summary>
+        public IEnumerable Documents
+        {
+            get { return _documents; }
+            set { _documents = value; }
+        }
+
+        /// <summary>
+        /// Gets or sets the flags.
+        /// </summary>
+        public InsertFlags Flags
+        {
+            get { return _flags; }
+            set { _flags = value; }
+        }
+
+        /// <summary>
+        /// Gets or sets the maximum ,essage size for each batch.
+        /// </summary>
+        public int MaxMessageSize
+        {
+            get { return _maxMessageSize; }
+            set { _maxMessageSize = value; }
         }
 
         // public methods
         /// <summary>
         /// Executes the Insert operation.
         /// </summary>
-        /// <param name="channelProvider">The channel provider.</param>
+        /// <param name="operationBehavior">The operation behavior.</param>
         /// <returns>A list of WriteConcernResults (or null if WriteConcern is not enabled).</returns>
-        public override IEnumerable<WriteConcernResult> Execute(IOperationChannelProvider channelProvider)
+        public override IEnumerable<WriteConcernResult> Execute(OperationBehavior operationBehavior)
         {
-            Ensure.IsNotNull("channelProvider", channelProvider);
+            ValidateRequiredProperties();
 
-            using(channelProvider)
+            var options = new CreateOperationChannelProviderOptions(
+                serverSelector: new ReadPreferenceServerSelector(ReadPreference.Primary),
+                isQuery: false)
+            {
+                CloseSession = operationBehavior == OperationBehavior.CloseSession,
+            };
+
+            using(var channelProvider = Session.CreateOperationChannelProvider(options))
             using (var channel = channelProvider.GetChannel())
             {
                 var maxMessageSize = (_maxMessageSize != 0) ? _maxMessageSize : channel.Server.MaxMessageSize;
@@ -146,6 +191,17 @@ namespace MongoDB.Driver.Core.Operations
             }
         }
 
+        // protected methods
+        /// <summary>
+        /// Validates the required properties.
+        /// </summary>
+        protected override void ValidateRequiredProperties()
+        {
+            base.ValidateRequiredProperties();
+            Ensure.IsNotNull("Documents", _documents);
+            Ensure.IsNotNull("DocumentType", _documentType);
+        }
+
         // private methods
         private IEnumerable<Batch> GetBatches(int maxMessageSize, BsonBinaryWriterSettings writerSettings)
         {
@@ -156,7 +212,7 @@ namespace MongoDB.Driver.Core.Operations
                 do
                 {
                     var insertMessage = new InsertMessage(
-                        CollectionNamespace,
+                        Collection,
                         _flags,
                         _checkInsertDocuments,
                         writerSettings);

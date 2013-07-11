@@ -19,6 +19,7 @@ using MongoDB.Bson.IO;
 using MongoDB.Bson.Serialization;
 using MongoDB.Driver.Core.Connections;
 using MongoDB.Driver.Core.Protocol;
+using MongoDB.Driver.Core.Sessions;
 using MongoDB.Driver.Core.Support;
 
 namespace MongoDB.Driver.Core.Operations
@@ -27,80 +28,118 @@ namespace MongoDB.Driver.Core.Operations
     /// Represents a Command operation.
     /// </summary>
     /// <typeparam name="TCommandResult">The type of the command result.</typeparam>
-    public class CommandOperation<TCommandResult> : ReadOperation, IOperation<TCommandResult> where TCommandResult : CommandResult
+    public class CommandOperation<TCommandResult> : ReadOperation<TCommandResult> where TCommandResult : CommandResult
     {
         // private fields
-        private readonly object _command;
-        private readonly QueryFlags _flags;
-        private readonly BsonDocument _options;
-        private readonly ReadPreference _readPreference;
-        private readonly IBsonSerializationOptions _serializationOptions;
-        private readonly IBsonSerializer _serializer;
+        private object _command;
+        private DatabaseNamespace _database;
+        private QueryFlags _flags;
+        private BsonDocument _options;
+        private ReadPreference _readPreference;
+        private IBsonSerializationOptions _serializationOptions;
+        private IBsonSerializer _serializer;
 
         // constructors
         /// <summary>
         /// Initializes a new instance of the <see cref="CommandOperation{TCommandResult}" /> class.
         /// </summary>
-        /// <param name="databaseNamespace">Name of the database.</param>
-        /// <param name="readerSettings">The reader settings.</param>
-        /// <param name="writerSettings">The writer settings.</param>
-        /// <param name="command">The command.</param>
-        /// <param name="flags">The flags.</param>
-        /// <param name="options">The options.</param>
-        /// <param name="readPreference">The read preference.</param>
-        /// <param name="serializationOptions">The serialization options.</param>
-        /// <param name="serializer">The serializer.</param>
-        public CommandOperation(
-            DatabaseNamespace databaseNamespace,
-            BsonBinaryReaderSettings readerSettings,
-            BsonBinaryWriterSettings writerSettings,
-            object command,
-            QueryFlags flags,
-            BsonDocument options,
-            ReadPreference readPreference,
-            IBsonSerializationOptions serializationOptions,
-            IBsonSerializer serializer)
-            : base(databaseNamespace.CommandCollection, readerSettings, writerSettings)
+        public CommandOperation()
         {
-            Ensure.IsNotNull("command", command);
-            Ensure.IsNotNull("serializer", serializer);
+            _readPreference = ReadPreference.Primary;
+        }
 
-            _command = command;
-            _flags = flags;
-            _options = options;
-            _readPreference = readPreference;
-            _serializationOptions = serializationOptions;
-            _serializer = serializer;
+        /// <summary>
+        /// Initializes a new instance of the <see cref="CommandOperation{TCommandResult}" /> class.
+        /// </summary>
+        /// <param name="session">The session.</param>
+        public CommandOperation(ISession session)
+            : this()
+        {
+            Session = session;
         }
 
         // public properties
         /// <summary>
-        /// Gets a value indicating whether this instance is query.
+        /// Gets or sets the command.
         /// </summary>
-        public bool IsQuery
+        public object Command
         {
-            get { return true; } // TODO: this is obviously not correct :)
+            get { return _command; }
+            set { _command = value; }
         }
 
         /// <summary>
-        /// Gets the server selector.
+        /// Gets or sets the database.
         /// </summary>
-        public IServerSelector ServerSelector
+        public DatabaseNamespace Database
         {
-            get { return new ReadPreferenceServerSelector(_readPreference); }
+            get { return _database; }
+            set { _database = value; }
+        }
+
+        /// <summary>
+        /// Gets or sets the flags.
+        /// </summary>
+        public QueryFlags Flags
+        {
+            get { return _flags; }
+            set { _flags = value; }
+        }
+
+        /// <summary>
+        /// Gets or sets the options.
+        /// </summary>
+        public BsonDocument Options
+        {
+            get { return _options; }
+            set { _options = value; }
+        }
+
+        /// <summary>
+        /// Gets or sets the read preference.
+        /// </summary>
+        public ReadPreference ReadPreference
+        {
+            get { return _readPreference; }
+            set { _readPreference = value; }
+        }
+
+        /// <summary>
+        /// Gets or sets the serialization options.
+        /// </summary>
+        public IBsonSerializationOptions SerializationOptions
+        {
+            get { return _serializationOptions; }
+            set { _serializationOptions = value; }
+        }
+
+        /// <summary>
+        /// Gets or sets the serializer.
+        /// </summary>
+        public IBsonSerializer Serializer
+        {
+            get { return _serializer; }
+            set { _serializer = value; }
         }
 
         // public methods
         /// <summary>
         /// Executes the Command operation.
         /// </summary>
-        /// <param name="channelProvider">The channel provider.</param>
+        /// <param name="operationBehavior">The operation behavior.</param>
         /// <returns>The command result.</returns>
-        public TCommandResult Execute(IOperationChannelProvider channelProvider)
+        public override TCommandResult Execute(OperationBehavior operationBehavior)
         {
-            Ensure.IsNotNull("channelProvider", channelProvider);
+            ValidateRequiredProperties();
 
-            using(channelProvider)
+            var options = new CreateOperationChannelProviderOptions(
+                serverSelector: new ReadPreferenceServerSelector(_readPreference),
+                isQuery: true)
+            {
+                CloseSession = operationBehavior == OperationBehavior.CloseSession,
+            };
+
+            using(var channelProvider = Session.CreateOperationChannelProvider(options))
             using (var channel = channelProvider.GetChannel())
             {
                 var readerSettings = GetServerAdjustedReaderSettings(channel.Server);
@@ -108,7 +147,7 @@ namespace MongoDB.Driver.Core.Operations
                 var wrappedQuery = WrapQuery(channel.Server, _command, _options, _readPreference);
 
                 var queryMessage = new QueryMessage(
-                    CollectionNamespace,
+                    Database.CommandCollection,
                     wrappedQuery,
                     _flags,
                     0,
@@ -147,6 +186,18 @@ namespace MongoDB.Driver.Core.Operations
                     return commandResult;
                 }
             }
+        }
+
+        // protected methods
+        /// <summary>
+        /// Validates the required properties.
+        /// </summary>
+        protected override void ValidateRequiredProperties()
+        {
+            base.ValidateRequiredProperties();
+            Ensure.IsNotNull("Command", _command);
+            Ensure.IsNotNull("Database", _database);
+            Ensure.IsNotNull("Serializer", _serializer);
         }
     }
 }

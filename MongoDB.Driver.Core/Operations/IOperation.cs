@@ -4,6 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using MongoDB.Driver.Core.Connections;
+using MongoDB.Driver.Core.Sessions;
 
 namespace MongoDB.Driver.Core.Operations
 {
@@ -14,20 +15,16 @@ namespace MongoDB.Driver.Core.Operations
     public interface IOperation<T>
     {
         /// <summary>
-        /// Gets a value indicating whether this operation is a query operation.
+        /// Executes the operation.
         /// </summary>
-        bool IsQuery { get; }
-
-        /// <summary>
-        /// Gets the server selector.
-        /// </summary>
-        IServerSelector ServerSelector { get; }
+        /// <returns>The result of the operation.</returns>
+        T Execute();
 
         /// <summary>
         /// Executes the operation.
         /// </summary>
-        /// <param name="channelProvider">The channel provider.</param>
+        /// <param name="operationBehavior">The operation behavior.</param>
         /// <returns>The result of the operation.</returns>
-        T Execute(IOperationChannelProvider channelProvider);
+        T Execute(OperationBehavior operationBehavior);
     }
 }

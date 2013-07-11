@@ -29,21 +29,17 @@ namespace MongoDB.Driver.Core.Sessions
 
         // public methods
         /// <summary>
-        /// Executes the specified operation.
+        /// Creates an operation channel provider.
         /// </summary>
-        /// <typeparam name="T"></typeparam>
-        /// <param name="operation">The operation.</param>
-        /// <param name="timeout">The timeout.</param>
-        /// <param name="cancellationToken">The cancellation token.</param>
-        /// <returns>The result of the operation.</returns>
-        public override T Execute<T>(IOperation<T> operation, TimeSpan timeout, CancellationToken cancellationToken)
+        /// <param name="options">The options.</param>
+        /// <returns>An operation channel provider.</returns>
+        public override IOperationChannelProvider CreateOperationChannelProvider(CreateOperationChannelProviderOptions options)
         {
-            Ensure.IsNotNull("operation", operation);
+            Ensure.IsNotNull("options", options);
             ThrowIfDisposed();
 
-            var server = _cluster.SelectServer(operation.ServerSelector, timeout, cancellationToken);
-            var provider = new ClusterOperationChannelProvider(server, timeout, cancellationToken);
-            return operation.Execute(provider);
+            var server = _cluster.SelectServer(options.ServerSelector, options.SelectServerTimeout, options.SelectServerCancellationToken);
+            return new ClusterOperationChannelProvider(this, server, options.GetChannelTimeout, options.GetChannelCancellationToken, options.CloseSession);
         }
 
         // protected methods
@@ -68,38 +64,34 @@ namespace MongoDB.Driver.Core.Sessions
         // nested classes
         private sealed class ClusterOperationChannelProvider : IOperationChannelProvider
         {
+            private readonly ClusterSession _session;
             private readonly IServer _server;
             private readonly TimeSpan _timeout;
             private readonly CancellationToken _cancellationToken;
+            private readonly bool _disposeSession;
             private bool _disposed;
 
-            public ClusterOperationChannelProvider(IServer server, TimeSpan timeout, CancellationToken cancellationToken)
+            public ClusterOperationChannelProvider(ClusterSession session, IServer server, TimeSpan timeout, CancellationToken cancellationToken, bool disposeSession)
             {
-                Ensure.IsNotNull("server", server);
-
+                _session = session;
                 _server = server;
                 _timeout = timeout;
                 _cancellationToken = cancellationToken;
+                _disposeSession = disposeSession;
             }
 
             public ServerDescription Server
             {
                 get 
                 {
-                    if (_disposed)
-                    {
-                        throw new ObjectDisposedException(GetType().Name);
-                    }
+                    ThrowIfDisposed();
                     return _server.Description; 
                 }
             }
 
             public IServerChannel GetChannel()
             {
-                if (_disposed)
-                {
-                    throw new ObjectDisposedException(GetType().Name);
-                }
+                ThrowIfDisposed();
                 return _server.GetChannel(_timeout, _cancellationToken);
             }
 
@@ -109,7 +101,21 @@ namespace MongoDB.Driver.Core.Sessions
                 {
                     _disposed = true;
                     _server.Dispose();
+                    if (_disposeSession)
+                    {
+                        _session.Dispose();
+                    }
+                    GC.SuppressFinalize(this);
                 }
+            }
+
+            private void ThrowIfDisposed()
+            {
+                if (_disposed)
+                {
+                    throw new ObjectDisposedException(GetType().Name);
+                }
+                _session.ThrowIfDisposed();
             }
         }
     }

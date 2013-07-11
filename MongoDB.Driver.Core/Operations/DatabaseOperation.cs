@@ -15,6 +15,7 @@
 
 using MongoDB.Bson.IO;
 using MongoDB.Driver.Core.Connections;
+using MongoDB.Driver.Core.Sessions;
 using MongoDB.Driver.Core.Support;
 
 namespace MongoDB.Driver.Core.Operations
@@ -22,43 +23,77 @@ namespace MongoDB.Driver.Core.Operations
     /// <summary>
     /// Base class for an operation.
     /// </summary>
-    public abstract class DatabaseOperation
+    public abstract class DatabaseOperation<T> : IOperation<T>
     {
         // private fields
-        private readonly CollectionNamespace _collectionNamespace;
-        private readonly BsonBinaryReaderSettings _readerSettings;
-        private readonly BsonBinaryWriterSettings _writerSettings;
+        private BsonBinaryReaderSettings _readerSettings;
+        private ISession _session;
+        private BsonBinaryWriterSettings _writerSettings;
 
         // constructors
         /// <summary>
-        /// Initializes a new instance of the <see cref="DatabaseOperation" /> class.
+        /// Initializes a new instance of the <see cref="DatabaseOperation{T}" /> class.
         /// </summary>
-        /// <param name="collectionNamespace">The namespace.</param>
-        /// <param name="readerSettings">The reader settings.</param>
-        /// <param name="writerSettings">The writer settings.</param>
-        protected DatabaseOperation(
-            CollectionNamespace collectionNamespace,
-            BsonBinaryReaderSettings readerSettings,
-            BsonBinaryWriterSettings writerSettings)
+        protected DatabaseOperation()
         {
-            Ensure.IsNotNull("namespace", collectionNamespace);
-            Ensure.IsNotNull("readerSettings", readerSettings);
-            Ensure.IsNotNull("writerSettings", writerSettings);
-
-            _collectionNamespace = collectionNamespace;
-            _readerSettings = (BsonBinaryReaderSettings)readerSettings.FrozenCopy();
-            _writerSettings = (BsonBinaryWriterSettings)writerSettings.FrozenCopy();
+            _readerSettings = BsonBinaryReaderSettings.Defaults;
+            _writerSettings = BsonBinaryWriterSettings.Defaults;
         }
 
-        // protected properties
+        // public properties
         /// <summary>
-        /// Gets the collection namespace the operation will be performed against.
+        /// Gets or sets the reader settings.
         /// </summary>
-        protected CollectionNamespace CollectionNamespace
+        public BsonBinaryReaderSettings ReaderSettings
         {
-            get { return _collectionNamespace; }
+            get { return _readerSettings; }
+            set
+            {
+                Ensure.IsNotNull("value", value);
+                _readerSettings = value;
+            }
         }
 
+        /// <summary>
+        /// Gets or sets the session.
+        /// </summary>
+        public ISession Session
+        {
+            get { return _session; }
+            set { _session = value; }
+        }
+
+        /// <summary>
+        /// Gets or sets the writer settings.
+        /// </summary>
+        public BsonBinaryWriterSettings WriterSettings
+        {
+            get { return _writerSettings; }
+            set
+            {
+                Ensure.IsNotNull("value", value);
+                _writerSettings = value;
+            }
+        }
+
+        // public methods
+        /// <summary>
+        /// Executes this instance.
+        /// </summary>
+        /// <returns>An operation channel provider.</returns>
+        public T Execute()
+        {
+            return Execute(OperationBehavior.Default);
+        }
+
+        /// <summary>
+        /// Executes the specified operation behavior.
+        /// </summary>
+        /// <param name="operationBehavior">The operation behavior.</param>
+        /// <returns>An operation channel provider.</returns>
+        public abstract T Execute(OperationBehavior operationBehavior);
+
+        // protected methods
         /// <summary>
         /// Adjusts the reader settings based on server specific settings.
         /// </summary>
@@ -86,6 +121,14 @@ namespace MongoDB.Driver.Core.Operations
             var writerSettings = _writerSettings.Clone();
             writerSettings.MaxDocumentSize = server.MaxDocumentSize;
             return writerSettings;
+        }
+
+        /// <summary>
+        /// Validates the required properties.
+        /// </summary>
+        protected virtual void ValidateRequiredProperties()
+        {
+            Ensure.IsNotNull("Session", _session);
         }
     }
 }

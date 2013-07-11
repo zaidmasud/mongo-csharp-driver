@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Threading;
+using MongoDB.Driver.Core.Connections;
 using MongoDB.Driver.Core.Operations;
 
 namespace MongoDB.Driver.Core.Sessions
@@ -29,14 +30,11 @@ namespace MongoDB.Driver.Core.Sessions
         }
 
         /// <summary>
-        /// Executes the specified operation.
+        /// Creates an operation channel provider.
         /// </summary>
-        /// <typeparam name="T">The return type of the operation.</typeparam>
-        /// <param name="operation">The operation.</param>
-        /// <param name="timeout">The timeout.</param>
-        /// <param name="cancellationToken">The cancellation token.</param>
-        /// <returns>The result of the operation.</returns>
-        public abstract T Execute<T>(IOperation<T> operation, TimeSpan timeout, CancellationToken cancellationToken);
+        /// <param name="options">The options.</param>
+        /// <returns>An operation channel provider.</returns>
+        public abstract IOperationChannelProvider CreateOperationChannelProvider(CreateOperationChannelProviderOptions options);
 
         // protected methods
         /// <summary>

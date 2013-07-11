@@ -1,15 +1,11 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.IO;
-using System.Linq;
-using System.Net;
-using System.Text;
 using MongoDB.Bson;
 using MongoDB.Bson.IO;
 using MongoDB.Bson.Serialization;
 using MongoDB.Driver.Core.Connections;
-using MongoDB.Driver.Core.Mocks;
 using MongoDB.Driver.Core.Operations;
+using MongoDB.Driver.Core.Sessions;
 using NSubstitute;
 using NUnit.Framework;
 
@@ -39,8 +35,11 @@ namespace MongoDB.Driver.Core.Protocol
             var channelProvider = Substitute.For<IOperationChannelProvider>();
             channelProvider.GetChannel().Returns(channel);
 
-            var subject = CreateSubject(flags, writeConcern, numBatches);
-            subject.Execute(channelProvider);
+            var session = Substitute.For<ISession>();
+            session.CreateOperationChannelProvider(null).ReturnsForAnyArgs(channelProvider);
+
+            var subject = CreateSubject(session, flags, writeConcern, numBatches);
+            subject.Execute();
 
             channel.ReceivedWithAnyArgs(numGetLastErrors).Receive(null);
         }
@@ -72,19 +71,17 @@ namespace MongoDB.Driver.Core.Protocol
             }
         }
 
-        private InsertOperation CreateSubject(InsertFlags flags, WriteConcern writeConcern, int numBatches)
+        private InsertOperation CreateSubject(ISession session, InsertFlags flags, WriteConcern writeConcern, int numBatches)
         {
-            return new InsertOperation(
-                new CollectionNamespace("admin", "YAY"),
-                new BsonBinaryReaderSettings(),
-                new BsonBinaryWriterSettings(),
-                writeConcern,
-                false, // don't generate ids, it would change the size of the documents...
-                true,
-                typeof(BsonDocument),
-                CreateDocumentBatch(numBatches),
-                flags,
-                0);
+            return new InsertOperation(session)
+            {
+                AssignIdOnInsert = false,
+                Collection = new CollectionNamespace("admin", "YAY"),
+                Documents = CreateDocumentBatch(numBatches),
+                DocumentType = typeof(BsonDocument),
+                Flags = flags,
+                WriteConcern = writeConcern
+            };
         }
 
         private ReplyMessage CreateWriteConcernResult(bool ok, string err)

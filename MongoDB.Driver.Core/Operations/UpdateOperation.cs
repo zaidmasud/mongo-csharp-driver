@@ -16,6 +16,7 @@
 using MongoDB.Bson.IO;
 using MongoDB.Driver.Core.Connections;
 using MongoDB.Driver.Core.Protocol;
+using MongoDB.Driver.Core.Sessions;
 using MongoDB.Driver.Core.Support;
 
 namespace MongoDB.Driver.Core.Operations
@@ -26,58 +27,92 @@ namespace MongoDB.Driver.Core.Operations
     public class UpdateOperation : WriteOperation<WriteConcernResult>
     {
         // private fields
-        private readonly bool _checkUpdateDocument;
-        private readonly UpdateFlags _flags;
-        private readonly object _query;
-        private readonly object _update;
+        private bool _checkUpdateDocument;
+        private UpdateFlags _flags;
+        private object _query;
+        private object _update;
 
         // constructors
         /// <summary>
         /// Initializes a new instance of the <see cref="UpdateOperation" /> class.
         /// </summary>
-        /// <param name="collectionNamespace">The namespace.</param>
-        /// <param name="readerSettings">The reader settings.</param>
-        /// <param name="writerSettings">The writer settings.</param>
-        /// <param name="writeConcern">The write concern.</param>
-        /// <param name="query">The query.</param>
-        /// <param name="update">The update.</param>
-        /// <param name="flags">The flags.</param>
-        /// <param name="checkUpdateDocument">Set to true if the update document should be checked for invalid element names.</param>
-        public UpdateOperation(
-            CollectionNamespace collectionNamespace,
-            BsonBinaryReaderSettings readerSettings,
-            BsonBinaryWriterSettings writerSettings,
-            WriteConcern writeConcern,
-            object query,
-            object update,
-            UpdateFlags flags,
-            bool checkUpdateDocument)
-            : base(collectionNamespace, readerSettings, writerSettings, writeConcern)
+        public UpdateOperation()
         {
-            _query = query;
-            _update = update;
-            _flags = flags;
-            _checkUpdateDocument = checkUpdateDocument;
+            _checkUpdateDocument = true;
+        }
+
+        /// <summary>
+        /// Initializes a new instance of the <see cref="UpdateOperation" /> class.
+        /// </summary>
+        /// <param name="session">The session.</param>
+        public UpdateOperation(ISession session)
+            : this()
+        {
+            Session = session;
+        }
+
+        // public properties
+        /// <summary>
+        /// Gets or sets a value indicating whether to check the update document.  What does this mean???
+        /// </summary>
+        public bool CheckUpdateDocument
+        {
+            get { return _checkUpdateDocument; }
+            set { _checkUpdateDocument = value; }
+        }
+
+        /// <summary>
+        /// Gets or sets the update flags.
+        /// </summary>
+        public UpdateFlags Flags
+        {
+            get { return _flags; }
+            set { _flags = value; }
+        }
+
+        /// <summary>
+        /// Gets or sets the query object.
+        /// </summary>
+        public object Query
+        {
+            get { return _query; }
+            set { _query = value; }
+        }
+
+        /// <summary>
+        /// Gets or sets the update object.
+        /// </summary>
+        public object Update
+        {
+            get { return _update; }
+            set { _update = value; }
         }
 
         // public methods
         /// <summary>
         /// Executes the Update operation.
         /// </summary>
-        /// <param name="channelProvider">The channel provider.</param>
+        /// <param name="operationBehavior">The operation behavior.</param>
         /// <returns>A WriteConcern result (or null if WriteConcern was not enabled).</returns>
-        public override WriteConcernResult Execute(IOperationChannelProvider channelProvider)
+        public override WriteConcernResult Execute(OperationBehavior operationBehavior)
         {
-            Ensure.IsNotNull("channelProvider", channelProvider);
+            ValidateRequiredProperties();
 
-            using(channelProvider)
+            var options = new CreateOperationChannelProviderOptions(
+                serverSelector: new ReadPreferenceServerSelector(ReadPreference.Primary),
+                isQuery: false)
+            {
+                CloseSession = operationBehavior == OperationBehavior.CloseSession,
+            };
+
+            using(var channelProvider = Session.CreateOperationChannelProvider(options))
             using (var channel = channelProvider.GetChannel())
             {
                 var readerSettings = GetServerAdjustedReaderSettings(channel.Server);
                 var writerSettings = GetServerAdjustedWriterSettings(channel.Server);
 
                 var updateMessage = new UpdateMessage(
-                    CollectionNamespace,
+                    Collection,
                     _query,
                     _update,
                     _flags,
@@ -93,6 +128,17 @@ namespace MongoDB.Driver.Core.Operations
 
                 return ReadWriteConcernResult(channel, sendMessageResult, readerSettings);
             }
+        }
+
+        // protected methods
+        /// <summary>
+        /// Validates the required properties.
+        /// </summary>
+        protected override void ValidateRequiredProperties()
+        {
+            base.ValidateRequiredProperties();
+            Ensure.IsNotNull("Query", _query);
+            Ensure.IsNotNull("Update", _update);
         }
     }
 }
