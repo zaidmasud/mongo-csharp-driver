@@ -9,11 +9,12 @@ namespace MongoDB.Driver.Core.Sessions
     /// <summary>
     /// A session based on an entire cluster.
     /// </summary>
-    public sealed class ClusterSession : SessionBase
+    public sealed class ClusterSession : ClusterSessionBase
     {
         // private fields
         private readonly ICluster _cluster;
-        private int _disposed;
+        private readonly SessionSettings _settings;
+        private bool _disposed;
 
         // constructors
         /// <summary>
@@ -21,10 +22,22 @@ namespace MongoDB.Driver.Core.Sessions
         /// </summary>
         /// <param name="cluster">The cluster.</param>
         public ClusterSession(ICluster cluster)
+            : this(cluster, new SessionSettings())
+        {
+        }
+
+        /// <summary>
+        /// Initializes a new instance of the <see cref="ClusterSession" /> class.
+        /// </summary>
+        /// <param name="cluster">The cluster.</param>
+        /// <param name="settings">The settings.</param>
+        public ClusterSession(ICluster cluster, SessionSettings settings)
         {
             Ensure.IsNotNull("cluster", cluster);
+            Ensure.IsNotNull("settings", settings);
 
             _cluster = cluster;
+            _settings = settings;
         }
 
         // public methods
@@ -38,8 +51,8 @@ namespace MongoDB.Driver.Core.Sessions
             Ensure.IsNotNull("options", options);
             ThrowIfDisposed();
 
-            var server = _cluster.SelectServer(options.ServerSelector, options.SelectServerTimeout, options.SelectServerCancellationToken);
-            return new ClusterOperationChannelProvider(this, server, options.GetChannelTimeout, options.GetChannelCancellationToken, options.CloseSession);
+            var server = _cluster.SelectServer(options.ServerSelector, _settings.Timeout, _settings.CancellationToken);
+            return new ClusterOperationChannelProvider(this, server, _settings.Timeout, _settings.CancellationToken, options.DisposeSession);
         }
 
         // protected methods
@@ -49,13 +62,13 @@ namespace MongoDB.Driver.Core.Sessions
         /// <param name="disposing"><c>true</c> to release both managed and unmanaged resources; <c>false</c> to release only unmanaged resources.</param>
         protected override void Dispose(bool disposing)
         {
-            Interlocked.CompareExchange(ref _disposed, 1, 0);
+            _disposed = true;
         }
 
         // private methods
         private void ThrowIfDisposed()
         {
-            if (Interlocked.CompareExchange(ref _disposed, 0, 0) == 1)
+            if (_disposed)
             {
                 throw new ObjectDisposedException(GetType().Name);
             }

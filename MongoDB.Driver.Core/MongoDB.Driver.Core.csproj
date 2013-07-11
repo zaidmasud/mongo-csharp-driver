@@ -146,8 +146,9 @@
     <Compile Include="Sessions\ClusterSession.cs" />
     <Compile Include="Sessions\CreateOperationChannelProviderOptions.cs" />
     <Compile Include="Sessions\ISession.cs" />
+    <Compile Include="Sessions\SessionSettings.cs" />
     <Compile Include="Sessions\SingleServerSession.cs" />
-    <Compile Include="Sessions\SessionBase.cs" />
+    <Compile Include="Sessions\ClusterSessionBase.cs" />
     <Compile Include="Sessions\SingleChannelSession.cs" />
     <Compile Include="Support\EnumerableExtensionMethods.cs" />
     <Compile Include="CommandResult.cs" />

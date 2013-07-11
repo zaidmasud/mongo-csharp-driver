@@ -101,20 +101,21 @@ namespace MongoDB.DriverUnitTests.Jira
             //    nodeFactory);
             cluster.Initialize();
 
-            var session = new ClusterSession(cluster);
-
-            Console.WriteLine("Clearing Data");
-            ClearData(session);
-            Console.WriteLine("Inserting Seed Data");
-            InsertData(session);
+            using (var session = new ClusterSession(cluster))
+            {
+                Console.WriteLine("Clearing Data");
+                ClearData(session);
+                Console.WriteLine("Inserting Seed Data");
+                InsertData(session);
+            }
 
             Console.WriteLine("Running Tests (errors will show up as + (query error) or * (insert/update error))");
             for (int i = 0; i < 0; i++)
             {
-                ThreadPool.QueueUserWorkItem(_ => DoWork(session));
+                ThreadPool.QueueUserWorkItem(_ => DoWork(new ClusterSession(cluster)));
             }
 
-            DoWork(session); // blocking
+            DoWork(new ClusterSession(cluster)); // blocking
         }
 
         private static void ClearData(ISession session)

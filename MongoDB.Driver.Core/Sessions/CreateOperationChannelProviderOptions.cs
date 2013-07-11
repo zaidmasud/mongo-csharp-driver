@@ -27,19 +27,14 @@ namespace MongoDB.Driver.Core.Sessions
         {
             _serverSelector = serverSelector;
             _isQuery = isQuery;
-            CloseSession = false;
-            SelectServerTimeout = Timeout.InfiniteTimeSpan;
-            SelectServerCancellationToken = CancellationToken.None;
+            DisposeSession = false;
         }
 
         // public properties
         /// <summary>
-        /// Gets the server selector.
+        /// Gets or sets a value indicating whether to dispose of the session when the IOperationChannelProvider is disposed.
         /// </summary>
-        public IServerSelector ServerSelector
-        {
-            get { return _serverSelector; }
-        }
+        public bool DisposeSession { get; set; }
 
         /// <summary>
         /// Gets a value indicating whether to create an IOperationChannelProvider for a query.
@@ -50,28 +45,11 @@ namespace MongoDB.Driver.Core.Sessions
         }
 
         /// <summary>
-        /// Gets or sets a value indicating whether to close the session when the IOperationChannelProvider is closed.
+        /// Gets the server selector.
         /// </summary>
-        public bool CloseSession { get; set; }
-
-        /// <summary>
-        /// Gets or sets the timeout to apply when selecting a server.
-        /// </summary>
-        public TimeSpan SelectServerTimeout { get; set; }
-
-        /// <summary>
-        /// Gets or sets the cancellation token to use when selecting a server.
-        /// </summary>
-        public CancellationToken SelectServerCancellationToken { get; set; }
-
-        /// <summary>
-        /// Gets or sets the timeout to apply when getting a channel.
-        /// </summary>
-        public TimeSpan GetChannelTimeout { get; set; }
-
-        /// <summary>
-        /// Gets or sets the cancellation token to use when getting a channel.
-        /// </summary>
-        public CancellationToken GetChannelCancellationToken { get; set; }
+        public IServerSelector ServerSelector
+        {
+            get { return _serverSelector; }
+        }
     }
 }

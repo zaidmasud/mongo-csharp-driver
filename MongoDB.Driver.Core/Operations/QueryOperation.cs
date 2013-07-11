@@ -189,7 +189,7 @@ namespace MongoDB.Driver.Core.Operations
                 serverSelector: new ReadPreferenceServerSelector(_readPreference),
                 isQuery: true)
             {
-                CloseSession = operationBehavior == OperationBehavior.CloseSession,
+                DisposeSession = operationBehavior == OperationBehavior.CloseSession,
             };
 
             using (var channelProvider = Session.CreateOperationChannelProvider(options))

@@ -10,14 +10,14 @@ namespace MongoDB.Driver.Core.Sessions
     /// <summary>
     /// Session that uses a single channel.
     /// </summary>
-    public sealed class SingleChannelSession : SessionBase
+    public sealed class SingleChannelSession : ClusterSessionBase
     {
         // private fields
-        private readonly object _selectServerLock = new object();
         private readonly ICluster _cluster;
-        private volatile IServer _server;
-        private volatile IServerChannel _channel;
-        private int _disposed;
+        private readonly SessionSettings _settings;
+        private IServerChannel _channel;
+        private bool _disposed;
+        private IServer _server;
 
         // constructors
         /// <summary>
@@ -25,10 +25,22 @@ namespace MongoDB.Driver.Core.Sessions
         /// </summary>
         /// <param name="cluster">The cluster.</param>
         public SingleChannelSession(ICluster cluster)
+            : this(cluster, new SessionSettings())
+        {
+        }
+
+        /// <summary>
+        /// Initializes a new instance of the <see cref="SingleChannelSession" /> class.
+        /// </summary>
+        /// <param name="cluster">The cluster.</param>
+        /// <param name="settings">The settings.</param>
+        public SingleChannelSession(ICluster cluster, SessionSettings settings)
         {
             Ensure.IsNotNull("cluster", cluster);
+            Ensure.IsNotNull("settings", settings);
 
             _cluster = cluster;
+            _settings = settings;
         }
 
         // public methods
@@ -44,14 +56,8 @@ namespace MongoDB.Driver.Core.Sessions
 
             if (_server == null)
             {
-                lock (_selectServerLock)
-                {
-                    if (_server == null)
-                    {
-                        _server = _cluster.SelectServer(options.ServerSelector, options.SelectServerTimeout, options.SelectServerCancellationToken);
-                        _channel = _server.GetChannel(options.GetChannelTimeout, options.GetChannelCancellationToken);
-                    }
-                }
+                _server = _cluster.SelectServer(options.ServerSelector, _settings.Timeout, _settings.CancellationToken);
+                _channel = _server.GetChannel(_settings.Timeout, _settings.CancellationToken);
             }
 
             var selected = options.ServerSelector.SelectServers(new[] { _server.Description });
@@ -60,7 +66,7 @@ namespace MongoDB.Driver.Core.Sessions
                 throw new Exception("The current operation does not match the selected channel.");
             }
 
-            return new SingleChannelOperationChannelProvider(this, _channel, options.CloseSession);
+            return new SingleChannelOperationChannelProvider(this, _channel, options.DisposeSession);
         }
 
         // protected methods
@@ -70,20 +76,21 @@ namespace MongoDB.Driver.Core.Sessions
         /// <param name="disposing"><c>true</c> to release both managed and unmanaged resources; <c>false</c> to release only unmanaged resources.</param>
         protected override void Dispose(bool disposing)
         {
-            if (disposing && Interlocked.CompareExchange(ref _disposed, 1, 0) == 0)
+            if (disposing && !_disposed)
             {
                 if (_server != null)
                 {
                     _channel.Dispose();
                     _server.Dispose();
                 }
+                _disposed = true;
             }
         }
 
         // private methods
         private void ThrowIfDisposed()
         {
-            if (Interlocked.CompareExchange(ref _disposed, 0, 0) == 1)
+            if (_disposed)
             {
                 throw new ObjectDisposedException(GetType().Name);
             }

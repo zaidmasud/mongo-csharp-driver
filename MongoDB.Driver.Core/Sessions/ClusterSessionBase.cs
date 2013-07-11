@@ -8,13 +8,13 @@ namespace MongoDB.Driver.Core.Sessions
     /// <summary>
     /// Abstract base class for sessions.
     /// </summary>
-    public abstract class SessionBase : ISession
+    public abstract class ClusterSessionBase : ISession
     {
         // constructors
         /// <summary>
-        /// Finalizes an instance of the <see cref="SessionBase" /> class.
+        /// Finalizes an instance of the <see cref="ClusterSessionBase" /> class.
         /// </summary>
-        ~SessionBase()
+        ~ClusterSessionBase()
         {
             Dispose(false);
         }

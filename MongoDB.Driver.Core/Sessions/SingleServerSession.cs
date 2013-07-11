@@ -10,13 +10,13 @@ namespace MongoDB.Driver.Core.Sessions
     /// <summary>
     /// A session bound to a particular server.
     /// </summary>
-    public sealed class SingleServerSession : SessionBase
+    public sealed class SingleServerSession : ClusterSessionBase
     {
         // private fields
-        private object _selectServerLock = new object();
         private readonly ICluster _cluster;
-        private volatile IServer _server;
-        private int _disposed;
+        private readonly SessionSettings _settings;
+        private bool _disposed;
+        private IServer _server;
 
         // constructors
         /// <summary>
@@ -24,10 +24,22 @@ namespace MongoDB.Driver.Core.Sessions
         /// </summary>
         /// <param name="cluster">The cluster.</param>
         public SingleServerSession(ICluster cluster)
+            : this(cluster, new SessionSettings())
+        {
+        }
+
+        /// <summary>
+        /// Initializes a new instance of the <see cref="SingleServerSession" /> class.
+        /// </summary>
+        /// <param name="cluster">The cluster.</param>
+        /// <param name="settings">The settings.</param>
+        public SingleServerSession(ICluster cluster, SessionSettings settings)
         {
             Ensure.IsNotNull("cluster", cluster);
+            Ensure.IsNotNull("settings", settings);
 
             _cluster = cluster;
+            _settings = settings;
         }
 
         // public methods
@@ -43,13 +55,7 @@ namespace MongoDB.Driver.Core.Sessions
 
             if (_server == null)
             {
-                lock (_selectServerLock)
-                {
-                    if (_server == null)
-                    {
-                        _server = _cluster.SelectServer(options.ServerSelector, options.SelectServerTimeout, options.SelectServerCancellationToken);
-                    }
-                }
+                _server = _cluster.SelectServer(options.ServerSelector, _settings.Timeout, _settings.CancellationToken);
             }
 
             var selected = options.ServerSelector.SelectServers(new[] { _server.Description });
@@ -58,7 +64,7 @@ namespace MongoDB.Driver.Core.Sessions
                 throw new Exception("The current operation does not match the selected server.");
             }
 
-            return new SingleServerOperationChannelProvider(this, _server, options.GetChannelTimeout, options.GetChannelCancellationToken, options.CloseSession);
+            return new SingleServerOperationChannelProvider(this, _server, _settings.Timeout, _settings.CancellationToken, options.DisposeSession);
         }
 
         // protected methods
@@ -68,19 +74,20 @@ namespace MongoDB.Driver.Core.Sessions
         /// <param name="disposing"><c>true</c> to release both managed and unmanaged resources; <c>false</c> to release only unmanaged resources.</param>
         protected override void Dispose(bool disposing)
         {
-            if (disposing && Interlocked.CompareExchange(ref _disposed, 1, 0) == 0)
+            if (disposing && !_disposed)
             {
                 if (_server != null)
                 {
                     _server.Dispose();
                 }
+                _disposed = true;
             }
         }
 
         // private methods
         private void ThrowIfDisposed()
         {
-            if (Interlocked.CompareExchange(ref _disposed, 0, 0) == 1)
+            if (_disposed)
             {
                 throw new ObjectDisposedException(GetType().Name);
             }
@@ -107,10 +114,10 @@ namespace MongoDB.Driver.Core.Sessions
 
             public ServerDescription Server
             {
-                get 
+                get
                 {
                     ThrowIfDisposed();
-                    return _server.Description; 
+                    return _server.Description;
                 }
             }
 
