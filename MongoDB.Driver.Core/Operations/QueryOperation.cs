@@ -185,14 +185,14 @@ namespace MongoDB.Driver.Core.Operations
             var count = 0;
             var limit = (_limit >= 0) ? _limit : -_limit;
 
-            var options = new CreateOperationChannelProviderOptions(
+            var options = new CreateSessionChannelProviderOptions(
                 serverSelector: new ReadPreferenceServerSelector(_readPreference),
                 isQuery: true)
             {
                 DisposeSession = operationBehavior == OperationBehavior.CloseSession,
             };
 
-            using (var channelProvider = Session.CreateOperationChannelProvider(options))
+            using (var channelProvider = Session.CreateSessionChannelProvider(options))
             {
                 foreach (var document in DeserializeDocuments(channelProvider))
                 {
@@ -219,7 +219,7 @@ namespace MongoDB.Driver.Core.Operations
         }
 
         // private methods
-        private IEnumerable<TDocument> DeserializeDocuments(IOperationChannelProvider channelProvider)
+        private IEnumerable<TDocument> DeserializeDocuments(ISessionChannelProvider channelProvider)
         {
             var readerSettings = GetServerAdjustedReaderSettings(channelProvider.Server);
 
@@ -266,7 +266,7 @@ namespace MongoDB.Driver.Core.Operations
             }
         }
 
-        private ReplyMessage GetFirstBatch(IOperationChannelProvider channelProvider)
+        private ReplyMessage GetFirstBatch(ISessionChannelProvider channelProvider)
         {
             // some of these weird conditions are necessary to get commands to run correctly
             // specifically numberToReturn has to be 1 or -1 for commands
@@ -317,7 +317,7 @@ namespace MongoDB.Driver.Core.Operations
             }
         }
 
-        private ReplyMessage GetNextBatch(IOperationChannelProvider channelProvider, long cursorId)
+        private ReplyMessage GetNextBatch(ISessionChannelProvider channelProvider, long cursorId)
         {
             using (var channel = channelProvider.GetChannel())
             {
@@ -335,7 +335,7 @@ namespace MongoDB.Driver.Core.Operations
             }
         }
 
-        private void KillCursor(IOperationChannelProvider channelProvider, long cursorId)
+        private void KillCursor(ISessionChannelProvider channelProvider, long cursorId)
         {
             using (var channel = channelProvider.GetChannel())
             {

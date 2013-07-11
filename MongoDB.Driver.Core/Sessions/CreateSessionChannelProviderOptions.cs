@@ -9,9 +9,9 @@ using MongoDB.Driver.Core.Connections;
 namespace MongoDB.Driver.Core.Sessions
 {
     /// <summary>
-    /// Options for ISession.CreateOperationChannelProvider.
+    /// Options for ISession.CreateSessionChannelProvider.
     /// </summary>
-    public class CreateOperationChannelProviderOptions
+    public class CreateSessionChannelProviderOptions
     {
         // private fields
         private readonly IServerSelector _serverSelector;
@@ -19,11 +19,11 @@ namespace MongoDB.Driver.Core.Sessions
 
         // constructors
         /// <summary>
-        /// Initializes a new instance of the <see cref="CreateOperationChannelProviderOptions" /> class.
+        /// Initializes a new instance of the <see cref="CreateSessionChannelProviderOptions" /> class.
         /// </summary>
         /// <param name="serverSelector">The server selector.</param>
         /// <param name="isQuery">if set to <c>true</c> [is query].</param>
-        public CreateOperationChannelProviderOptions(IServerSelector serverSelector, bool isQuery)
+        public CreateSessionChannelProviderOptions(IServerSelector serverSelector, bool isQuery)
         {
             _serverSelector = serverSelector;
             _isQuery = isQuery;

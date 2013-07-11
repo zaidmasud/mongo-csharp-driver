@@ -76,14 +76,14 @@ namespace MongoDB.Driver.Core.Operations
         {
             ValidateRequiredProperties();
 
-            var options = new CreateOperationChannelProviderOptions(
+            var options = new CreateSessionChannelProviderOptions(
                 serverSelector: new ReadPreferenceServerSelector(ReadPreference.Primary),
                 isQuery: false)
             {
                 DisposeSession = operationBehavior == OperationBehavior.CloseSession,
             };
 
-            using(var channelProvider = Session.CreateOperationChannelProvider(options))
+            using(var channelProvider = Session.CreateSessionChannelProvider(options))
             using (var channel = channelProvider.GetChannel())
             {
                 var readerSettings = GetServerAdjustedReaderSettings(channel.Server);

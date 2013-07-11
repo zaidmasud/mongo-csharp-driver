@@ -46,7 +46,7 @@ namespace MongoDB.Driver.Core.Sessions
         /// </summary>
         /// <param name="options">The options.</param>
         /// <returns>An operation channel provider.</returns>
-        public override IOperationChannelProvider CreateOperationChannelProvider(CreateOperationChannelProviderOptions options)
+        public override ISessionChannelProvider CreateSessionChannelProvider(CreateSessionChannelProviderOptions options)
         {
             Ensure.IsNotNull("options", options);
             ThrowIfDisposed();
@@ -75,7 +75,7 @@ namespace MongoDB.Driver.Core.Sessions
         }
 
         // nested classes
-        private sealed class ClusterOperationChannelProvider : IOperationChannelProvider
+        private sealed class ClusterOperationChannelProvider : ISessionChannelProvider
         {
             private readonly ClusterSession _session;
             private readonly IServer _server;

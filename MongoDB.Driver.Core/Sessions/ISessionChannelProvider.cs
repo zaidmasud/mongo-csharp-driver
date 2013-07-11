@@ -16,12 +16,12 @@
 using System;
 using MongoDB.Driver.Core.Connections;
 
-namespace MongoDB.Driver.Core.Operations
+namespace MongoDB.Driver.Core.Sessions
 {
     /// <summary>
-    /// Represents a source of channels.
+    /// Represents a source of channels from a session.
     /// </summary>
-    public interface IOperationChannelProvider : IDisposable
+    public interface ISessionChannelProvider : IDisposable
     {
         /// <summary>
         /// Gets the server.

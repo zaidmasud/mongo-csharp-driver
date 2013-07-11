@@ -15,6 +15,6 @@ namespace MongoDB.Driver.Core.Sessions
         /// </summary>
         /// <param name="options">The options.</param>
         /// <returns>An operation channel provider.</returns>
-        IOperationChannelProvider CreateOperationChannelProvider(CreateOperationChannelProviderOptions options);
+        ISessionChannelProvider CreateSessionChannelProvider(CreateSessionChannelProviderOptions options);
     }
 }
