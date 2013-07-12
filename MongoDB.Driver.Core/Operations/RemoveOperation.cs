@@ -77,7 +77,7 @@ namespace MongoDB.Driver.Core.Operations
             ValidateRequiredProperties();
 
             var options = new CreateSessionChannelProviderOptions(
-                serverSelector: new ReadPreferenceServerSelector(ReadPreference.Primary),
+                serverSelector: PrimaryServerSelector.Instance,
                 isQuery: false)
             {
                 DisposeSession = operationBehavior == OperationBehavior.CloseSession,

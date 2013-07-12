@@ -94,6 +94,7 @@
     <Compile Include="Connections\MongoSocketException.cs" />
     <Compile Include="Connections\IRequestPacket.cs" />
     <Compile Include="Operations\IOperation.cs" />
+    <Compile Include="PrimaryServerSelector.cs" />
     <Compile Include="Sessions\ISessionChannelProvider.cs" />
     <Compile Include="Operations\OperationBehavior.cs" />
     <Compile Include="Protocol\BufferedRequestPacket.cs" />
@@ -146,7 +147,7 @@
     <Compile Include="Sessions\ClusterSession.cs" />
     <Compile Include="Sessions\CreateSessionChannelProviderOptions.cs" />
     <Compile Include="Sessions\ISession.cs" />
-    <Compile Include="Sessions\SessionSettings.cs" />
+    <Compile Include="Sessions\SessionBehavior.cs" />
     <Compile Include="Sessions\SingleServerSession.cs" />
     <Compile Include="Sessions\ClusterSessionBase.cs" />
     <Compile Include="Sessions\SingleChannelSession.cs" />

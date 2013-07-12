@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Linq;
 using System.Threading;
 using MongoDB.Driver.Core.Connections;
 using MongoDB.Driver.Core.Operations;
@@ -12,9 +13,10 @@ namespace MongoDB.Driver.Core.Sessions
     public sealed class ClusterSession : ClusterSessionBase
     {
         // private fields
+        private readonly SessionBehavior _behavior;
         private readonly ICluster _cluster;
-        private readonly SessionSettings _settings;
         private bool _disposed;
+        private bool _usePrimary;
 
         // constructors
         /// <summary>
@@ -22,7 +24,7 @@ namespace MongoDB.Driver.Core.Sessions
         /// </summary>
         /// <param name="cluster">The cluster.</param>
         public ClusterSession(ICluster cluster)
-            : this(cluster, new SessionSettings())
+            : this(cluster, SessionBehavior.Default)
         {
         }
 
@@ -30,14 +32,13 @@ namespace MongoDB.Driver.Core.Sessions
         /// Initializes a new instance of the <see cref="ClusterSession" /> class.
         /// </summary>
         /// <param name="cluster">The cluster.</param>
-        /// <param name="settings">The settings.</param>
-        public ClusterSession(ICluster cluster, SessionSettings settings)
+        /// <param name="behavior">The behavior.</param>
+        public ClusterSession(ICluster cluster, SessionBehavior behavior)
         {
             Ensure.IsNotNull("cluster", cluster);
-            Ensure.IsNotNull("settings", settings);
 
             _cluster = cluster;
-            _settings = settings;
+            _behavior = behavior;
         }
 
         // public methods
@@ -51,8 +52,23 @@ namespace MongoDB.Driver.Core.Sessions
             Ensure.IsNotNull("options", options);
             ThrowIfDisposed();
 
-            var server = _cluster.SelectServer(options.ServerSelector, _settings.Timeout, _settings.CancellationToken);
-            return new ClusterOperationChannelProvider(this, server, _settings.Timeout, _settings.CancellationToken, options.DisposeSession);
+            _usePrimary = (_usePrimary || !options.IsQuery) && _behavior == SessionBehavior.Monotonic;
+            var selector = options.ServerSelector;
+            if (_usePrimary)
+            {
+                selector = PrimaryServerSelector.Instance;
+            }
+
+            var serverToUse = _cluster.SelectServer(selector, options.Timeout, options.CancellationToken);
+
+            // verify that the server selector for the operation is compatible with the selected server.
+            var selected = options.ServerSelector.SelectServers(new[] { serverToUse.Description });
+            if (!selected.Any())
+            {
+                throw new Exception("The current operation does not match the selected server.");
+            }
+
+            return new ClusterOperationChannelProvider(this, serverToUse, options.Timeout, options.CancellationToken, options.DisposeSession);
         }
 
         // protected methods

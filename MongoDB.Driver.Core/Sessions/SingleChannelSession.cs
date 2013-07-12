@@ -13,11 +13,13 @@ namespace MongoDB.Driver.Core.Sessions
     public sealed class SingleChannelSession : ClusterSessionBase
     {
         // private fields
+        private readonly SessionBehavior _behavior;
         private readonly ICluster _cluster;
-        private readonly SessionSettings _settings;
-        private IServerChannel _channel;
         private bool _disposed;
-        private IServer _server;
+        private IServerChannel _nonQueryChannel;
+        private IServer _nonQueryServer;
+        private IServerChannel _queryChannel;
+        private IServer _queryServer;
 
         // constructors
         /// <summary>
@@ -25,7 +27,7 @@ namespace MongoDB.Driver.Core.Sessions
         /// </summary>
         /// <param name="cluster">The cluster.</param>
         public SingleChannelSession(ICluster cluster)
-            : this(cluster, new SessionSettings())
+            : this(cluster, SessionBehavior.Default)
         {
         }
 
@@ -33,14 +35,13 @@ namespace MongoDB.Driver.Core.Sessions
         /// Initializes a new instance of the <see cref="SingleChannelSession" /> class.
         /// </summary>
         /// <param name="cluster">The cluster.</param>
-        /// <param name="settings">The settings.</param>
-        public SingleChannelSession(ICluster cluster, SessionSettings settings)
+        /// <param name="behavior">The behavior.</param>
+        public SingleChannelSession(ICluster cluster, SessionBehavior behavior)
         {
             Ensure.IsNotNull("cluster", cluster);
-            Ensure.IsNotNull("settings", settings);
 
             _cluster = cluster;
-            _settings = settings;
+            _behavior = behavior;
         }
 
         // public methods
@@ -54,19 +55,55 @@ namespace MongoDB.Driver.Core.Sessions
             Ensure.IsNotNull("options", options);
             ThrowIfDisposed();
 
-            if (_server == null)
+            IServerChannel channelToUse;
+            if (!options.IsQuery)
             {
-                _server = _cluster.SelectServer(options.ServerSelector, _settings.Timeout, _settings.CancellationToken);
-                _channel = _server.GetChannel(_settings.Timeout, _settings.CancellationToken);
+                if (_queryServer != null)
+                {
+                    // we want to use the query channel if it matches
+                    var matches = PrimaryServerSelector.Instance.SelectServers(new[] { _queryServer.Description }).Any();
+                    if (matches)
+                    {
+                        _nonQueryServer = _queryServer;
+                        _nonQueryChannel = _queryChannel;
+                    }
+                }
+
+                if (_nonQueryServer == null)
+                {
+                    _nonQueryServer = _cluster.SelectServer(PrimaryServerSelector.Instance, options.Timeout, options.CancellationToken);
+                    _nonQueryChannel = _nonQueryServer.GetChannel(options.Timeout, options.CancellationToken);
+                }
+                channelToUse = _nonQueryChannel;
+
+                if (_behavior == SessionBehavior.Monotonic)
+                {
+                    if (_queryChannel != null && _queryChannel != channelToUse)
+                    {
+                        _queryChannel.Dispose();
+                        _queryServer.Dispose();
+                    }
+                    _queryServer = _nonQueryServer;
+                    _queryChannel = _nonQueryChannel;
+                }
+            }
+            else
+            {
+                if (_queryServer == null)
+                {
+                    _queryServer = _cluster.SelectServer(options.ServerSelector, options.Timeout, options.CancellationToken);
+                    _queryChannel = _queryServer.GetChannel(options.Timeout, options.CancellationToken);
+                }
+                channelToUse = _queryChannel;
             }
 
-            var selected = options.ServerSelector.SelectServers(new[] { _server.Description });
-            if (selected.Any())
+            var selected = options.ServerSelector.SelectServers(new[] { channelToUse.Server });
+            if (!selected.Any())
             {
                 throw new Exception("The current operation does not match the selected channel.");
             }
 
-            return new SingleChannelOperationChannelProvider(this, _channel, options.DisposeSession);
+            return new SingleChannelOperationChannelProvider(this, channelToUse, options.DisposeSession);
         }
 
         // protected methods
@@ -78,10 +115,15 @@ namespace MongoDB.Driver.Core.Sessions
         {
             if (disposing && !_disposed)
             {
-                if (_server != null)
+                if (_nonQueryChannel != null)
                 {
-                    _channel.Dispose();
-                    _server.Dispose();
+                    _nonQueryChannel.Dispose();
+                    _nonQueryServer.Dispose();
+                }
+                if (_queryChannel != null)
+                {
+                    _queryChannel.Dispose();
+                    _queryServer.Dispose();
                 }
                 _disposed = true;
             }

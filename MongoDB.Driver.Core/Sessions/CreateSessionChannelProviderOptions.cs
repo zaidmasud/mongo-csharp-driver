@@ -14,8 +14,11 @@ namespace MongoDB.Driver.Core.Sessions
     public class CreateSessionChannelProviderOptions
     {
         // private fields
-        private readonly IServerSelector _serverSelector;
         private readonly bool _isQuery;
+        private readonly IServerSelector _serverSelector;
+        private CancellationToken _cancellationToken;
+        private bool _disposeSession;
+        private TimeSpan _timeout;
 
         // constructors
         /// <summary>
@@ -27,14 +30,30 @@ namespace MongoDB.Driver.Core.Sessions
         {
             _serverSelector = serverSelector;
             _isQuery = isQuery;
-            DisposeSession = false;
+
+            _cancellationToken = CancellationToken.None;
+            _disposeSession = false;
+            _timeout = TimeSpan.FromSeconds(30);
         }
 
         // public properties
         /// <summary>
+        /// Gets or sets the cancellation token.
+        /// </summary>
+        public CancellationToken CancellationToken
+        {
+            get { return _cancellationToken; }
+            set { _cancellationToken = value; }
+        }
+
+        /// <summary>
         /// Gets or sets a value indicating whether to dispose of the session when the IOperationChannelProvider is disposed.
         /// </summary>
-        public bool DisposeSession { get; set; }
+        public bool DisposeSession
+        {
+            get { return _disposeSession; }
+            set { _disposeSession = value; }
+        }
 
         /// <summary>
         /// Gets a value indicating whether to create an IOperationChannelProvider for a query.
@@ -50,6 +69,15 @@ namespace MongoDB.Driver.Core.Sessions
         public IServerSelector ServerSelector
         {
             get { return _serverSelector; }
+        }
+
+        /// <summary>
+        /// Gets or sets the timeout.
+        /// </summary>
+        public TimeSpan Timeout
+        {
+            get { return _timeout; }
+            set { _timeout = value; }
         }
     }
 }
