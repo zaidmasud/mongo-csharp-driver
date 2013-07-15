@@ -16,9 +16,9 @@ namespace MongoDB.Driver.Core.Sessions
         private readonly SessionBehavior _behavior;
         private readonly ICluster _cluster;
         private bool _disposed;
-        private IServerChannel _nonQueryChannel;
+        private IChannel _nonQueryChannel;
         private IServer _nonQueryServer;
-        private IServerChannel _queryChannel;
+        private IChannel _queryChannel;
         private IServer _queryServer;
 
         // constructors
@@ -55,7 +55,8 @@ namespace MongoDB.Driver.Core.Sessions
             Ensure.IsNotNull("options", options);
             ThrowIfDisposed();
 
-            IServerChannel channelToUse;
+            IChannel channelToUse;
+            IServer serverToUse;
             if (!options.IsQuery)
             {
                 if (_queryServer != null)
@@ -74,6 +75,7 @@ namespace MongoDB.Driver.Core.Sessions
                     _nonQueryServer = _cluster.SelectServer(PrimaryServerSelector.Instance, options.Timeout, options.CancellationToken);
                     _nonQueryChannel = _nonQueryServer.GetChannel(options.Timeout, options.CancellationToken);
                 }
+                serverToUse = _nonQueryServer;
                 channelToUse = _nonQueryChannel;
 
                 if (_behavior == SessionBehavior.Monotonic)
@@ -94,16 +96,17 @@ namespace MongoDB.Driver.Core.Sessions
                     _queryServer = _cluster.SelectServer(options.ServerSelector, options.Timeout, options.CancellationToken);
                     _queryChannel = _queryServer.GetChannel(options.Timeout, options.CancellationToken);
                 }
+                serverToUse = _queryServer;
                 channelToUse = _queryChannel;
             }
 
-            var selected = options.ServerSelector.SelectServers(new[] { channelToUse.Server });
+            var selected = options.ServerSelector.SelectServers(new[] { serverToUse.Description });
             if (!selected.Any())
             {
                 throw new Exception("The current operation does not match the selected channel.");
             }
 
-            return new SingleChannelOperationChannelProvider(this, channelToUse, options.DisposeSession);
+            return new SingleChannelOperationChannelProvider(this, serverToUse, channelToUse, options.DisposeSession);
         }
 
         // protected methods
@@ -142,30 +145,28 @@ namespace MongoDB.Driver.Core.Sessions
         private sealed class SingleChannelOperationChannelProvider : ISessionChannelProvider
         {
             private readonly SingleChannelSession _session;
-            private readonly IServerChannel _channel;
+            private readonly IChannel _channel;
+            private readonly IServer _server;
             private bool _disposeSession;
             private bool _disposed;
 
-            public SingleChannelOperationChannelProvider(SingleChannelSession session, IServerChannel channel, bool disposeSession)
+            public SingleChannelOperationChannelProvider(SingleChannelSession session, IServer server, IChannel channel, bool disposeSession)
             {
                 _session = session;
+                _server = server;
                 _channel = channel;
                 _disposeSession = disposeSession;
             }
 
             public ServerDescription Server
             {
-                get 
-                {
-                    ThrowIfDisposed();
-                    return _channel.Server; 
-                }
+                get { return _server.Description; }
             }
 
-            public IServerChannel GetChannel()
+            public IChannel GetChannel(TimeSpan timeout, CancellationToken cancellationToken)
             {
                 ThrowIfDisposed();
-                return new DisposalProtectedServerChannel(_channel);
+                return new DisposalProtectedChannel(_channel);
             }
 
             public void Dispose()

@@ -24,14 +24,14 @@ namespace MongoDB.Driver.Core.Connections
     /// <summary>
     /// ServerChannel that does not dispose of its wrapped channel.  This is used to protect the driver from a bad user decision.
     /// </summary>
-    internal sealed class DisposalProtectedServerChannel : IServerChannel
+    internal sealed class DisposalProtectedChannel : IChannel
     {
         // private fields
-        private readonly IServerChannel _wrapped;
+        private readonly IChannel _wrapped;
         private bool _disposed;
 
         // constructors
-        public DisposalProtectedServerChannel(IServerChannel wrapped)
+        public DisposalProtectedChannel(IChannel wrapped)
         {
             Ensure.IsNotNull("wrapped", wrapped);
 
@@ -42,15 +42,6 @@ namespace MongoDB.Driver.Core.Connections
         public DnsEndPoint DnsEndPoint
         {
             get { return _wrapped.DnsEndPoint; }
-        }
-
-        public ServerDescription Server
-        {
-            get
-            {
-                ThrowIfDisposed();
-                return _wrapped.Server;
-            }
         }
 
         // public methods

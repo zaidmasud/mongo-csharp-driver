@@ -68,7 +68,7 @@ namespace MongoDB.Driver.Core.Sessions
                 throw new Exception("The current operation does not match the selected server.");
             }
 
-            return new ClusterOperationChannelProvider(this, serverToUse, options.Timeout, options.CancellationToken, options.DisposeSession);
+            return new ClusterOperationChannelProvider(this, serverToUse, options.DisposeSession);
         }
 
         // protected methods
@@ -95,17 +95,13 @@ namespace MongoDB.Driver.Core.Sessions
         {
             private readonly ClusterSession _session;
             private readonly IServer _server;
-            private readonly TimeSpan _timeout;
-            private readonly CancellationToken _cancellationToken;
             private readonly bool _disposeSession;
             private bool _disposed;
 
-            public ClusterOperationChannelProvider(ClusterSession session, IServer server, TimeSpan timeout, CancellationToken cancellationToken, bool disposeSession)
+            public ClusterOperationChannelProvider(ClusterSession session, IServer server, bool disposeSession)
             {
                 _session = session;
                 _server = server;
-                _timeout = timeout;
-                _cancellationToken = cancellationToken;
                 _disposeSession = disposeSession;
             }
 
@@ -118,10 +114,10 @@ namespace MongoDB.Driver.Core.Sessions
                 }
             }
 
-            public IServerChannel GetChannel()
+            public IChannel GetChannel(TimeSpan timeout, CancellationToken cancellationToken)
             {
                 ThrowIfDisposed();
-                return _server.GetChannel(_timeout, _cancellationToken);
+                return _server.GetChannel(timeout, cancellationToken);
             }
 
             public void Dispose()

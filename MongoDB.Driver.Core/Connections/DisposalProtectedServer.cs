@@ -50,7 +50,7 @@ namespace MongoDB.Driver.Core.Connections
             GC.SuppressFinalize(this);
         }
 
-        public IServerChannel GetChannel(TimeSpan timeout, CancellationToken cancellationToken)
+        public IChannel GetChannel(TimeSpan timeout, CancellationToken cancellationToken)
         {
             ThrowIfDisposed();
             return _wrapped.GetChannel(timeout, cancellationToken);

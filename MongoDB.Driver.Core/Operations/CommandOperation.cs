@@ -132,19 +132,12 @@ namespace MongoDB.Driver.Core.Operations
         {
             ValidateRequiredProperties();
 
-            var options = new CreateSessionChannelProviderOptions(
-                serverSelector: new ReadPreferenceServerSelector(_readPreference),
-                isQuery: true)
+            using(var channelProvider = CreateSessionChannelProvider(new ReadPreferenceServerSelector(_readPreference), true, operationBehavior))
+            using (var channel = channelProvider.GetChannel(Timeout, CancellationToken))
             {
-                DisposeSession = operationBehavior == OperationBehavior.CloseSession,
-            };
-
-            using(var channelProvider = Session.CreateSessionChannelProvider(options))
-            using (var channel = channelProvider.GetChannel())
-            {
-                var readerSettings = GetServerAdjustedReaderSettings(channel.Server);
-                var writerSettings = GetServerAdjustedWriterSettings(channel.Server);
-                var wrappedQuery = WrapQuery(channel.Server, _command, _options, _readPreference);
+                var readerSettings = GetServerAdjustedReaderSettings(channelProvider.Server);
+                var writerSettings = GetServerAdjustedWriterSettings(channelProvider.Server);
+                var wrappedQuery = WrapQuery(channelProvider.Server, _command, _options, _readPreference);
 
                 var queryMessage = new QueryMessage(
                     Database.CommandCollection,

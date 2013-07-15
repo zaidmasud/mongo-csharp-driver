@@ -185,14 +185,7 @@ namespace MongoDB.Driver.Core.Operations
             var count = 0;
             var limit = (_limit >= 0) ? _limit : -_limit;
 
-            var options = new CreateSessionChannelProviderOptions(
-                serverSelector: new ReadPreferenceServerSelector(_readPreference),
-                isQuery: true)
-            {
-                DisposeSession = operationBehavior == OperationBehavior.CloseSession,
-            };
-
-            using (var channelProvider = Session.CreateSessionChannelProvider(options))
+            using (var channelProvider = CreateSessionChannelProvider(new ReadPreferenceServerSelector(_readPreference), true, operationBehavior))
             {
                 foreach (var document in DeserializeDocuments(channelProvider))
                 {
@@ -292,10 +285,10 @@ namespace MongoDB.Driver.Core.Operations
                 numberToReturn = _batchSize;
             }
 
-            using (var channel = channelProvider.GetChannel())
+            using (var channel = channelProvider.GetChannel(Timeout, CancellationToken))
             {
-                var writerSettings = GetServerAdjustedWriterSettings(channel.Server);
-                var wrappedQuery = WrapQuery(channel.Server, _query, _options, _readPreference);
+                var writerSettings = GetServerAdjustedWriterSettings(channelProvider.Server);
+                var wrappedQuery = WrapQuery(channelProvider.Server, _query, _options, _readPreference);
 
                 var queryMessage = new QueryMessage(
                     Collection,
@@ -319,9 +312,9 @@ namespace MongoDB.Driver.Core.Operations
 
         private ReplyMessage GetNextBatch(ISessionChannelProvider channelProvider, long cursorId)
         {
-            using (var channel = channelProvider.GetChannel())
+            using (var channel = channelProvider.GetChannel(Timeout, CancellationToken))
             {
-                var readerSettings = GetServerAdjustedReaderSettings(channel.Server);
+                var readerSettings = GetServerAdjustedReaderSettings(channelProvider.Server);
                 var getMoreMessage = new GetMoreMessage(Collection, cursorId, _batchSize);
 
                 using (var packet = new BufferedRequestPacket())
@@ -337,7 +330,7 @@ namespace MongoDB.Driver.Core.Operations
 
         private void KillCursor(ISessionChannelProvider channelProvider, long cursorId)
         {
-            using (var channel = channelProvider.GetChannel())
+            using (var channel = channelProvider.GetChannel(Timeout, CancellationToken))
             {
                 var killCursorsMessage = new KillCursorsMessage(new[] { cursorId });
 

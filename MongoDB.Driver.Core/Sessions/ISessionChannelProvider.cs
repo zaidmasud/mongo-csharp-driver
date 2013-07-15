@@ -14,6 +14,7 @@
 */
 
 using System;
+using System.Threading;
 using MongoDB.Driver.Core.Connections;
 
 namespace MongoDB.Driver.Core.Sessions
@@ -31,7 +32,9 @@ namespace MongoDB.Driver.Core.Sessions
         /// <summary>
         /// Gets a channel.
         /// </summary>
+        /// <param name="timeout">The timeout.</param>
+        /// <param name="cancellationToken">The cancellation token.</param>
         /// <returns>A channel.</returns>
-        IServerChannel GetChannel();
+        IChannel GetChannel(TimeSpan timeout, CancellationToken cancellationToken);
     }
 }

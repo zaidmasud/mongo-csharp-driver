@@ -76,18 +76,11 @@ namespace MongoDB.Driver.Core.Operations
         {
             ValidateRequiredProperties();
 
-            var options = new CreateSessionChannelProviderOptions(
-                serverSelector: PrimaryServerSelector.Instance,
-                isQuery: false)
+            using (var channelProvider = CreateSessionChannelProvider(PrimaryServerSelector.Instance, false, operationBehavior))
+            using (var channel = channelProvider.GetChannel(Timeout, CancellationToken))
             {
-                DisposeSession = operationBehavior == OperationBehavior.CloseSession,
-            };
-
-            using(var channelProvider = Session.CreateSessionChannelProvider(options))
-            using (var channel = channelProvider.GetChannel())
-            {
-                var readerSettings = GetServerAdjustedReaderSettings(channel.Server);
-                var writerSettings = GetServerAdjustedWriterSettings(channel.Server);
+                var readerSettings = GetServerAdjustedReaderSettings(channelProvider.Server);
+                var writerSettings = GetServerAdjustedWriterSettings(channelProvider.Server);
 
                 var deleteMessage = new DeleteMessage(Collection, _query, _flags, writerSettings);
 

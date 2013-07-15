@@ -1,5 +1,6 @@
 ﻿using System.Collections.Generic;
 using System.IO;
+using System.Threading;
 using MongoDB.Bson;
 using MongoDB.Bson.IO;
 using MongoDB.Bson.Serialization;
@@ -24,16 +25,16 @@ namespace MongoDB.Driver.Core.Protocol
         public void Should_send_the_proper_number_of_getLastError_messages(bool useWriteConcern, InsertFlags flags, int numBatches, int numGetLastErrors)
         {
             var writeConcern = useWriteConcern ? WriteConcern.Acknowledged : WriteConcern.Unacknowledged;
-            var channel = Substitute.For<IServerChannel>();
-            channel.Server.Returns(ServerDescriptionBuilder.Build(b =>
+            var channel = Substitute.For<IChannel>();
+            channel.Receive(null).ReturnsForAnyArgs(c => CreateWriteConcernResult(true, null));
+
+            var channelProvider = Substitute.For<ISessionChannelProvider>();
+            channelProvider.Server.Returns(ServerDescriptionBuilder.Build(b =>
             {
                 b.MaxDocumentSize(BATCH_SIZE);
                 b.MaxMessageSize(BATCH_SIZE);
             }));
-            channel.Receive(null).ReturnsForAnyArgs(c => CreateWriteConcernResult(true, null));
-
-            var channelProvider = Substitute.For<ISessionChannelProvider>();
-            channelProvider.GetChannel().Returns(channel);
+            channelProvider.GetChannel(Timeout.InfiniteTimeSpan, CancellationToken.None).ReturnsForAnyArgs(channel);
 
             var session = Substitute.For<ISession>();
             session.CreateSessionChannelProvider(null).ReturnsForAnyArgs(channelProvider);

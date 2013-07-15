@@ -123,19 +123,12 @@ namespace MongoDB.Driver.Core.Operations
         {
             ValidateRequiredProperties();
 
-            var options = new CreateSessionChannelProviderOptions(
-                serverSelector: PrimaryServerSelector.Instance,
-                isQuery: false)
+            using(var channelProvider = CreateSessionChannelProvider(PrimaryServerSelector.Instance, false, operationBehavior))
+            using (var channel = channelProvider.GetChannel(Timeout, CancellationToken))
             {
-                DisposeSession = operationBehavior == OperationBehavior.CloseSession,
-            };
-
-            using(var channelProvider = Session.CreateSessionChannelProvider(options))
-            using (var channel = channelProvider.GetChannel())
-            {
-                var maxMessageSize = (_maxMessageSize != 0) ? _maxMessageSize : channel.Server.MaxMessageSize;
-                var readerSettings = GetServerAdjustedReaderSettings(channel.Server);
-                var writerSettings = GetServerAdjustedWriterSettings(channel.Server);
+                var maxMessageSize = (_maxMessageSize != 0) ? _maxMessageSize : channelProvider.Server.MaxMessageSize;
+                var readerSettings = GetServerAdjustedReaderSettings(channelProvider.Server);
+                var writerSettings = GetServerAdjustedWriterSettings(channelProvider.Server);
 
                 List<WriteConcernResult> results = (WriteConcern.Enabled) ? new List<WriteConcernResult>() : null;
 
@@ -287,7 +280,7 @@ namespace MongoDB.Driver.Core.Operations
             }
         }
         
-        private SendPacketWithWriteConcernResult SendBatchWithWriteConcern(IServerChannel channel, Batch batch, bool continueOnError, BsonBinaryWriterSettings writerSettings)
+        private SendPacketWithWriteConcernResult SendBatchWithWriteConcern(IChannel channel, Batch batch, bool continueOnError, BsonBinaryWriterSettings writerSettings)
         {
             var writeConcern = WriteConcern;
             if (!writeConcern.Enabled && !continueOnError && !batch.IsLast)

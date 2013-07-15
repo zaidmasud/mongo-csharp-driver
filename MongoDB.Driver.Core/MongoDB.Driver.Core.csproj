@@ -68,7 +68,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Connections\ConnectionBase.cs" />
-    <Compile Include="Connections\DisposalProtectedServerChannel.cs" />
+    <Compile Include="Connections\DisposalProtectedChannel.cs" />
     <Compile Include="Connections\IConnection.cs" />
     <Compile Include="Connections\PipelinedChannelProvider.cs" />
     <Compile Include="Connections\PipelinedChannelProviderFactory.cs" />
@@ -76,7 +76,6 @@
     <Compile Include="Connections\MongoSocketWriteTimeoutException.cs" />
     <Compile Include="Connections\MongoSocketReadTimeoutException.cs" />
     <Compile Include="Connections\IClusterableServer.cs" />
-    <Compile Include="Connections\IServerChannel.cs" />
     <Compile Include="Connections\MultiServerClusterDescription.cs" />
     <Compile Include="Connections\Socks5ProxyStreamFactory.cs" />
     <Compile Include="Connections\IConnectionPool.cs" />
@@ -154,7 +153,6 @@
     <Compile Include="Support\EnumerableExtensionMethods.cs" />
     <Compile Include="CommandResult.cs" />
     <Compile Include="CommandResultSerializer.cs" />
-    <Compile Include="Connections\ServerChannelBase.cs" />
     <Compile Include="Security\AuthenticationSettings.cs" />
     <Compile Include="Security\MongoSecurityException.cs" />
     <Compile Include="Security\IAuthenticationProtocol.cs" />

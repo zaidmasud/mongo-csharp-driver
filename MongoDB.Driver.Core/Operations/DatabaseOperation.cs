@@ -13,6 +13,8 @@
 * limitations under the License.
 */
 
+using System;
+using System.Threading;
 using MongoDB.Bson.IO;
 using MongoDB.Driver.Core.Connections;
 using MongoDB.Driver.Core.Sessions;
@@ -26,8 +28,10 @@ namespace MongoDB.Driver.Core.Operations
     public abstract class DatabaseOperation<T> : IOperation<T>
     {
         // private fields
+        private CancellationToken _cancellationToken;
         private BsonBinaryReaderSettings _readerSettings;
         private ISession _session;
+        private TimeSpan _timeout;
         private BsonBinaryWriterSettings _writerSettings;
 
         // constructors
@@ -36,11 +40,22 @@ namespace MongoDB.Driver.Core.Operations
         /// </summary>
         protected DatabaseOperation()
         {
+            _cancellationToken = CancellationToken.None;
             _readerSettings = BsonBinaryReaderSettings.Defaults;
+            _timeout = TimeSpan.FromSeconds(30);
             _writerSettings = BsonBinaryWriterSettings.Defaults;
         }
 
         // public properties
+        /// <summary>
+        /// Gets or sets the cancellation token.
+        /// </summary>
+        public CancellationToken CancellationToken
+        {
+            get { return _cancellationToken; }
+            set { _cancellationToken = value; }
+        }
+
         /// <summary>
         /// Gets or sets the reader settings.
         /// </summary>
@@ -61,6 +76,15 @@ namespace MongoDB.Driver.Core.Operations
         {
             get { return _session; }
             set { _session = value; }
+        }
+
+        /// <summary>
+        /// Gets or sets the timeout.
+        /// </summary>
+        public TimeSpan Timeout
+        {
+            get { return _timeout; }
+            set { _timeout = value; }
         }
 
         /// <summary>
@@ -94,6 +118,25 @@ namespace MongoDB.Driver.Core.Operations
         public abstract T Execute(OperationBehavior operationBehavior);
 
         // protected methods
+        /// <summary>
+        /// Creates the session channel provider.
+        /// </summary>
+        /// <param name="serverSelector">The server selector.</param>
+        /// <param name="isQuery">if set to <c>true</c> the operation is a query.</param>
+        /// <param name="operationBehavior">The operation behavior.</param>
+        /// <returns>A session channel provider.</returns>
+        protected ISessionChannelProvider CreateSessionChannelProvider(IServerSelector serverSelector, bool isQuery, OperationBehavior operationBehavior)
+        {
+            var options = new CreateSessionChannelProviderOptions(serverSelector, isQuery)
+            {
+                CancellationToken = _cancellationToken,
+                DisposeSession = (operationBehavior & OperationBehavior.CloseSession) == OperationBehavior.CloseSession,
+                Timeout = _timeout
+            };
+
+            return Session.CreateSessionChannelProvider(options);
+        }
+
         /// <summary>
         /// Adjusts the reader settings based on server specific settings.
         /// </summary>
@@ -129,6 +172,7 @@ namespace MongoDB.Driver.Core.Operations
         protected virtual void ValidateRequiredProperties()
         {
             Ensure.IsNotNull("Session", _session);
+            Ensure.IsInfiniteOrZeroOrPositive("Timeout", _timeout);
         }
     }
 }

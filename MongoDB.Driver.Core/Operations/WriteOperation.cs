@@ -75,7 +75,7 @@ namespace MongoDB.Driver.Core.Operations
         /// <exception cref="MongoWriteConcernException">
         /// </exception>
         protected WriteConcernResult ReadWriteConcernResult(
-            IServerChannel channel,
+            IChannel channel,
             SendPacketWithWriteConcernResult sendMessageResult,
             BsonBinaryReaderSettings readerSettings)
         {
@@ -127,7 +127,7 @@ namespace MongoDB.Driver.Core.Operations
         /// <param name="writerSettings">The writer settings.</param>
         /// <returns>A SendPacketWithWriteConcernResult.</returns>
         protected SendPacketWithWriteConcernResult SendPacketWithWriteConcern(
-            IServerChannel channel,
+            IChannel channel,
             BufferedRequestPacket packet,
             WriteConcern writeConcern,
             BsonBinaryWriterSettings writerSettings)
