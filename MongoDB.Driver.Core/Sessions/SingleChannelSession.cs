@@ -55,58 +55,23 @@ namespace MongoDB.Driver.Core.Sessions
             Ensure.IsNotNull("args", args);
             ThrowIfDisposed();
 
-            IChannel channelToUse;
-            IServer serverToUse;
-            if (!args.IsQuery)
+            Tuple<IServer, IChannel> serverChannelToUse;
+            if (args.IsQuery)
             {
-                if (_queryServer != null)
-                {
-                    // we want to use the query channel if it matches
-                    var matches = PrimaryServerSelector.Instance.SelectServers(new[] { _queryServer.Description }).Any();
-                    if (matches)
-                    {
-                        _nonQueryServer = _queryServer;
-                        _nonQueryChannel = _queryChannel;
-                    }
-                }
-
-                if (_nonQueryServer == null)
-                {
-                    _nonQueryServer = _cluster.SelectServer(PrimaryServerSelector.Instance, args.Timeout, args.CancellationToken);
-                    _nonQueryChannel = _nonQueryServer.GetChannel(args.Timeout, args.CancellationToken);
-                }
-                serverToUse = _nonQueryServer;
-                channelToUse = _nonQueryChannel;
-
-                if (_behavior == SessionBehavior.Monotonic)
-                {
-                    if (_queryChannel != null && _queryChannel != channelToUse)
-                    {
-                        _queryChannel.Dispose();
-                        _queryServer.Dispose();
-                    }
-                    _queryServer = _nonQueryServer;
-                    _queryChannel = _nonQueryChannel;
-                }
+                serverChannelToUse = GetServerChannelForQuery(args);
             }
             else
             {
-                if (_queryServer == null)
-                {
-                    _queryServer = _cluster.SelectServer(args.ServerSelector, args.Timeout, args.CancellationToken);
-                    _queryChannel = _queryServer.GetChannel(args.Timeout, args.CancellationToken);
-                }
-                serverToUse = _queryServer;
-                channelToUse = _queryChannel;
+                serverChannelToUse = GetServerChannelForNonQuery(args);
             }
 
-            var selected = args.ServerSelector.SelectServers(new[] { serverToUse.Description });
+            var selected = args.ServerSelector.SelectServers(new[] { serverChannelToUse.Item1.Description });
             if (!selected.Any())
             {
                 throw new Exception("The current operation does not match the selected channel.");
             }
 
-            return new SingleChannelOperationChannelProvider(this, serverToUse, channelToUse, args.DisposeSession);
+            return new SingleChannelOperationChannelProvider(this, serverChannelToUse.Item1, serverChannelToUse.Item2, args.DisposeSession);
         }
 
         // protected methods
@@ -133,6 +98,58 @@ namespace MongoDB.Driver.Core.Sessions
         }
 
         // private methods
+        private Tuple<IServer, IChannel> GetServerChannelForNonQuery(CreateServerChannelProviderArgs args)
+        {
+            if (_queryServer != null)
+            {
+                // we want to use the query channel if it is a primary.  This is especially 
+                // important if we are talking to a mongos which shouldn't switch channels
+                // ever.
+                var matches = PrimaryServerSelector.Instance.SelectServers(new[] { _queryServer.Description }).Any();
+                if (matches)
+                {
+                    _nonQueryServer = _queryServer;
+                    _nonQueryChannel = _queryChannel;
+                }
+            }
+
+            // if we've never done a non-query or a query with the primary
+            if (_nonQueryServer == null)
+            {
+                _nonQueryServer = _cluster.SelectServer(PrimaryServerSelector.Instance, args.Timeout, args.CancellationToken);
+                _nonQueryChannel = _nonQueryServer.GetChannel(args.Timeout, args.CancellationToken);
+            }
+            
+            var serverToUse = _nonQueryServer;
+            var channelToUse = _nonQueryChannel;
+
+            // if we are monotonic and the query channel isn't the non-query channel, 
+            // we need to change the query channel over to the non-query channel.
+            if (_behavior == SessionBehavior.Monotonic)
+            {
+                if (_queryChannel != null && _queryChannel != channelToUse)
+                {
+                    _queryChannel.Dispose();
+                    _queryServer.Dispose();
+                }
+                _queryServer = _nonQueryServer;
+                _queryChannel = _nonQueryChannel;
+            }
+
+            return Tuple.Create(serverToUse, channelToUse);
+        }
+
+        private Tuple<IServer, IChannel> GetServerChannelForQuery(CreateServerChannelProviderArgs args)
+        {
+            if (_queryServer == null)
+            {
+                _queryServer = _cluster.SelectServer(args.ServerSelector, args.Timeout, args.CancellationToken);
+                _queryChannel = _queryServer.GetChannel(args.Timeout, args.CancellationToken);
+            }
+
+            return Tuple.Create(_queryServer, _queryChannel);
+        }
+
         private void ThrowIfDisposed()
         {
             if (_disposed)

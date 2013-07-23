@@ -53,41 +53,14 @@ namespace MongoDB.Driver.Core.Sessions
             Ensure.IsNotNull("args", args);
             ThrowIfDisposed();
 
-            IServer serverToUse = null;
-            if (!args.IsQuery)
+            IServer serverToUse;
+            if (args.IsQuery)
             {
-                if (_queryServer != null)
-                {
-                    // we want to use the query server if it is a primary...
-                    var matches = PrimaryServerSelector.Instance.SelectServers(new[] { _queryServer.Description }).Any();
-                    if (matches)
-                    {
-                        _nonQueryServer = _queryServer;
-                    }
-                }
-
-                if (_nonQueryServer == null)
-                {
-                    _nonQueryServer = _cluster.SelectServer(PrimaryServerSelector.Instance, args.Timeout, args.CancellationToken);
-                }
-                serverToUse = _nonQueryServer;
-
-                if (_behavior == SessionBehavior.Monotonic)
-                {
-                    if (_queryServer != null && _queryServer != serverToUse)
-                    {
-                        _queryServer.Dispose();
-                    }
-                    _queryServer = serverToUse;
-                }
+                serverToUse = GetServerForQuery(args);
             }
-            else 
+            else
             {
-                if (_queryServer == null)
-                {
-                    _queryServer = _cluster.SelectServer(args.ServerSelector, args.Timeout, args.CancellationToken);
-                }
-                serverToUse = _queryServer;
+                serverToUse = GetServerForNonQuery(args);
             }
 
             // verify that the server selector for the operation is compatible with the selected server.
@@ -119,6 +92,52 @@ namespace MongoDB.Driver.Core.Sessions
                 }
                 _disposed = true;
             }
+        }
+
+        //private methods
+        private IServer GetServerForNonQuery(CreateServerChannelProviderArgs args)
+        {
+            if (_queryServer != null)
+            {
+                // we want to use the query server if it is a primary.  This is especially 
+                // important if we are talking to a mongos which shouldn't switch servers
+                // ever.
+                var matches = PrimaryServerSelector.Instance.SelectServers(new[] { _queryServer.Description });
+                if (matches.Any())
+                {
+                    _nonQueryServer = _queryServer;
+                }
+            }
+
+            // if we've never done a non-query or a query with the primary
+            if (_nonQueryServer == null)
+            {
+                _nonQueryServer = _cluster.SelectServer(PrimaryServerSelector.Instance, args.Timeout, args.CancellationToken);
+            }
+
+            var serverToUse = _nonQueryServer;
+
+            // if we are monotonic and the query server isn't the non-query server, 
+            // we need to change the query server over to the non-query server.
+            if (_behavior == SessionBehavior.Monotonic)
+            {
+                if (_queryServer != null && _queryServer != serverToUse)
+                {
+                    _queryServer.Dispose();
+                }
+                _queryServer = serverToUse;
+            }
+
+            return serverToUse;
+        }
+
+        private IServer GetServerForQuery(CreateServerChannelProviderArgs args)
+        {
+            if (_queryServer == null)
+            {
+                _queryServer = _cluster.SelectServer(args.ServerSelector, args.Timeout, args.CancellationToken);
+            }
+            return _queryServer;
         }
 
         private void ThrowIfDisposed()
