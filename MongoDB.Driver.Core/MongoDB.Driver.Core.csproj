@@ -83,7 +83,7 @@
     <Compile Include="Connections\DefaultStreamFactory.cs" />
     <Compile Include="Connections\IsMasterResult.cs" />
     <Compile Include="DatabaseNamespace.cs" />
-    <Compile Include="LatencyMinimizingServerSelector.cs" />
+    <Compile Include="LatencyLimitingServerSelector.cs" />
     <Compile Include="MongoOperationException.cs" />
     <Compile Include="Diagnostics\TraceManager.cs" />
     <Compile Include="Events\ConnectionAuthenticatedEvent.cs" />
@@ -144,7 +144,7 @@
     <Compile Include="Events\ConnectionMessageReceivedEvent.cs" />
     <Compile Include="Events\ConnectionPacketSendingEvent.cs" />
     <Compile Include="Sessions\ClusterSession.cs" />
-    <Compile Include="Sessions\CreateSessionChannelProviderOptions.cs" />
+    <Compile Include="Sessions\CreateSessionChannelProviderArgs.cs" />
     <Compile Include="Sessions\ISession.cs" />
     <Compile Include="Sessions\SessionBehavior.cs" />
     <Compile Include="Sessions\SingleServerSession.cs" />

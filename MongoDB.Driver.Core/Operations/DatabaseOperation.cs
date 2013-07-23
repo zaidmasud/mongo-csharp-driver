@@ -127,10 +127,10 @@ namespace MongoDB.Driver.Core.Operations
         /// <returns>A session channel provider.</returns>
         protected ISessionChannelProvider CreateSessionChannelProvider(IServerSelector serverSelector, bool isQuery, OperationBehavior operationBehavior)
         {
-            var options = new CreateSessionChannelProviderOptions(serverSelector, isQuery)
+            var options = new CreateSessionChannelProviderArgs(serverSelector, isQuery)
             {
                 CancellationToken = _cancellationToken,
-                DisposeSession = (operationBehavior & OperationBehavior.CloseSession) == OperationBehavior.CloseSession,
+                DisposeSession = operationBehavior.HasFlag(OperationBehavior.CloseSession),
                 Timeout = _timeout
             };
 

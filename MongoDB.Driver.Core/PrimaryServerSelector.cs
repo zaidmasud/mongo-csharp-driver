@@ -19,7 +19,7 @@ namespace MongoDB.Driver.Core
         public new static PrimaryServerSelector Instance = new PrimaryServerSelector();
 
         // private fields
-        private readonly LatencyMinimizingServerSelector _latencySelector;
+        private readonly LatencyLimitingServerSelector _latencySelector;
 
         // constructors
         /// <summary>
@@ -27,7 +27,7 @@ namespace MongoDB.Driver.Core
         /// </summary>
         private PrimaryServerSelector()
         {
-            _latencySelector = new LatencyMinimizingServerSelector();
+            _latencySelector = new LatencyLimitingServerSelector();
         }
 
         // protected methods

@@ -28,7 +28,7 @@ namespace MongoDB.Driver.Core
     {
         // private fields
         private readonly ReadPreference _readPreference;
-        private readonly LatencyMinimizingServerSelector _latencySelector;
+        private readonly LatencyLimitingServerSelector _latencySelector;
 
         // constructors
         /// <summary>
@@ -38,7 +38,7 @@ namespace MongoDB.Driver.Core
         public ReadPreferenceServerSelector(ReadPreference readPreference)
         {
             _readPreference = readPreference;
-            _latencySelector = new LatencyMinimizingServerSelector(readPreference.SecondaryAcceptableLatency);
+            _latencySelector = new LatencyLimitingServerSelector(readPreference.SecondaryAcceptableLatency);
         }
 
         // public methods

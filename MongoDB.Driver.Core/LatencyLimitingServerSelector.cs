@@ -12,25 +12,25 @@ namespace MongoDB.Driver.Core
     /// <summary>
     /// Filters the servers by an allowed latency emanating from the first server.
     /// </summary>
-    public class LatencyMinimizingServerSelector : IServerSelector
+    public class LatencyLimitingServerSelector : IServerSelector
     {
         // private fields
         private readonly TimeSpan _allowedLatency;
 
         // constructors
         /// <summary>
-        /// Initializes a new instance of the <see cref="LatencyMinimizingServerSelector" /> class.
+        /// Initializes a new instance of the <see cref="LatencyLimitingServerSelector" /> class.
         /// </summary>
-        public LatencyMinimizingServerSelector()
+        public LatencyLimitingServerSelector()
             : this(TimeSpan.FromMilliseconds(15))
         {
         }
 
         /// <summary>
-        /// Initializes a new instance of the <see cref="LatencyMinimizingServerSelector" /> class.
+        /// Initializes a new instance of the <see cref="LatencyLimitingServerSelector" /> class.
         /// </summary>
         /// <param name="allowedLatency">The allowed latency.</param>
-        public LatencyMinimizingServerSelector(TimeSpan allowedLatency)
+        public LatencyLimitingServerSelector(TimeSpan allowedLatency)
         {
             Ensure.IsInfiniteOrZeroOrPositive("allowedLatency", allowedLatency);
 

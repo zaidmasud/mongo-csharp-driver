@@ -11,7 +11,7 @@ namespace MongoDB.Driver.Core.Sessions
     /// <summary>
     /// Options for ISession.CreateSessionChannelProvider.
     /// </summary>
-    public class CreateSessionChannelProviderOptions
+    public class CreateSessionChannelProviderArgs
     {
         // private fields
         private readonly bool _isQuery;
@@ -22,11 +22,11 @@ namespace MongoDB.Driver.Core.Sessions
 
         // constructors
         /// <summary>
-        /// Initializes a new instance of the <see cref="CreateSessionChannelProviderOptions" /> class.
+        /// Initializes a new instance of the <see cref="CreateSessionChannelProviderArgs" /> class.
         /// </summary>
         /// <param name="serverSelector">The server selector.</param>
         /// <param name="isQuery">if set to <c>true</c> [is query].</param>
-        public CreateSessionChannelProviderOptions(IServerSelector serverSelector, bool isQuery)
+        public CreateSessionChannelProviderArgs(IServerSelector serverSelector, bool isQuery)
         {
             _serverSelector = serverSelector;
             _isQuery = isQuery;

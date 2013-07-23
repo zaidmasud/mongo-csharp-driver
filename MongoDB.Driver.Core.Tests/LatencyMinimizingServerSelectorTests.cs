@@ -52,7 +52,7 @@ namespace MongoDB.Driver.Core
         [Test]
         public void SelectServers_should_return_all_servers_when_the_allowed_latency_is_infinite()
         {
-            var subject = new LatencyMinimizingServerSelector(Timeout.InfiniteTimeSpan);
+            var subject = new LatencyLimitingServerSelector(Timeout.InfiniteTimeSpan);
 
             var servers = subject.SelectServers(_servers);
 
@@ -62,7 +62,7 @@ namespace MongoDB.Driver.Core
         [Test]
         public void SelectServers_should_only_return_the_servers_within_the_allowed_latency()
         {
-            var subject = new LatencyMinimizingServerSelector(TimeSpan.FromMilliseconds(29));
+            var subject = new LatencyLimitingServerSelector(TimeSpan.FromMilliseconds(29));
 
             Assert.Contains(1000, _servers.Select(x => x.DnsEndPoint.Port).ToList());
             Assert.Contains(1001, _servers.Select(x => x.DnsEndPoint.Port).ToList());

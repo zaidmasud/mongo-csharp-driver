@@ -16,7 +16,7 @@ namespace MongoDB.Driver.Core.Sessions
         private readonly SessionBehavior _behavior;
         private readonly ICluster _cluster;
         private bool _disposed;
-        private bool _usePrimary;
+        private bool _pinnedToPrimary;
 
         // constructors
         /// <summary>
@@ -47,14 +47,14 @@ namespace MongoDB.Driver.Core.Sessions
         /// </summary>
         /// <param name="options">The options.</param>
         /// <returns>An operation channel provider.</returns>
-        public override ISessionChannelProvider CreateSessionChannelProvider(CreateSessionChannelProviderOptions options)
+        public override ISessionChannelProvider CreateSessionChannelProvider(CreateSessionChannelProviderArgs options)
         {
             Ensure.IsNotNull("options", options);
             ThrowIfDisposed();
 
-            _usePrimary = (_usePrimary || !options.IsQuery) && _behavior == SessionBehavior.Monotonic;
+            _pinnedToPrimary |= _behavior == SessionBehavior.Monotonic && !options.IsQuery;
             var selector = options.ServerSelector;
-            if (_usePrimary)
+            if (_pinnedToPrimary)
             {
                 selector = PrimaryServerSelector.Instance;
             }

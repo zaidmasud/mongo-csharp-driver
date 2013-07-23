@@ -50,7 +50,7 @@ namespace MongoDB.Driver.Core.Sessions
         /// </summary>
         /// <param name="options">The options.</param>
         /// <returns>An operation channel provider.</returns>
-        public override ISessionChannelProvider CreateSessionChannelProvider(CreateSessionChannelProviderOptions options)
+        public override ISessionChannelProvider CreateSessionChannelProvider(CreateSessionChannelProviderArgs options)
         {
             Ensure.IsNotNull("options", options);
             ThrowIfDisposed();
