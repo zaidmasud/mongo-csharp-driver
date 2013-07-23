@@ -76,7 +76,7 @@ namespace MongoDB.Driver.Core.Operations
         {
             ValidateRequiredProperties();
 
-            using (var channelProvider = CreateSessionChannelProvider(PrimaryServerSelector.Instance, false, operationBehavior))
+            using (var channelProvider = CreateServerChannelProvider(PrimaryServerSelector.Instance, false, operationBehavior))
             using (var channel = channelProvider.GetChannel(Timeout, CancellationToken))
             {
                 var readerSettings = GetServerAdjustedReaderSettings(channelProvider.Server);

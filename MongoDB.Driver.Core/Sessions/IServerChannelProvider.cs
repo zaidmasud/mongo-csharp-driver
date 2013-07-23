@@ -22,7 +22,7 @@ namespace MongoDB.Driver.Core.Sessions
     /// <summary>
     /// Represents a source of channels from a session.
     /// </summary>
-    public interface ISessionChannelProvider : IDisposable
+    public interface IServerChannelProvider : IDisposable
     {
         /// <summary>
         /// Gets the server.

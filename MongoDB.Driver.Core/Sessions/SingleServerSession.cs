@@ -46,15 +46,15 @@ namespace MongoDB.Driver.Core.Sessions
         /// <summary>
         /// Creates an operation channel provider.
         /// </summary>
-        /// <param name="options">The options.</param>
+        /// <param name="args">The args.</param>
         /// <returns>An operation channel provider.</returns>
-        public override ISessionChannelProvider CreateSessionChannelProvider(CreateSessionChannelProviderArgs options)
+        public override IServerChannelProvider CreateServerChannelProvider(CreateServerChannelProviderArgs args)
         {
-            Ensure.IsNotNull("options", options);
+            Ensure.IsNotNull("args", args);
             ThrowIfDisposed();
 
             IServer serverToUse = null;
-            if (!options.IsQuery)
+            if (!args.IsQuery)
             {
                 if (_queryServer != null)
                 {
@@ -68,7 +68,7 @@ namespace MongoDB.Driver.Core.Sessions
 
                 if (_nonQueryServer == null)
                 {
-                    _nonQueryServer = _cluster.SelectServer(PrimaryServerSelector.Instance, options.Timeout, options.CancellationToken);
+                    _nonQueryServer = _cluster.SelectServer(PrimaryServerSelector.Instance, args.Timeout, args.CancellationToken);
                 }
                 serverToUse = _nonQueryServer;
 
@@ -85,19 +85,19 @@ namespace MongoDB.Driver.Core.Sessions
             {
                 if (_queryServer == null)
                 {
-                    _queryServer = _cluster.SelectServer(options.ServerSelector, options.Timeout, options.CancellationToken);
+                    _queryServer = _cluster.SelectServer(args.ServerSelector, args.Timeout, args.CancellationToken);
                 }
                 serverToUse = _queryServer;
             }
 
             // verify that the server selector for the operation is compatible with the selected server.
-            var selected = options.ServerSelector.SelectServers(new[] { serverToUse.Description });
+            var selected = args.ServerSelector.SelectServers(new[] { serverToUse.Description });
             if (!selected.Any())
             {
                 throw new Exception("The current operation does not match the selected server.");
             }
 
-            return new SingleServerOperationChannelProvider(this, serverToUse, options.DisposeSession);
+            return new SingleServerOperationChannelProvider(this, serverToUse, args.DisposeSession);
         }
 
         // protected methods
@@ -121,7 +121,6 @@ namespace MongoDB.Driver.Core.Sessions
             }
         }
 
-        // private methods
         private void ThrowIfDisposed()
         {
             if (_disposed)
@@ -131,7 +130,7 @@ namespace MongoDB.Driver.Core.Sessions
         }
 
         // nested classes
-        private sealed class SingleServerOperationChannelProvider : ISessionChannelProvider
+        private sealed class SingleServerOperationChannelProvider : IServerChannelProvider
         {
             private readonly SingleServerSession _session;
             private readonly IServer _server;

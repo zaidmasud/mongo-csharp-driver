@@ -25,12 +25,12 @@ namespace MongoDB.Driver.Core.Protocol
             var channel = Substitute.For<IChannel>();
             channel.WhenForAnyArgs(c => c.Send(null)).Do(c => { sentBufferLength = c.Arg<IRequestPacket>().Length; });
 
-            var channelProvider = Substitute.For<ISessionChannelProvider>();
+            var channelProvider = Substitute.For<IServerChannelProvider>();
             channelProvider.Server.Returns(ServerDescriptionBuilder.Build(b => { }));
             channelProvider.GetChannel(Timeout.InfiniteTimeSpan, CancellationToken.None).ReturnsForAnyArgs(channel);
 
             var session = Substitute.For<ISession>();
-            session.CreateSessionChannelProvider(null).ReturnsForAnyArgs(channelProvider);
+            session.CreateServerChannelProvider(null).ReturnsForAnyArgs(channelProvider);
 
             var subject = CreateSubject(session, WriteConcern.Unacknowledged);
             subject.Execute();
@@ -46,12 +46,12 @@ namespace MongoDB.Driver.Core.Protocol
             channel.WhenForAnyArgs(c => c.Send(null)).Do(c => { sentBufferLength = c.Arg<IRequestPacket>().Length; });
             channel.Receive(null).ReturnsForAnyArgs(CreateWriteConcernResult(true, null));
 
-            var channelProvider = Substitute.For<ISessionChannelProvider>();
+            var channelProvider = Substitute.For<IServerChannelProvider>();
             channelProvider.Server.Returns(ServerDescriptionBuilder.Build(b => { }));
             channelProvider.GetChannel(Timeout.InfiniteTimeSpan, CancellationToken.None).ReturnsForAnyArgs(channel);
 
             var session = Substitute.For<ISession>();
-            session.CreateSessionChannelProvider(null).ReturnsForAnyArgs(channelProvider);
+            session.CreateServerChannelProvider(null).ReturnsForAnyArgs(channelProvider);
 
             var subject = CreateSubject(session, WriteConcern.Acknowledged);
             subject.Execute();
@@ -67,12 +67,12 @@ namespace MongoDB.Driver.Core.Protocol
             channel.WhenForAnyArgs(c => c.Send(null)).Do(c => { sentBufferLength = c.Arg<IRequestPacket>().Length; });
             channel.Receive(null).ReturnsForAnyArgs(CreateWriteConcernResult(false, "an error"));
 
-            var channelProvider = Substitute.For<ISessionChannelProvider>();
+            var channelProvider = Substitute.For<IServerChannelProvider>();
             channelProvider.Server.Returns(ServerDescriptionBuilder.Build(b => { }));
             channelProvider.GetChannel(Timeout.InfiniteTimeSpan, CancellationToken.None).ReturnsForAnyArgs(channel);
 
             var session = Substitute.For<ISession>();
-            session.CreateSessionChannelProvider(null).ReturnsForAnyArgs(channelProvider);
+            session.CreateServerChannelProvider(null).ReturnsForAnyArgs(channelProvider);
 
             var subject = CreateSubject(session, WriteConcern.Acknowledged);
             Assert.Throws<MongoWriteConcernException>(() => subject.Execute());
@@ -86,12 +86,12 @@ namespace MongoDB.Driver.Core.Protocol
             channel.WhenForAnyArgs(c => c.Send(null)).Do(c => { sentBufferLength = c.Arg<IRequestPacket>().Length; });
             channel.Receive(null).ReturnsForAnyArgs(CreateWriteConcernResult(true, "an error"));
 
-            var channelProvider = Substitute.For<ISessionChannelProvider>();
+            var channelProvider = Substitute.For<IServerChannelProvider>();
             channelProvider.Server.Returns(ServerDescriptionBuilder.Build(b => { }));
             channelProvider.GetChannel(Timeout.InfiniteTimeSpan, CancellationToken.None).ReturnsForAnyArgs(channel);
 
             var session = Substitute.For<ISession>();
-            session.CreateSessionChannelProvider(null).ReturnsForAnyArgs(channelProvider);
+            session.CreateServerChannelProvider(null).ReturnsForAnyArgs(channelProvider);
 
             var subject = CreateSubject(session, WriteConcern.Acknowledged);
             Assert.Throws<MongoWriteConcernException>(() => subject.Execute());
@@ -130,7 +130,7 @@ namespace MongoDB.Driver.Core.Protocol
 
             public override WriteConcernResult Execute(OperationBehavior operationBehavior)
             {
-                using (var channelProvider = Session.CreateSessionChannelProvider(null))
+                using (var channelProvider = Session.CreateServerChannelProvider(null))
                 using (var channel = channelProvider.GetChannel(Timeout, CancellationToken))
                 {
                     var readerSettings = GetServerAdjustedReaderSettings(channelProvider.Server);

@@ -132,7 +132,7 @@ namespace MongoDB.Driver.Core.Operations
         {
             ValidateRequiredProperties();
 
-            using(var channelProvider = CreateSessionChannelProvider(new ReadPreferenceServerSelector(_readPreference), true, operationBehavior))
+            using(var channelProvider = CreateServerChannelProvider(new ReadPreferenceServerSelector(_readPreference), true, operationBehavior))
             using (var channel = channelProvider.GetChannel(Timeout, CancellationToken))
             {
                 var readerSettings = GetServerAdjustedReaderSettings(channelProvider.Server);

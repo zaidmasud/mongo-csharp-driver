@@ -11,10 +11,10 @@ namespace MongoDB.Driver.Core.Sessions
     public interface ISession : IDisposable
     {
         /// <summary>
-        /// Creates a session channel provider.
+        /// Creates a server channel provider.
         /// </summary>
-        /// <param name="options">The options.</param>
-        /// <returns>A session channel provider.</returns>
-        ISessionChannelProvider CreateSessionChannelProvider(CreateSessionChannelProviderArgs options);
+        /// <param name="args">The args.</param>
+        /// <returns>A server channel provider.</returns>
+        IServerChannelProvider CreateServerChannelProvider(CreateServerChannelProviderArgs args);
     }
 }

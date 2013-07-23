@@ -125,16 +125,16 @@ namespace MongoDB.Driver.Core.Operations
         /// <param name="isQuery">if set to <c>true</c> the operation is a query.</param>
         /// <param name="operationBehavior">The operation behavior.</param>
         /// <returns>A session channel provider.</returns>
-        protected ISessionChannelProvider CreateSessionChannelProvider(IServerSelector serverSelector, bool isQuery, OperationBehavior operationBehavior)
+        protected IServerChannelProvider CreateServerChannelProvider(IServerSelector serverSelector, bool isQuery, OperationBehavior operationBehavior)
         {
-            var options = new CreateSessionChannelProviderArgs(serverSelector, isQuery)
+            var options = new CreateServerChannelProviderArgs(serverSelector, isQuery)
             {
                 CancellationToken = _cancellationToken,
                 DisposeSession = operationBehavior.HasFlag(OperationBehavior.CloseSession),
                 Timeout = _timeout
             };
 
-            return Session.CreateSessionChannelProvider(options);
+            return Session.CreateServerChannelProvider(options);
         }
 
         /// <summary>

@@ -185,7 +185,7 @@ namespace MongoDB.Driver.Core.Operations
             var count = 0;
             var limit = (_limit >= 0) ? _limit : -_limit;
 
-            using (var channelProvider = CreateSessionChannelProvider(new ReadPreferenceServerSelector(_readPreference), true, operationBehavior))
+            using (var channelProvider = CreateServerChannelProvider(new ReadPreferenceServerSelector(_readPreference), true, operationBehavior))
             {
                 foreach (var document in DeserializeDocuments(channelProvider))
                 {
@@ -212,7 +212,7 @@ namespace MongoDB.Driver.Core.Operations
         }
 
         // private methods
-        private IEnumerable<TDocument> DeserializeDocuments(ISessionChannelProvider channelProvider)
+        private IEnumerable<TDocument> DeserializeDocuments(IServerChannelProvider channelProvider)
         {
             var readerSettings = GetServerAdjustedReaderSettings(channelProvider.Server);
 
@@ -259,7 +259,7 @@ namespace MongoDB.Driver.Core.Operations
             }
         }
 
-        private ReplyMessage GetFirstBatch(ISessionChannelProvider channelProvider)
+        private ReplyMessage GetFirstBatch(IServerChannelProvider channelProvider)
         {
             // some of these weird conditions are necessary to get commands to run correctly
             // specifically numberToReturn has to be 1 or -1 for commands
@@ -310,7 +310,7 @@ namespace MongoDB.Driver.Core.Operations
             }
         }
 
-        private ReplyMessage GetNextBatch(ISessionChannelProvider channelProvider, long cursorId)
+        private ReplyMessage GetNextBatch(IServerChannelProvider channelProvider, long cursorId)
         {
             using (var channel = channelProvider.GetChannel(Timeout, CancellationToken))
             {
@@ -328,7 +328,7 @@ namespace MongoDB.Driver.Core.Operations
             }
         }
 
-        private void KillCursor(ISessionChannelProvider channelProvider, long cursorId)
+        private void KillCursor(IServerChannelProvider channelProvider, long cursorId)
         {
             using (var channel = channelProvider.GetChannel(Timeout, CancellationToken))
             {

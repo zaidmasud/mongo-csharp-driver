@@ -28,7 +28,7 @@ namespace MongoDB.Driver.Core.Protocol
             var channel = Substitute.For<IChannel>();
             channel.Receive(null).ReturnsForAnyArgs(c => CreateWriteConcernResult(true, null));
 
-            var channelProvider = Substitute.For<ISessionChannelProvider>();
+            var channelProvider = Substitute.For<IServerChannelProvider>();
             channelProvider.Server.Returns(ServerDescriptionBuilder.Build(b =>
             {
                 b.MaxDocumentSize(BATCH_SIZE);
@@ -37,7 +37,7 @@ namespace MongoDB.Driver.Core.Protocol
             channelProvider.GetChannel(Timeout.InfiniteTimeSpan, CancellationToken.None).ReturnsForAnyArgs(channel);
 
             var session = Substitute.For<ISession>();
-            session.CreateSessionChannelProvider(null).ReturnsForAnyArgs(channelProvider);
+            session.CreateServerChannelProvider(null).ReturnsForAnyArgs(channelProvider);
 
             var subject = CreateSubject(session, flags, writeConcern, numBatches);
             subject.Execute();
