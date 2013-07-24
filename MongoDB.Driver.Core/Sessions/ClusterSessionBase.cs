@@ -14,9 +14,6 @@
 */
 
 using System;
-using System.Threading;
-using MongoDB.Driver.Core.Connections;
-using MongoDB.Driver.Core.Operations;
 
 namespace MongoDB.Driver.Core.Sessions
 {
@@ -45,10 +42,10 @@ namespace MongoDB.Driver.Core.Sessions
         }
 
         /// <summary>
-        /// Creates an operation channel provider.
+        /// Creates a server channel provider.
         /// </summary>
         /// <param name="options">The options.</param>
-        /// <returns>An operation channel provider.</returns>
+        /// <returns>A server channel provider.</returns>
         public abstract IServerChannelProvider CreateServerChannelProvider(CreateServerChannelProviderArgs options);
 
         // protected methods

@@ -22,21 +22,22 @@ using MongoDB.Driver.Core.Support;
 namespace MongoDB.Driver.Core.Sessions
 {
     /// <summary>
-    /// A SingleServerSession picks a server when the first operation is executed and uses that single server for all subsequent operations.
+    /// A DualServerSession uses one server for writes and a possibly different server for reads.
     /// </summary>
-    public sealed class SingleServerSession : ClusterSessionBase
+    public sealed class DualServerSession : ClusterSessionBase
     {
         // private fields
         private readonly ICluster _cluster;
         private bool _disposed;
-        private IServer _server;
+        private IServer _nonQueryServer;
+        private IServer _queryServer;
 
         // constructors
         /// <summary>
-        /// Initializes a new instance of the <see cref="SingleServerSession" /> class.
+        /// Initializes a new instance of the <see cref="DualServerSession" /> class.
         /// </summary>
         /// <param name="cluster">The cluster.</param>
-        public SingleServerSession(ICluster cluster)
+        public DualServerSession(ICluster cluster)
         {
             Ensure.IsNotNull("cluster", cluster);
 
@@ -45,28 +46,33 @@ namespace MongoDB.Driver.Core.Sessions
 
         // public methods
         /// <summary>
-        /// Creates an operation channel provider.
+        /// Creates a server channel provider.
         /// </summary>
         /// <param name="args">The args.</param>
-        /// <returns>An operation channel provider.</returns>
+        /// <returns>A server channel provider.</returns>
         public override IServerChannelProvider CreateServerChannelProvider(CreateServerChannelProviderArgs args)
         {
             Ensure.IsNotNull("args", args);
             ThrowIfDisposed();
 
-            if (_server == null)
+            IServer server;
+            if (args.IsQuery)
             {
-                _server = _cluster.SelectServer(args.ServerSelector, args.Timeout, args.CancellationToken);
+                server = GetServerForQuery(args);
+            }
+            else
+            {
+                server = GetServerForNonQuery(args);
             }
 
             // verify that the server selector for the operation is compatible with the selected server.
-            var selected = args.ServerSelector.SelectServers(new[] { _server.Description });
+            var selected = args.ServerSelector.SelectServers(new[] { server.Description });
             if (!selected.Any())
             {
                 throw new Exception("The current operation does not match the selected server.");
             }
 
-            return new ServerChannelProvider(this, _server, args.DisposeSession);
+            return new ServerChannelProvider(this, server, args.DisposeSession);
         }
 
         // protected methods
@@ -78,15 +84,50 @@ namespace MongoDB.Driver.Core.Sessions
         {
             if (disposing && !_disposed)
             {
-                if (_server != null)
+                if (_nonQueryServer != null)
                 {
-                    _server.Dispose();
+                    _nonQueryServer.Dispose();
+                }
+                if (_queryServer != null)
+                {
+                    _queryServer.Dispose();
                 }
                 _disposed = true;
             }
         }
 
         //private methods
+        private IServer GetServerForNonQuery(CreateServerChannelProviderArgs args)
+        {
+            if (_queryServer != null)
+            {
+                // we want to use the query server if it is a primary.  This is especially 
+                // important if we are talking to a mongos which shouldn't switch servers
+                // ever.
+                var matches = PrimaryServerSelector.Instance.SelectServers(new[] { _queryServer.Description });
+                if (matches.Any())
+                {
+                    _nonQueryServer = _queryServer;
+                }
+            }
+
+            // if we've never done a non-query or a query with the primary
+            if (_nonQueryServer == null)
+            {
+                _nonQueryServer = _cluster.SelectServer(PrimaryServerSelector.Instance, args.Timeout, args.CancellationToken);
+            }
+            return _nonQueryServer;
+        }
+
+        private IServer GetServerForQuery(CreateServerChannelProviderArgs args)
+        {
+            if (_queryServer == null)
+            {
+                _queryServer = _cluster.SelectServer(args.ServerSelector, args.Timeout, args.CancellationToken);
+            }
+            return _queryServer;
+        }
+
         private void ThrowIfDisposed()
         {
             if (_disposed)

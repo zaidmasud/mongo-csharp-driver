@@ -94,6 +94,8 @@
     <Compile Include="Connections\IRequestPacket.cs" />
     <Compile Include="Operations\IOperation.cs" />
     <Compile Include="PrimaryServerSelector.cs" />
+    <Compile Include="Sessions\DualChannelSession.cs" />
+    <Compile Include="Sessions\DualServerSession.cs" />
     <Compile Include="Sessions\IServerChannelProvider.cs" />
     <Compile Include="Operations\OperationBehavior.cs" />
     <Compile Include="Protocol\BufferedRequestPacket.cs" />
@@ -146,7 +148,9 @@
     <Compile Include="Sessions\ClusterSession.cs" />
     <Compile Include="Sessions\CreateServerChannelProviderArgs.cs" />
     <Compile Include="Sessions\ISession.cs" />
-    <Compile Include="Sessions\SessionBehavior.cs" />
+    <Compile Include="Sessions\MonotonicSession.cs" />
+    <Compile Include="Sessions\ChannelChannelProvider.cs" />
+    <Compile Include="Sessions\ServerChannelProvider.cs" />
     <Compile Include="Sessions\SingleServerSession.cs" />
     <Compile Include="Sessions\ClusterSessionBase.cs" />
     <Compile Include="Sessions\SingleChannelSession.cs" />

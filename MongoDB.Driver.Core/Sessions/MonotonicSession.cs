@@ -22,22 +22,23 @@ using MongoDB.Driver.Core.Support;
 namespace MongoDB.Driver.Core.Sessions
 {
     /// <summary>
-    /// A SingleChannelSession gets a channel when the first operation is executed and uses that single channel for all subsequent operations.
+    /// A session based on an entire cluster. If the first operation is a query, the session can choose a secondary
+    /// and send all subsequent queries to the same secondary. But once a non-query operation is seen the session
+    /// switches to the primary and sends all subsequent operations to the primary.
     /// </summary>
-    public sealed class SingleChannelSession : ClusterSessionBase
+    public sealed class MonotonicSession : ClusterSessionBase
     {
         // private fields
         private readonly ICluster _cluster;
         private bool _disposed;
-        private IChannel _channel;
-        private IServer _server;
+        private bool _pinnedToPrimary;
 
         // constructors
         /// <summary>
-        /// Initializes a new instance of the <see cref="SingleChannelSession" /> class.
+        /// Initializes a new instance of the <see cref="MonotonicSession" /> class.
         /// </summary>
         /// <param name="cluster">The cluster.</param>
-        public SingleChannelSession(ICluster cluster)
+        public MonotonicSession(ICluster cluster)
         {
             Ensure.IsNotNull("cluster", cluster);
 
@@ -46,28 +47,35 @@ namespace MongoDB.Driver.Core.Sessions
 
         // public methods
         /// <summary>
-        /// Creates a server channel provider.
+        /// Creates an operation channel provider.
         /// </summary>
         /// <param name="args">The args.</param>
-        /// <returns>A server channel provider.</returns>
+        /// <returns>An operation channel provider.</returns>
         public override IServerChannelProvider CreateServerChannelProvider(CreateServerChannelProviderArgs args)
         {
             Ensure.IsNotNull("args", args);
             ThrowIfDisposed();
 
-            if (_channel == null)
+            IServerSelector selector;
+            if (_pinnedToPrimary |= !args.IsQuery)
             {
-                _server = _cluster.SelectServer(args.ServerSelector, args.Timeout, args.CancellationToken);
-                _channel = _server.GetChannel(args.Timeout, args.CancellationToken);
+                selector = PrimaryServerSelector.Instance;
+            }
+            else
+            {
+                selector = args.ServerSelector;
             }
 
-            var selected = args.ServerSelector.SelectServers(new[] { _server.Description });
+            var server = _cluster.SelectServer(selector, args.Timeout, args.CancellationToken);
+
+            // verify that the server selector for the operation is compatible with the selected server.
+            var selected = args.ServerSelector.SelectServers(new[] { server.Description });
             if (!selected.Any())
             {
-                throw new Exception("The current operation does not match the selected channel.");
+                throw new Exception("The current operation does not match the selected server.");
             }
 
-            return new ChannelChannelProvider(this, _server, _channel, args.DisposeSession);
+            return new ServerChannelProvider(this, server, args.DisposeSession);
         }
 
         // protected methods
@@ -77,15 +85,7 @@ namespace MongoDB.Driver.Core.Sessions
         /// <param name="disposing"><c>true</c> to release both managed and unmanaged resources; <c>false</c> to release only unmanaged resources.</param>
         protected override void Dispose(bool disposing)
         {
-            if (disposing && !_disposed)
-            {
-                if (_channel != null)
-                {
-                    _channel.Dispose();
-                    _server.Dispose();
-                }
-                _disposed = true;
-            }
+            _disposed = true;
         }
 
         // private methods

@@ -20,7 +20,7 @@ using MongoDB.Driver.Core.Connections;
 namespace MongoDB.Driver.Core.Sessions
 {
     /// <summary>
-    /// Represents a source of channels from a session.
+    /// Represents a source of channels from a server.
     /// </summary>
     public interface IServerChannelProvider : IDisposable
     {
